@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { Modifiers, ProviderInfo, CustomStyle, GenerationMode, TranscriptLanguage } from '@/lib/types';
 import {
+  getStorageAccountNamespace,
   loadSelectedModel,
   saveSelectedModel,
   loadCustomStyles,
@@ -8,6 +9,7 @@ import {
   loadWebhookUrl,
   saveWebhookUrl,
 } from '@/lib/storage';
+import { subscribeAuthSession } from '@/lib/auth-session';
 
 interface SettingsState {
   // 프로바이더
@@ -130,3 +132,18 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     });
   },
 }));
+
+let activeStorageNamespace = getStorageAccountNamespace();
+
+subscribeAuthSession(() => {
+  const nextNamespace = getStorageAccountNamespace();
+  if (nextNamespace === activeStorageNamespace) return;
+  activeStorageNamespace = nextNamespace;
+
+  // 이전 계정의 사용자 프롬프트·웹훅 URL을 즉시 숨긴 뒤 새 계정 영역을 동기 로드한다.
+  useSettingsStore.setState({ customStyles: [], webhookUrl: '' });
+  useSettingsStore.setState({
+    customStyles: loadCustomStyles(),
+    webhookUrl: loadWebhookUrl(),
+  });
+});

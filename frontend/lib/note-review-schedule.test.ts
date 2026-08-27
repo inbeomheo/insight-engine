@@ -11,6 +11,11 @@ import {
   readNoteReviewSchedule,
   writeNoteReviewSchedule,
 } from './note-review-schedule';
+import { setAuthSession, type AuthSession } from './auth-session';
+
+function authSession(userId: string): AuthSession {
+  return { user: { id: userId }, session: { access_token: `${userId}-token` } };
+}
 
 function createMemoryStorage() {
   const data = new Map<string, string>();
@@ -90,6 +95,23 @@ describe('note-review-schedule', () => {
     expect(readNoteReviewSchedule('note-1', storage)).toEqual(schedule);
     clearNoteReviewSchedule('note-1', storage);
     expect(readNoteReviewSchedule('note-1', storage)).toBeNull();
+  });
+
+  it('계정별로 같은 노트의 복습 일정을 따로 보존한다', () => {
+    const storage = createMemoryStorage();
+    try {
+      setAuthSession(authSession('account-a'));
+      writeNoteReviewSchedule('shared-note', 2, storage, now);
+
+      setAuthSession(authSession('account-b'));
+      expect(readNoteReviewSchedule('shared-note', storage)).toBeNull();
+      writeNoteReviewSchedule('shared-note', 7, storage, now);
+
+      setAuthSession(authSession('account-a'));
+      expect(readNoteReviewSchedule('shared-note', storage)?.intervalDays).toBe(2);
+    } finally {
+      setAuthSession(null);
+    }
   });
 
   it('labels overdue, today, tomorrow, and upcoming schedules', () => {

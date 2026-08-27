@@ -17,15 +17,16 @@ const translations: Record<Locale, TranslationDict> = {
   ja: {} as TranslationDict,
 };
 
-/** 로케일 데이터를 동적으로 로드합니다 (ko 이외) */
-export async function loadLocale(locale: Locale): Promise<void> {
-  if (locale === 'ko') return;
+/** 로케일 데이터를 동적으로 로드하고 렌더링에 사용할 사전을 반환합니다. */
+export async function loadLocale(locale: Locale): Promise<TranslationDict> {
+  if (locale === 'ko') return translations.ko;
   // 이미 로드됨
-  if (Object.keys(translations[locale]).length > 0) return;
+  if (Object.keys(translations[locale]).length > 0) return translations[locale];
   const loader = localeLoaders[locale];
   if (loader) {
     translations[locale] = await loader();
   }
+  return translations[locale];
 }
 
 const LOCALE_STORAGE_KEY = 'insight-engine-locale';
@@ -64,13 +65,14 @@ function getNestedValue(obj: TranslationDict, key: string): string | undefined {
  * 찾지 못하면 한국어(ko)로 폴백합니다.
  * 변수 대체: {count}, {name} 등을 params 객체로 치환합니다.
  */
-export function translate(
+export function translateWithMessages(
   locale: Locale,
   key: string,
+  messages: TranslationDict,
   params?: Record<string, string | number>
 ): string {
   let value =
-    getNestedValue(translations[locale], key) ??
+    getNestedValue(messages, key) ??
     getNestedValue(translations['ko'], key) ??
     key;
 
@@ -81,6 +83,14 @@ export function translate(
   }
 
   return value;
+}
+
+export function translate(
+  locale: Locale,
+  key: string,
+  params?: Record<string, string | number>
+): string {
+  return translateWithMessages(locale, key, translations[locale], params);
 }
 
 export { translations };

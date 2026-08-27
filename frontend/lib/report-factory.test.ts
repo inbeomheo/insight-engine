@@ -3,6 +3,24 @@ import { responseToReport } from './report-factory';
 import type { GenerateResponse } from './types';
 
 describe('responseToReport', () => {
+  it('일반 웹 응답에 없는 YouTube 전용 메타데이터를 기본값으로 보완한다', () => {
+    const response = {
+      title: '웹 문서',
+      content: '본문',
+      html: '<p>본문</p>',
+      usage: { total_tokens: 3 },
+      elapsed_time: 0.5,
+      prompt: 'prompt',
+      source_type: 'rss',
+    } satisfies GenerateResponse;
+
+    const report = responseToReport(response, 'https://example.com/feed', 'summary');
+
+    expect(report.transcript_source).toBe('');
+    expect(report.cached).toBe(false);
+    expect(report.comment_summary_included).toBe(false);
+  });
+
   it('source_receipts를 Report로 전달한다', () => {
     const response = {
       title: '제목',

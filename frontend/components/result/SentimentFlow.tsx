@@ -5,6 +5,7 @@ import { Activity, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { apiUrl } from '@/lib/api';
+import { authFetch } from '@/lib/auth-session';
 
 interface FlowItem {
   paragraph_index: number;
@@ -45,7 +46,7 @@ export default function SentimentFlow({ content }: SentimentFlowProps) {
     if (loading) return;
     setLoading(true);
     try {
-      const res = await fetch(apiUrl('/api/sentiment-flow'), {
+      const res = await authFetch(apiUrl('/api/sentiment-flow'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content }),

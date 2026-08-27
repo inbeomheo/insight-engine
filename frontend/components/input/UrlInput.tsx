@@ -130,7 +130,7 @@ const UrlInput = memo(function UrlInput({
         <Button
           variant="ghost"
           size="sm"
-          className="signal-meta h-9 shrink-0 rounded-sm bg-muted px-3 text-[10px] text-muted-foreground hover:bg-secondary hover:text-foreground"
+          className="signal-meta h-9 shrink-0 rounded-sm bg-muted px-3 text-[10px] text-foreground/75 hover:bg-secondary hover:text-foreground"
           onClick={onToggleSettings}
           aria-label="생성 설정 열기"
         >
@@ -149,7 +149,7 @@ const UrlInput = memo(function UrlInput({
 
       {/* 힌트 (에러는 InputWrapper가 표시) */}
       {!error && (
-        <p className="signal-meta text-[10px] text-muted-foreground/55 mt-3 px-1">
+        <p className="signal-meta text-[10px] text-muted-foreground mt-3 px-1">
           YouTube · 웹페이지 · RSS · arXiv · Podcast · 최대 10개
         </p>
       )}

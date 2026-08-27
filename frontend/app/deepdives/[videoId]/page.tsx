@@ -7,20 +7,14 @@ import { ArrowLeft, ExternalLink, Image as ImageIcon, Loader2, Save } from 'luci
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import ProtectedImage from '@/components/media/ProtectedImage';
 import {
-  apiUrl,
   extractVideoDeepDiveScreenshots,
   fetchVideoDeepDive,
   updateVideoDeepDiveSlides,
   type VideoDeepDiveResponse,
   type VideoDeepDiveSlide,
 } from '@/lib/api';
-
-function mediaSrc(src?: string): string {
-  if (!src) return '';
-  if (/^https?:\/\//.test(src)) return src;
-  return apiUrl(src);
-}
 
 function youtubeAt(sourceUrl: string, seconds?: number): string {
   if (!seconds) return sourceUrl;
@@ -198,8 +192,7 @@ export default function VideoDeepDivePage() {
               {slides.map((slide, index) => (
                 <Card key={`${slide.idx}-${slide.t}`} className="overflow-hidden rounded-sm border-border bg-card shadow-none">
                   {slide.img ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={mediaSrc(slide.img)} alt={slide.title || `화면 ${index + 1}`} className="w-full border-b border-border object-cover" />
+                    <ProtectedImage src={slide.img} alt={slide.title || `화면 ${index + 1}`} className="w-full border-b border-border object-cover" />
                   ) : (
                     <div className="flex aspect-video items-center justify-center border-b border-border bg-muted text-muted-foreground">
                       <ImageIcon className="h-8 w-8" />

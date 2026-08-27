@@ -5,8 +5,7 @@ import Providers from "@/components/Providers";
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  viewportFit: "cover",
   themeColor: "#2F54EB",
 };
 
@@ -49,7 +48,10 @@ export default function RootLayout({
           />
         </noscript>
       </head>
-      <body className="overflow-hidden h-screen">
+      {/* 전역 문서 스크롤은 모든 폭에서 유지한다. 메인 데스크톱 셸은 자체
+          h-screen/overflow-hidden + ScrollArea를 사용하지만, dashboard·notes·profile·
+          deepdives 같은 독립 라우트는 body 스크롤이 유일한 세로 탐색 경로다. */}
+      <body className="min-h-dvh">
         <Providers>{children}</Providers>
         {/* PWA Service Worker 등록 */}
         <script

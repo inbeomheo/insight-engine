@@ -1,3 +1,5 @@
+import { getAccountStorageKey } from './storage';
+
 export interface NoteReviewSchedule {
   dueAt: string;
   intervalDays: number;
@@ -59,8 +61,8 @@ export function getNextReviewInterval(
   return Math.min(365, Math.max(1, Math.round(nextInterval)));
 }
 
-export function getNoteReviewScheduleKey(noteId: string): string {
-  return `ie_note_review_schedule:${noteId}`;
+export function getNoteReviewScheduleKey(noteId: string, namespace?: string): string {
+  return getAccountStorageKey(`ie_note_review_schedule:${noteId}`, namespace);
 }
 
 function resolveStorage(storage?: ReviewScheduleStorage): ReviewScheduleStorage | null {

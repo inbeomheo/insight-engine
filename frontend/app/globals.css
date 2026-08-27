@@ -67,7 +67,7 @@
   --secondary: #E8EBF1;           /* Wash — cool neutral fill */
   --secondary-foreground: #15171F;
   --muted: #E8EBF1;
-  --muted-foreground: #6A6E78;    /* ~rgba(21,23,31,0.55) flattened */
+  --muted-foreground: #60656F;    /* Wash(#E8EBF1) 위에서 4.9:1 대비 */
   --accent: #E4E9FB;              /* Faint ink-blue tint for accent surfaces */
   --accent-foreground: #2F54EB;
 

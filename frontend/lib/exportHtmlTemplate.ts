@@ -10,4 +10,5 @@
 export const EXPORT_HTML_STYLE = `body{font-family:sans-serif;max-width:800px;margin:2rem auto;padding:0 1rem;line-height:1.6;color:#15171F}
 h1,h2,h3{margin-top:1.5rem}a{color:#2F54EB}blockquote{border-left:3px solid #2F54EB;padding-left:1rem;color:#6A6E78}
 table{border-collapse:collapse;width:100%}th,td{border:1px solid #E0E3EB;padding:8px;text-align:left}
-th{background:#E8EBF1}`;
+th{background:#E8EBF1}.katex-display{display:block;max-width:100%;margin:1em 0;overflow-x:auto;text-align:center}
+.katex{font-size:1.05em}math{font-family:"STIX Two Math","Cambria Math",serif}`;

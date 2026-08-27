@@ -14,6 +14,11 @@ import {
   writeNoteStudyProgress,
   type NoteStudyProgress,
 } from './note-study-progress';
+import { setAuthSession, type AuthSession } from './auth-session';
+
+function authSession(userId: string): AuthSession {
+  return { user: { id: userId }, session: { access_token: `${userId}-token` } };
+}
 
 function createMemoryStorage() {
   const data = new Map<string, string>();
@@ -201,6 +206,37 @@ describe('note-study-progress', () => {
       review: [],
       updatedAt: null,
     });
+  });
+
+  it('계정별로 같은 노트의 학습 진행률을 격리한다', () => {
+    const storage = createMemoryStorage();
+    const counts = { learning: 2, review: 2 };
+    try {
+      setAuthSession(authSession('account-a'));
+      writeNoteStudyProgress(
+        'shared-note',
+        { learning: [0], review: [], updatedAt: '2026-07-10T00:00:00.000Z' },
+        counts,
+        storage,
+      );
+
+      setAuthSession(authSession('account-b'));
+      expect(readNoteStudyProgress('shared-note', counts, storage).learning).toEqual([]);
+      writeNoteStudyProgress(
+        'shared-note',
+        { learning: [1], review: [0], updatedAt: '2026-07-11T00:00:00.000Z' },
+        counts,
+        storage,
+      );
+
+      setAuthSession(authSession('account-a'));
+      expect(readNoteStudyProgress('shared-note', counts, storage)).toMatchObject({
+        learning: [0],
+        review: [],
+      });
+    } finally {
+      setAuthSession(null);
+    }
   });
 
   it('returns visible study indexes for all or unfinished-only mode', () => {

@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useClipboardCopy } from '@/hooks/useClipboardCopy';
+import { useAuthUserId } from '@/hooks/useAuthUserId';
 import { getNote, type NoteDetail } from '@/lib/api';
 import ResultChatPanel from '@/components/result/ResultChatPanel';
 import { findReportLinkedToNote } from '@/lib/knowledge-note-source';
@@ -135,6 +136,13 @@ function formatStudyUpdatedAt(iso: string | null): string {
 }
 
 export default function NoteDetailPage() {
+  const authUserId = useAuthUserId();
+  return (
+    <AccountNoteDetailPage key={authUserId ? `user:${authUserId}` : 'anonymous'} />
+  );
+}
+
+function AccountNoteDetailPage() {
   const params = useParams<{ id: string }>();
   const searchParams = useSearchParams();
   const noteId = params.id;

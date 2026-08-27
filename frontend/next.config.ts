@@ -1,6 +1,17 @@
 import type { NextConfig } from "next";
 import path from "path";
 
+const browserSecurityHeaders = [
+  {
+    key: 'Content-Security-Policy',
+    value: "object-src 'none'; frame-ancestors 'none'; base-uri 'self'",
+  },
+  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+  { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  { key: 'X-Frame-Options', value: 'DENY' },
+];
+
 const nextConfig: NextConfig = {
   turbopack: {
     root: path.resolve(__dirname),
@@ -12,6 +23,14 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   experimental: {
     optimizePackageImports: ['lucide-react', 'radix-ui'],
+  },
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: browserSecurityHeaders,
+      },
+    ];
   },
   async rewrites() {
     const backend = process.env.NEXT_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';

@@ -31,10 +31,10 @@ export interface GenerateResponse {
   html: string;
   usage: TokenUsage;
   elapsed_time: number;
-  transcript_source: string;
+  transcript_source?: string;
   prompt: string;
-  cached: boolean;
-  comment_summary_included: boolean;
+  cached?: boolean;
+  comment_summary_included?: boolean;
   seo?: SeoMetadata;
   geo?: GeoMetadata;
   faq_schema?: FaqSchema;
@@ -57,42 +57,6 @@ export interface GenerateResponse {
   chapters?: Array<{ title: string; start: number; end: number; summary: string }>;
   citations?: Citation[];
   source_receipts?: SourceReceipt[];
-  /** agent_mode 요청이 백그라운드 job으로 전환된 경우 */
-  async?: boolean;
-  job_id?: string;
-  job?: AgentJob;
-  status?: string;
-}
-
-export interface AgentJobStep {
-  id: string;
-  status: 'queued' | 'running' | 'succeeded' | 'failed';
-  error?: string | null;
-}
-
-export interface AgentJob {
-  id: string;
-  type: string;
-  status: 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled';
-  payload: Record<string, unknown>;
-  steps: AgentJobStep[];
-  current_step?: string | null;
-  failed_step?: string | null;
-  result?: {
-    final: {
-      title: string;
-      content: string;
-      seo?: SeoMetadata;
-      sources?: WebSource[];
-    };
-    elapsed_seconds?: number;
-    agent_count?: number;
-  } | null;
-  error?: string | null;
-}
-
-export interface JobResponse {
-  job: AgentJob;
 }
 
 // === 스트리밍 이벤트 ===

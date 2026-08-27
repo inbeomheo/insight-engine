@@ -1,6 +1,8 @@
 'use client';
 
 import { Bot, User } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
 import type { ChatMessage as ChatMessageType } from '../hooks/useAgentChat';
 import ToolProgress from './ToolProgress';
@@ -40,12 +42,25 @@ export default function ChatMessage({ message, isStreaming }: ChatMessageProps) 
 
         {/* 메시지 내용 */}
         {message.content ? (
-          <div
-            className="prose prose-sm max-w-none text-foreground/90 dark:text-foreground/85 break-words"
-            dangerouslySetInnerHTML={{
-              __html: formatContent(message.content),
-            }}
-          />
+          <div className="prose prose-sm max-w-none text-foreground/90 dark:text-foreground/85 break-words">
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                pre: ({ children }) => (
+                  <pre className="my-2 overflow-x-auto rounded-md bg-muted/50 p-3 text-xs dark:bg-muted/30">
+                    {children}
+                  </pre>
+                ),
+                code: ({ children }) => (
+                  <code className="rounded bg-muted/50 px-1.5 py-0.5 font-mono text-xs dark:bg-muted/30">
+                    {children}
+                  </code>
+                ),
+              }}
+            >
+              {message.content}
+            </ReactMarkdown>
+          </div>
         ) : (
           !isUser &&
           isStreaming && (
@@ -59,27 +74,4 @@ export default function ChatMessage({ message, isStreaming }: ChatMessageProps) 
       </div>
     </div>
   );
-}
-
-/** 마크다운 텍스트를 간단한 HTML로 변환 (경량) */
-function formatContent(text: string): string {
-  return text
-    // 코드 블록
-    .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre class="bg-muted/50 dark:bg-muted/30 rounded-md p-3 my-2 overflow-x-auto text-xs font-mono"><code>$2</code></pre>')
-    // 인라인 코드
-    .replace(/`([^`]+)`/g, '<code class="bg-muted/50 dark:bg-muted/30 px-1.5 py-0.5 rounded text-xs font-mono">$1</code>')
-    // 볼드
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    // 이탤릭
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    // 헤딩
-    .replace(/^### (.+)$/gm, '<h3 class="text-base font-semibold mt-4 mb-2">$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2 class="text-lg font-semibold mt-5 mb-2">$1</h2>')
-    .replace(/^# (.+)$/gm, '<h1 class="text-xl font-bold mt-6 mb-3">$1</h1>')
-    // 리스트
-    .replace(/^- (.+)$/gm, '<li class="ml-4 list-disc">$1</li>')
-    .replace(/^(\d+)\. (.+)$/gm, '<li class="ml-4 list-decimal">$2</li>')
-    // 줄바꿈
-    .replace(/\n\n/g, '<br/><br/>')
-    .replace(/\n/g, '<br/>');
 }
