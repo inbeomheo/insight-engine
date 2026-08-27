@@ -4,7 +4,9 @@
 """
 import logging
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
+
+from services.usage.usage_lock import UsageLockUnavailable
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +84,8 @@ class RepurposeService:
         target_format: str,
         language: str = 'ko',
         model: Optional[str] = None,
+        *,
+        on_cost_start: Optional[Callable[[], None]] = None,
     ) -> Dict[str, Any]:
         """
         콘텐츠를 특정 포맷으로 변환
@@ -98,16 +102,18 @@ class RepurposeService:
         system_prompt = _build_system_prompt(target_format, language)
 
         try:
-            from services.core.ai_service import call_litellm
+            from services.core.ai_service import call_litellm, resolve_public_model
+            target_model = resolve_public_model(model, self.DEFAULT_MODEL)
             messages = [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": f"[원본 콘텐츠]\n{content[:5000]}"},
             ]
             response = call_litellm(
                 messages,
-                model=model or self.DEFAULT_MODEL,
+                model=target_model,
                 max_tokens=3000,
                 temperature=0.7,
+                on_cost_start=on_cost_start,
             )
             result_content = response.choices[0].message.content.strip()
 
@@ -118,15 +124,23 @@ class RepurposeService:
                 'language': language,
             }
 
-        except Exception as e:
-            logger.error("재활용 변환 실패: format=%s, error=%s", target_format, e)
-            raise RuntimeError(f"콘텐츠 재활용 변환 실패: {e}") from e
+        except UsageLockUnavailable:
+            raise
+        except Exception as exc:
+            logger.error(
+                "재활용 변환 실패: format=%s, type=%s",
+                target_format,
+                type(exc).__name__,
+            )
+            raise RuntimeError("콘텐츠 재활용 변환에 실패했습니다.") from exc
 
     def repurpose_all(
         self,
         content: str,
         formats: Optional[List[str]] = None,
         language: str = 'ko',
+        *,
+        on_cost_start: Optional[Callable[[], None]] = None,
     ) -> Dict[str, Any]:
         """
         다중 포맷 동시 변환
@@ -148,11 +162,25 @@ class RepurposeService:
 
         for fmt in formats:
             try:
-                results[fmt] = self.repurpose(content, fmt, language)
+                repurpose_kwargs = {}
+                if callable(on_cost_start):
+                    repurpose_kwargs['on_cost_start'] = on_cost_start
+                results[fmt] = self.repurpose(
+                    content,
+                    fmt,
+                    language,
+                    **repurpose_kwargs,
+                )
                 logger.info("재활용 변환 완료: %s", fmt)
-            except Exception as e:
-                errors[fmt] = str(e)
-                logger.warning("재활용 변환 실패: %s — %s", fmt, e)
+            except UsageLockUnavailable:
+                raise
+            except Exception as exc:
+                errors[fmt] = "변환 실패"
+                logger.warning(
+                    "재활용 변환 실패: %s (type=%s)",
+                    fmt,
+                    type(exc).__name__,
+                )
 
         return {
             'results': results,

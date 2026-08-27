@@ -7,6 +7,10 @@
 
 import html as html_lib
 import re
+import secrets
+import threading
+import time
+from collections import OrderedDict
 
 from ..mcp_apps import BaseMCPApp
 from services.core.logging_config import get_logger
@@ -14,14 +18,23 @@ from services.core.logging_config import get_logger
 logger = get_logger("inline_editor")
 
 _MAX_HISTORY = 20  # 편집 이력 최대 보관 수
+_MAX_HISTORY_CHARS = 400_000
+_MAX_SESSIONS = 256
+_MAX_SESSIONS_PER_OWNER = 16
+_SESSION_TTL_SECONDS = 30 * 60
+_MAX_TITLE_CHARS = 500
+_MAX_CONTENT_CHARS = 200_000
+_MAX_SECTION_CHARS = 50_000
+_DIRECT_OWNER = "__direct__"
 
 
 class InlineEditorApp(BaseMCPApp):
     """콘텐츠 단락 단위 인라인 편집 앱"""
 
     def __init__(self):
-        # {session_id: {"sections": List[str], "history": List[List[str]]}}
-        self._sessions: dict[str, dict] = {}
+        # LRU 순서의 {session_id: {owner_id, sections, history, ...}}
+        self._sessions: OrderedDict[str, dict] = OrderedDict()
+        self._lock = threading.RLock()
 
     def get_name(self) -> str:
         return "inline_editor"
@@ -36,21 +49,40 @@ class InlineEditorApp(BaseMCPApp):
             content: {"title": str, "content": str,
                       "session_id": str (선택, 없으면 새 세션 시작)}
         """
-        session_id = content.get("session_id") or _make_session_id(content)
+        owner_id = _owner_id(content)
+        raw_content = content.get("content") or ""
+        title_text = content.get("title") or ""
+        _validate_text(title_text, "title", _MAX_TITLE_CHARS)
+        _validate_text(raw_content, "content", _MAX_CONTENT_CHARS)
 
-        # 새 세션이거나 콘텐츠가 바뀐 경우 단락 재분리
-        if session_id not in self._sessions:
-            raw_content = content.get("content") or ""
-            sections = _split_sections(raw_content)
-            self._sessions[session_id] = {
-                "sections": sections,
-                "history": [],
-                "title": content.get("title") or "",
-            }
+        with self._lock:
+            now = time.monotonic()
+            self._purge_expired_locked(now)
+            requested_session_id = content.get("session_id")
+            if requested_session_id is not None and (
+                not isinstance(requested_session_id, str)
+                or len(requested_session_id) > 128
+            ):
+                raise ValueError("session_id must be a short string")
+            session = self._sessions.get(requested_session_id)
+            if session is None or session["owner_id"] != owner_id:
+                self._make_room_locked(owner_id)
+                session_id = _make_session_id()
+                session = {
+                    "owner_id": owner_id,
+                    "sections": _split_sections(raw_content),
+                    "history": [],
+                    "title": title_text,
+                    "last_access": now,
+                }
+                self._sessions[session_id] = session
+            else:
+                session_id = requested_session_id
+                session["last_access"] = now
+                self._sessions.move_to_end(session_id)
 
-        session = self._sessions[session_id]
-        title = html_lib.escape(session["title"])
-        sections = session["sections"]
+            title = html_lib.escape(session["title"])
+            sections = list(session["sections"])
 
         # 단락별 편집 가능한 카드 렌더링
         section_cards = ""
@@ -103,7 +135,7 @@ class InlineEditorApp(BaseMCPApp):
             {"action": "get_result", "label": "편집 결과 가져오기", "style": "success"},
         ]
 
-        return {"html": html_output, "actions": actions}
+        return {"html": html_output, "actions": actions, "session_id": session_id}
 
     def handle_action(self, action: str, data: dict) -> dict:
         """편집 액션을 처리합니다.
@@ -117,37 +149,43 @@ class InlineEditorApp(BaseMCPApp):
         try:
             return self._handle_action_internal(action, data)
         except Exception as e:
-            logger.error("인라인 편집 액션 처리 실패 (action=%s): %s", action, e)
+            logger.error("인라인 편집 액션 처리 실패 (action=%s): %s", action, e, exc_info=True)
             return {
                 "success": False,
-                "message": f"액션 처리 중 오류: {e}",
+                "message": "액션 처리 중 문제가 발생했습니다.",
                 "updated_content": None,
             }
 
     def _handle_action_internal(self, action: str, data: dict) -> dict:
         """실제 액션 처리 로직"""
         session_id = data.get("session_id")
-        if not session_id or session_id not in self._sessions:
-            return {
-                "success": False,
-                "message": "유효하지 않은 세션 ID입니다. render()를 먼저 호출하세요.",
-                "updated_content": None,
-            }
+        owner_id = _owner_id(data)
+        with self._lock:
+            now = time.monotonic()
+            self._purge_expired_locked(now)
+            session = self._sessions.get(session_id)
+            if session is None or session["owner_id"] != owner_id:
+                return {
+                    "success": False,
+                    "message": "유효하지 않은 세션 ID입니다. render()를 먼저 호출하세요.",
+                    "updated_content": None,
+                }
 
-        session = self._sessions[session_id]
+            session["last_access"] = now
+            self._sessions.move_to_end(session_id)
 
-        if action == "save_edit":
-            return self._save_edit(session, data)
-        if action == "undo":
-            return self._undo(session)
-        if action == "reset":
-            return self._reset(session, data)
-        if action == "get_result":
-            return self._get_result(session)
+            if action == "save_edit":
+                return self._save_edit(session, data)
+            if action == "undo":
+                return self._undo(session)
+            if action == "reset":
+                return self._reset(session, data)
+            if action == "get_result":
+                return self._get_result(session)
 
         return {
             "success": False,
-            "message": f"알 수 없는 액션입니다: {action}",
+            "message": "지원하지 않는 액션입니다.",
             "updated_content": None,
         }
 
@@ -165,8 +203,18 @@ class InlineEditorApp(BaseMCPApp):
                 "updated_content": None,
             }
 
+        _validate_text(new_content, "new_content", _MAX_SECTION_CHARS)
+        try:
+            section_idx = int(section_idx)
+        except (TypeError, ValueError):
+            return {
+                "success": False,
+                "message": "단락 번호가 올바르지 않습니다.",
+                "updated_content": None,
+            }
+
         sections = session["sections"]
-        if not (0 <= int(section_idx) < len(sections)):
+        if not (0 <= section_idx < len(sections)):
             return {
                 "success": False,
                 "message": f"단락 번호 {section_idx}가 범위를 벗어났습니다.",
@@ -174,11 +222,9 @@ class InlineEditorApp(BaseMCPApp):
             }
 
         # 이력 저장 (최대 _MAX_HISTORY 개)
-        session["history"].append(list(sections))
-        if len(session["history"]) > _MAX_HISTORY:
-            session["history"].pop(0)
+        self._append_history(session)
 
-        sections[int(section_idx)] = new_content.strip()
+        sections[section_idx] = new_content.strip()
 
         return {
             "success": True,
@@ -212,7 +258,8 @@ class InlineEditorApp(BaseMCPApp):
                 "updated_content": None,
             }
 
-        session["history"].append(list(session["sections"]))
+        _validate_text(original, "original_content", _MAX_CONTENT_CHARS)
+        self._append_history(session)
         session["sections"] = _split_sections(original)
 
         return {
@@ -220,6 +267,43 @@ class InlineEditorApp(BaseMCPApp):
             "message": "원본 콘텐츠로 복원했습니다.",
             "updated_content": {"sections": list(session["sections"])},
         }
+
+    def _purge_expired_locked(self, now: float) -> None:
+        expired = [
+            session_id
+            for session_id, session in self._sessions.items()
+            if now - session["last_access"] >= _SESSION_TTL_SECONDS
+        ]
+        for session_id in expired:
+            self._sessions.pop(session_id, None)
+
+    def _make_room_locked(self, owner_id: str) -> None:
+        owner_sessions = [
+            session_id
+            for session_id, session in self._sessions.items()
+            if session["owner_id"] == owner_id
+        ]
+        while len(owner_sessions) >= _MAX_SESSIONS_PER_OWNER:
+            self._sessions.pop(owner_sessions.pop(0), None)
+        while len(self._sessions) >= _MAX_SESSIONS:
+            self._sessions.popitem(last=False)
+
+    @staticmethod
+    def _append_history(session: dict) -> None:
+        """Keep undo history bounded by both entry count and retained text."""
+        history = session["history"]
+        history.append(list(session["sections"]))
+        retained_chars = sum(
+            len(section)
+            for snapshot in history
+            for section in snapshot
+        )
+        while history and (
+            len(history) > _MAX_HISTORY
+            or retained_chars > _MAX_HISTORY_CHARS
+        ):
+            removed = history.pop(0)
+            retained_chars -= sum(len(section) for section in removed)
 
     def _get_result(self, session: dict) -> dict:
         """현재 편집된 전체 콘텐츠를 반환합니다."""
@@ -241,9 +325,21 @@ def _split_sections(text: str) -> list:
     return [p.strip() for p in parts if p.strip()]
 
 
-def _make_session_id(content: dict) -> str:
-    """콘텐츠 기반 결정적 세션 ID를 생성합니다."""
-    import hashlib
+def _owner_id(data: dict) -> str:
+    """HTTP 라우트는 인증 컨텍스를, 직접 호출은 격리된 로컬 소유자를 사용한다."""
+    owner_id = data.get("_owner_id", _DIRECT_OWNER)
+    if not isinstance(owner_id, str) or not owner_id.strip():
+        raise ValueError("owner_id is required")
+    return owner_id.strip()
 
-    key = (content.get("title") or "") + (content.get("content") or "")[:200]
-    return hashlib.md5(key.encode()).hexdigest()[:12]
+
+def _validate_text(value, field: str, max_chars: int) -> None:
+    if not isinstance(value, str):
+        raise ValueError(f"{field} must be a string")
+    if len(value) > max_chars:
+        raise ValueError(f"{field} is too large")
+
+
+def _make_session_id() -> str:
+    """추측이 어려운 세션 ID를 생성한다."""
+    return secrets.token_hex(12)

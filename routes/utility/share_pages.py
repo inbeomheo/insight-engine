@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import secrets
 from pathlib import Path
 
 from flask import Response, current_app, jsonify, request
@@ -65,4 +66,15 @@ def view_share_page(share_id: str):
         item = _share_store().get(share_id)
     except (FileNotFoundError, ValueError):
         return Response("공유 페이지를 찾을 수 없습니다.", status=404, mimetype="text/plain; charset=utf-8")
-    return Response(render_share_html(item), mimetype="text/html; charset=utf-8")
+    style_nonce = secrets.token_urlsafe(18)
+    response = Response(
+        render_share_html(item, style_nonce=style_nonce),
+        mimetype="text/html; charset=utf-8",
+    )
+    response.headers['Content-Security-Policy'] = (
+        "default-src 'none'; "
+        f"style-src 'nonce-{style_nonce}'; "
+        "img-src 'self' data: https:; "
+        "frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
+    )
+    return response

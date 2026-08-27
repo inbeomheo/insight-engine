@@ -9,9 +9,20 @@ from __future__ import annotations
 import json
 import logging
 
-from agent.registry import registry
+from agent.registry import TOOL_BLOCKED_MESSAGE, registry
 
 logger = logging.getLogger(__name__)
+
+
+def _memory_context(kwargs: dict):
+    """코어가 전달한 저장소와 인증 범위를 보존한다."""
+    from agent.memory import memory_store
+
+    return (
+        kwargs.get("memory_store") or memory_store,
+        kwargs.get("user_id"),
+        bool(kwargs.get("is_admin_context", False)),
+    )
 
 
 # ── delegate_task ──
@@ -28,6 +39,18 @@ def _handle_delegate_task(args: dict, **kwargs) -> str:
     if not task_text:
         return json.dumps({"error": "task 파라미터가 필요합니다."})
 
+    current_depth = max(
+        0,
+        int(kwargs.get("delegation_depth", kwargs.get("depth", 0))),
+    )
+    # 현재 제품 정책은 위임받은 모든 자식의 재위임을 금지한다. 스키마 필터나
+    # registry dispatch를 우회해 핸들러가 직접 호출돼도 여기서 다시 거부한다.
+    if current_depth > 0:
+        return json.dumps({
+            "error": TOOL_BLOCKED_MESSAGE,
+            "code": "TOOL_BLOCKED",
+        }, ensure_ascii=False)
+
     # 부모 에이전트 정보 (kwargs에서 전달)
     parent_model = kwargs.get("parent_model", "gemini/gemini-3-flash-preview")
     parent_toolsets = kwargs.get("parent_toolsets", ["full"])
@@ -35,15 +58,35 @@ def _handle_delegate_task(args: dict, **kwargs) -> str:
     manager = DelegateManager(
         parent_model=parent_model,
         parent_toolsets=parent_toolsets,
-        depth=kwargs.get("depth", 0),
+        depth=current_depth,
+        parent_blocked_tools=kwargs.get("blocked_tools"),
+        parent_on_cost_start=kwargs.get("on_cost_start"),
     )
 
-    result = manager.delegate(DelegateTask(
+    task = DelegateTask(
         task=task_text,
         toolsets=toolsets,
         max_iterations=max_iterations,
         context=context,
-    ))
+    )
+
+    user_id = kwargs.get("user_id")
+    if user_id is not None:
+        # DelegateManager는 기존 API상 user_id를 받지 않는다. 컨텍스트 변수를
+        # 통해 자식 AIAgent 생성 시 동일 인증/저장소 범위를 상속시킨다.
+        from agent.core import inherited_agent_context
+        from agent.memory import memory_store
+
+        with inherited_agent_context(
+            user_id=user_id,
+            memory_store_instance=kwargs.get("memory_store") or memory_store,
+            is_admin_context=bool(kwargs.get("is_admin_context", False)),
+            delegation_depth=current_depth,
+            blocked_tools=kwargs.get("blocked_tools"),
+        ):
+            result = manager.delegate(task)
+    else:
+        result = manager.delegate(task)
 
     return json.dumps({
         "success": result.success,
@@ -94,14 +137,17 @@ registry.register(
 
 def _handle_memory_read(args: dict, **kwargs) -> str:
     """메모리에서 값을 읽습니다."""
-    from agent.memory import memory_store
-
     key = args.get("key", "")
     category = args.get("category", "agent")
+    store, user_id, is_admin = _memory_context(kwargs)
 
     if not key:
         # 키 없으면 해당 카테고리 전체 목록 반환
-        entries = memory_store.list_memory(category=category if category != "all" else None)
+        entries = store.list_memory(
+            category=category if category != "all" else None,
+            user_id=user_id,
+            is_admin=is_admin,
+        )
         return json.dumps({
             "entries": [
                 {"key": e.key, "value": e.value, "category": e.category}
@@ -110,7 +156,9 @@ def _handle_memory_read(args: dict, **kwargs) -> str:
             "total": len(entries),
         }, ensure_ascii=False)
 
-    value = memory_store.get_memory(key, category)
+    value = store.get_memory(
+        key, category, user_id=user_id, is_admin=is_admin,
+    )
     if value is None:
         return json.dumps({"key": key, "found": False})
     return json.dumps({"key": key, "value": value, "found": True}, ensure_ascii=False)
@@ -143,17 +191,21 @@ registry.register(
 
 def _handle_memory_write(args: dict, **kwargs) -> str:
     """메모리에 값을 저장합니다."""
-    from agent.memory import memory_store
-
     key = args.get("key", "")
     value = args.get("value", "")
     category = args.get("category", "agent")
+    store, user_id, is_admin = _memory_context(kwargs)
 
     if not key or not value:
         return json.dumps({"error": "key와 value가 필요합니다."})
 
-    memory_store.update_memory(key, value, category)
-    return json.dumps({"success": True, "key": key, "category": category}, ensure_ascii=False)
+    store.update_memory(
+        key, value, category, user_id=user_id, is_admin=is_admin,
+    )
+    effective_category = "user" if user_id is not None and not is_admin else category
+    return json.dumps({
+        "success": True, "key": key, "category": effective_category,
+    }, ensure_ascii=False)
 
 
 registry.register(
@@ -192,13 +244,17 @@ registry.register(
 
 def _handle_memory_search(args: dict, **kwargs) -> str:
     """메모리를 풀텍스트 검색합니다."""
-    from agent.memory import memory_store
-
     query = args.get("query", "")
+    store, user_id, is_admin = _memory_context(kwargs)
     if not query:
         return json.dumps({"error": "query가 필요합니다."})
 
-    entries = memory_store.search_memory(query, limit=args.get("limit", 10))
+    entries = store.search_memory(
+        query,
+        limit=args.get("limit", 10),
+        user_id=user_id,
+        is_admin=is_admin,
+    )
     return json.dumps({
         "results": [
             {"key": e.key, "value": e.value, "category": e.category}

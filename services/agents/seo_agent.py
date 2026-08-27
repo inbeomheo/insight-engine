@@ -9,6 +9,7 @@ import re
 import logging
 
 from .base_agent import BaseAgent
+from services.usage.usage_lock import UsageLockUnavailable
 
 logger = logging.getLogger(__name__)
 
@@ -93,6 +94,8 @@ class SEOAgent(BaseAgent):
         try:
             raw = self._call_ai(seo_prompt, temperature=0.4, max_tokens=1500)
             seo_data = self._parse_json(raw)
+        except UsageLockUnavailable:
+            raise
         except Exception as e:
             self._logger.error(f'[SEOAgent] SEO 메타데이터 생성 실패: {e}')
             seo_data = self._fallback_seo(title, summary)

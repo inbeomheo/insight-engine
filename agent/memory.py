@@ -23,6 +23,13 @@ logger = logging.getLogger(__name__)
 DEFAULT_DB_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "agent_state.db")
 
 
+class SessionAccessDenied(LookupError):
+    """세션 부재와 소유권 불일치를 외부에서 구분할 수 없게 하는 예외."""
+
+    def __init__(self) -> None:
+        super().__init__("세션을 찾을 수 없거나 접근 권한이 없습니다.")
+
+
 @dataclass
 class Session:
     """에이전트 세션."""
@@ -187,12 +194,22 @@ class AgentMemoryStore:
             metadata=meta,
         )
 
-    def get_session(self, session_id: str) -> Optional[Session]:
-        """세션 조회 (동결 스냅샷 포함)."""
+    def get_session(
+        self, session_id: str, user_id: Optional[str] = None
+    ) -> Optional[Session]:
+        """세션 조회 (인증 사용자는 자신의 세션만 조회)."""
         with self._conn() as conn:
-            row = conn.execute(
-                "SELECT * FROM sessions WHERE session_id = ?", (session_id,)
-            ).fetchone()
+            if user_id is None:
+                # 로컬/내부 호출의 기존 동작을 유지한다.
+                row = conn.execute(
+                    "SELECT * FROM sessions WHERE session_id = ?", (session_id,)
+                ).fetchone()
+            else:
+                # 소유권 불일치와 세션 부재가 모두 None으로 보여야 한다.
+                row = conn.execute(
+                    "SELECT * FROM sessions WHERE session_id = ? AND user_id = ?",
+                    (session_id, user_id),
+                ).fetchone()
 
         if not row:
             return None
@@ -236,10 +253,18 @@ class AgentMemoryStore:
         content: str,
         tool_calls: Optional[List[Dict]] = None,
         tool_call_id: Optional[str] = None,
+        user_id: Optional[str] = None,
     ) -> None:
-        """세션에 메시지 추가."""
+        """세션에 메시지 추가 (인증 사용자는 소유권 검사 필수)."""
         now = time.time()
         with self._conn() as conn:
+            if user_id is not None:
+                owned = conn.execute(
+                    "SELECT 1 FROM sessions WHERE session_id = ? AND user_id = ?",
+                    (session_id, user_id),
+                ).fetchone()
+                if not owned:
+                    raise SessionAccessDenied()
             conn.execute(
                 "INSERT INTO messages (session_id, role, content, tool_calls, "
                 "tool_call_id, created_at) VALUES (?, ?, ?, ?, ?, ?)",
@@ -255,10 +280,20 @@ class AgentMemoryStore:
             )
 
     def get_messages(
-        self, session_id: str, limit: Optional[int] = None
+        self,
+        session_id: str,
+        limit: Optional[int] = None,
+        user_id: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
-        """세션 메시지 히스토리 조회."""
+        """세션 메시지 히스토리 조회 (인증 사용자는 소유권 검사 필수)."""
         with self._conn() as conn:
+            if user_id is not None:
+                owned = conn.execute(
+                    "SELECT 1 FROM sessions WHERE session_id = ? AND user_id = ?",
+                    (session_id, user_id),
+                ).fetchone()
+                if not owned:
+                    raise SessionAccessDenied()
             query = (
                 "SELECT role, content, tool_calls, tool_call_id, created_at "
                 "FROM messages WHERE session_id = ? ORDER BY created_at ASC"
@@ -282,7 +317,14 @@ class AgentMemoryStore:
 
     # ── 메모리 (3계층) ──
 
-    def update_memory(self, key: str, value: str, category: str = "agent") -> None:
+    def update_memory(
+        self,
+        key: str,
+        value: str,
+        category: str = "agent",
+        user_id: Optional[str] = None,
+        is_admin: bool = False,
+    ) -> None:
         """메모리 항목 갱신 (디스크에 저장, 현재 세션 프롬프트에는 미반영).
 
         Args:
@@ -290,6 +332,7 @@ class AgentMemoryStore:
             value: 메모리 값
             category: "agent" | "user" | "project"
         """
+        key, category = self._memory_scope(key, category, user_id, is_admin)
         now = time.time()
         with self._conn() as conn:
             conn.execute(
@@ -299,8 +342,15 @@ class AgentMemoryStore:
             )
         logger.debug("메모리 갱신: [%s] %s", category, key)
 
-    def get_memory(self, key: str, category: str = "agent") -> Optional[str]:
+    def get_memory(
+        self,
+        key: str,
+        category: str = "agent",
+        user_id: Optional[str] = None,
+        is_admin: bool = False,
+    ) -> Optional[str]:
         """메모리 항목 조회."""
+        key, category = self._memory_scope(key, category, user_id, is_admin)
         with self._conn() as conn:
             row = conn.execute(
                 "SELECT value FROM memory WHERE key = ? AND category = ?",
@@ -308,10 +358,22 @@ class AgentMemoryStore:
             ).fetchone()
         return row["value"] if row else None
 
-    def list_memory(self, category: Optional[str] = None) -> List[MemoryEntry]:
+    def list_memory(
+        self,
+        category: Optional[str] = None,
+        user_id: Optional[str] = None,
+        is_admin: bool = False,
+    ) -> List[MemoryEntry]:
         """메모리 항목 목록."""
         with self._conn() as conn:
-            if category:
+            if user_id is not None and not is_admin:
+                prefix = self._user_prefix(user_id)
+                rows = conn.execute(
+                    "SELECT * FROM memory WHERE category = 'user' "
+                    "AND substr(key, 1, ?) = ? ORDER BY updated_at DESC",
+                    (len(prefix), prefix),
+                ).fetchall()
+            elif category:
                 rows = conn.execute(
                     "SELECT * FROM memory WHERE category = ? ORDER BY updated_at DESC",
                     (category,),
@@ -321,38 +383,65 @@ class AgentMemoryStore:
                     "SELECT * FROM memory ORDER BY category, updated_at DESC"
                 ).fetchall()
 
-        return [
+        entries = [
             MemoryEntry(
                 key=r["key"], value=r["value"],
                 category=r["category"], updated_at=r["updated_at"],
             )
             for r in rows
         ]
+        if user_id is not None and not is_admin:
+            prefix = self._user_prefix(user_id)
+            for entry in entries:
+                entry.key = entry.key[len(prefix):]
+        return entries
 
-    def search_memory(self, query: str, limit: int = 10) -> List[MemoryEntry]:
+    def search_memory(
+        self,
+        query: str,
+        limit: int = 10,
+        user_id: Optional[str] = None,
+        is_admin: bool = False,
+    ) -> List[MemoryEntry]:
         """풀텍스트 메모리 검색 (FTS5)."""
         with self._conn() as conn:
-            try:
+            if user_id is not None and not is_admin:
+                # namespace 조건을 SQL에서 함께 적용해 다른 사용자의 결과가
+                # 파이썬 필터링 전에 노출될 여지를 없앤다.
+                prefix = self._user_prefix(user_id)
                 rows = conn.execute(
-                    "SELECT m.key, m.value, m.category, m.updated_at "
-                    "FROM memory_fts f JOIN memory m ON f.rowid = m.rowid "
-                    "WHERE memory_fts MATCH ? LIMIT ?",
-                    (query, limit),
+                    "SELECT * FROM memory WHERE category = 'user' "
+                    "AND substr(key, 1, ?) = ? AND (key LIKE ? OR value LIKE ?) "
+                    "ORDER BY updated_at DESC LIMIT ?",
+                    (len(prefix), prefix, f"%{query}%", f"%{query}%", limit),
                 ).fetchall()
-            except sqlite3.OperationalError:
-                # FTS5 없으면 LIKE 폴백
-                rows = conn.execute(
-                    "SELECT * FROM memory WHERE value LIKE ? LIMIT ?",
-                    (f"%{query}%", limit),
-                ).fetchall()
+            else:
+                try:
+                    rows = conn.execute(
+                        "SELECT m.key, m.value, m.category, m.updated_at "
+                        "FROM memory_fts f JOIN memory m ON f.rowid = m.rowid "
+                        "WHERE memory_fts MATCH ? LIMIT ?",
+                        (query, limit),
+                    ).fetchall()
+                except sqlite3.OperationalError:
+                    # FTS5 없으면 LIKE 폴백
+                    rows = conn.execute(
+                        "SELECT * FROM memory WHERE value LIKE ? LIMIT ?",
+                        (f"%{query}%", limit),
+                    ).fetchall()
 
-        return [
+        entries = [
             MemoryEntry(
                 key=r["key"], value=r["value"],
                 category=r["category"], updated_at=r["updated_at"],
             )
             for r in rows
         ]
+        if user_id is not None and not is_admin:
+            prefix = self._user_prefix(user_id)
+            for entry in entries:
+                entry.key = entry.key[len(prefix):]
+        return entries
 
     def delete_memory(self, key: str, category: str = "agent") -> bool:
         """메모리 항목 삭제."""
@@ -389,28 +478,45 @@ class AgentMemoryStore:
 
     # ── 내부 헬퍼 ──
 
+    @staticmethod
+    def _user_prefix(user_id: str) -> str:
+        """기존 ``user_id:key`` 형식과 호환되는 사용자 namespace 접두사."""
+        return f"{user_id}:"
+
+    def _memory_scope(
+        self,
+        key: str,
+        category: str,
+        user_id: Optional[str],
+        is_admin: bool,
+    ) -> tuple[str, str]:
+        """일반 인증 요청을 항상 자기 user namespace로 제한한다."""
+        if user_id is not None and not is_admin:
+            return f"{self._user_prefix(user_id)}{key}", "user"
+        return key, category
+
     def _build_memory_block(self, user_id: Optional[str] = None) -> str:
         """메모리를 시스템 프롬프트 블록으로 포맷합니다."""
         sections = []
 
-        # 에이전트 메모리
-        agent_mem = self.list_memory(category="agent")
-        if agent_mem:
-            lines = [f"- {m.key}: {m.value}" for m in agent_mem[:20]]
-            sections.append(f"## Agent Memory\n" + "\n".join(lines))
+        # 인증 사용자 세션에는 전역 agent/project 메모리를 주입하지 않는다.
+        if user_id is None:
+            agent_mem = self.list_memory(category="agent")
+            if agent_mem:
+                lines = [f"- {m.key}: {m.value}" for m in agent_mem[:20]]
+                sections.append("## Agent Memory\n" + "\n".join(lines))
 
-        # 프로젝트 메모리
-        project_mem = self.list_memory(category="project")
-        if project_mem:
-            lines = [f"- {m.key}: {m.value}" for m in project_mem[:20]]
-            sections.append(f"## Project Memory\n" + "\n".join(lines))
+            project_mem = self.list_memory(category="project")
+            if project_mem:
+                lines = [f"- {m.key}: {m.value}" for m in project_mem[:20]]
+                sections.append("## Project Memory\n" + "\n".join(lines))
 
-        # 사용자 메모리
+        # 사용자 메모리: 정확한 namespace 조건은 list_memory가 보장한다.
         if user_id:
-            user_mem = [m for m in self.list_memory(category="user") if user_id in m.key]
+            user_mem = self.list_memory(category="user", user_id=user_id)
             if user_mem:
-                lines = [f"- {m.key.replace(user_id + ':', '')}: {m.value}" for m in user_mem[:10]]
-                sections.append(f"## User Preferences\n" + "\n".join(lines))
+                lines = [f"- {m.key}: {m.value}" for m in user_mem[:10]]
+                sections.append("## User Preferences\n" + "\n".join(lines))
 
         if not sections:
             return ""

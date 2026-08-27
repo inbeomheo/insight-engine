@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 
 import re
-from typing import Dict, Optional
+from typing import Callable, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -156,13 +156,18 @@ def detect_source_type(url: str) -> str:
     return SOURCE_WEBPAGE
 
 
-def collect_content(url: str, source_type: Optional[str] = None) -> Dict:
+def collect_content(
+    url: str,
+    source_type: Optional[str] = None,
+    on_cost_start: Optional[Callable[[], None]] = None,
+) -> Dict:
     """URL에서 콘텐츠를 수집합니다.
 
     Args:
         url: 콘텐츠 소스 URL
         source_type: 명시적 소스 타입 (None이면 자동 감지)
             "youtube" | "webpage" | "rss" | "arxiv"
+        on_cost_start: YouTube 자막의 유료 폴백 직전에 실행할 콜백
 
     Returns:
         수집된 콘텐츠 딕셔너리:
@@ -201,11 +206,21 @@ def collect_content(url: str, source_type: Optional[str] = None) -> Dict:
         collector = _collectors.get(stype)
         if not collector:
             raise ValueError(f"지원하지 않는 소스 타입: {stype}")
+        if stype == SOURCE_YOUTUBE:
+            return collector(url, on_cost_start=on_cost_start)
         return collector(url)
-    except Exception as e:
-        logger.error(f"콘텐츠 수집 처리 실패: {e}")
+    except Exception as exc:
+        logger.error(
+            "콘텐츠 수집 처리 실패 (type=%s)",
+            type(exc).__name__,
+        )
         raise
-def _collect_youtube(url: str) -> Dict:
+
+
+def _collect_youtube(
+    url: str,
+    on_cost_start: Optional[Callable[[], None]] = None,
+) -> Dict:
     """YouTube 콘텐츠 수집 — 기존 content_service에 위임."""
     from services.core import content_service
 
@@ -213,13 +228,19 @@ def _collect_youtube(url: str) -> Dict:
     if not video_id:
         raise ValueError(f"유효하지 않은 YouTube URL: {url}")
 
-    transcript_result = content_service.get_transcript(video_id)
+    transcript_result = content_service.get_transcript(
+        video_id,
+        on_cost_start=on_cost_start,
+    )
     if isinstance(transcript_result, dict) and transcript_result.get("error"):
         raise ValueError(transcript_result["error"])
 
     transcript_text = transcript_result.get("text", "") if isinstance(transcript_result, dict) else str(transcript_result)
     transcript_source = transcript_result.get("source", "unknown") if isinstance(transcript_result, dict) else "unknown"
-    title = content_service.get_content_title(url) or "YouTube 영상"
+    title = content_service.get_content_title(
+        url,
+        on_cost_start=on_cost_start,
+    ) or "YouTube 영상"
 
     return {
         "title": title,
@@ -347,7 +368,10 @@ def _collect_podcast(url: str) -> Dict:
     try:
         audio_path = download_audio(url)
         if not audio_path:
-            raise ValueError(f"팟캐스트 오디오 다운로드 실패: {url}")
+            raise ValueError(
+                "팟캐스트 오디오를 안전하게 다운로드할 수 없습니다. "
+                "공개 오디오 파일 URL과 지원 형식을 확인해주세요."
+            )
 
         whisper_model = os.getenv("WHISPER_MODEL_SIZE", "base")
         text = transcribe_audio(audio_path, whisper_model)

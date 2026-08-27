@@ -2,13 +2,19 @@
 import json
 import re
 from services.core import ai_service
+from services.usage.usage_lock import UsageLockUnavailable
 from prompts.styles.chapter_split import CHAPTER_SPLIT_PROMPT
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-def split_chapters(transcript_text: str, model: str, segments: list = None) -> list:
+def split_chapters(
+    transcript_text: str,
+    model: str,
+    segments: list = None,
+    on_cost_start=None,
+) -> list:
     """자막 텍스트를 AI로 분석하여 챕터 목록을 반환합니다.
 
     Args:
@@ -34,7 +40,11 @@ def split_chapters(transcript_text: str, model: str, segments: list = None) -> l
 
     try:
         result = ai_service.create_content(
-            content, model, CHAPTER_SPLIT_PROMPT, style_id='summary'
+            content,
+            model,
+            CHAPTER_SPLIT_PROMPT,
+            style_id='summary',
+            on_cost_start=on_cost_start,
         )
         raw = result.get('content', '')
         # JSON 추출
@@ -49,6 +59,8 @@ def split_chapters(transcript_text: str, model: str, segments: list = None) -> l
                 and isinstance(ch.get('start'), (int, float))
                 and isinstance(ch.get('end'), (int, float))
             ]
+    except UsageLockUnavailable:
+        raise
     except Exception:
         pass
     return []

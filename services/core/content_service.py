@@ -21,8 +21,9 @@ from __future__ import annotations
 import json
 import os
 import re
+import threading
 import time
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 
 import functools
 
@@ -69,6 +70,7 @@ from services.transcript.fallbacks.watch_page import (
     parse_vtt as _parse_vtt,
     pick_caption_track as _pick_caption_track,
 )
+from services.usage.usage_lock import UsageLockUnavailable
 
 
 @functools.lru_cache(maxsize=1)
@@ -110,6 +112,11 @@ except ImportError:
 
 # 재시도 최대 횟수 (자막 API)
 MAX_RETRY_ATTEMPTS: int = 3
+NLM_COST_DECISION_WAIT_SECONDS: float = 5.0
+
+
+class _NlmCostStartCancelled(RuntimeError):
+    """다른 폴백 성공 후 NLM 유료 진입을 취소하는 내부 신호."""
 
 # YouTube URL Patterns
 YOUTUBE_URL_REGEX = re.compile(
@@ -124,7 +131,16 @@ VIDEO_ID_PATTERNS = [
 
 # ==================== Cache System ====================
 
-CACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'cache')
+
+def _resolve_cache_dir() -> str:
+    """Return the configured cache directory, preserving the legacy local default."""
+    configured = os.getenv('CONTENT_CACHE_DIR', '').strip()
+    if configured:
+        return os.path.abspath(os.path.expanduser(configured))
+    return os.path.join(os.path.dirname(os.path.dirname(__file__)), 'cache')
+
+
+CACHE_DIR = _resolve_cache_dir()
 
 # YouTube video_id 형식: 11자 영숫자 + 하이픈 + 언더스코어
 VIDEO_ID_PATTERN = re.compile(r'^[A-Za-z0-9_-]{11}$')
@@ -342,22 +358,41 @@ def _try_ytdlp_fallback(video_id: str):
     return None
 
 
-def _try_nlm_fallback(video_id: str):
+def _try_nlm_fallback(
+    video_id: str,
+    on_cost_start: Optional[Callable[[], None]] = None,
+    cost_decided: Optional[threading.Event] = None,
+):
     """NotebookLM을 통한 YouTube 자막 추출."""
     try:
         from services.notebooklm.notebooklm_service import NotebookLmService
         nlm = NotebookLmService()
-        video_url = f"https://www.youtube.com/watch?v={video_id}"
-        content = nlm.extract_youtube_transcript(video_url)
+    except Exception:
+        if cost_decided is not None:
+            cost_decided.set()
+        return None
+
+    video_url = f"https://www.youtube.com/watch?v={video_id}"
+    try:
+        content = nlm.extract_youtube_transcript(
+            video_url,
+            on_cost_start=on_cost_start,
+        )
         if content:
             return ('nlm', content, 0.88, False)
-    except Exception:
-        pass
-    return None
+        return None
+    finally:
+        # 노트북 미설정·추출 실패로 비용 경계를 안 넘은
+        # 경우에도 메인 스레드가 안전하게 환불 여부를 판단할 수 있다.
+        if cost_decided is not None:
+            cost_decided.set()
 
 
 def _run_parallel_fallbacks(
-    video_id: str, overall_start: float, requested_language: Optional[str] = None,
+    video_id: str,
+    overall_start: float,
+    requested_language: Optional[str] = None,
+    on_cost_start: Optional[Callable[[], None]] = None,
 ) -> Optional[dict]:
     """watch_page + yt-dlp + NLM을 병렬 실행하여 첫 성공 결과를 반환.
 
@@ -371,11 +406,43 @@ def _run_parallel_fallbacks(
 
     # with 블록을 쓰지 않는 이유: 첫 성공 시 느린 폴백(yt-dlp 수십 초)의 완료를
     # 기다리지 않고 즉시 반환하기 위해 shutdown(wait=False)로 직접 정리한다
+    nlm_cost_decided = threading.Event()
+    nlm_cost_cancelled = threading.Event()
+    nlm_cost_decision_guard = threading.Lock()
+    nlm_cost_error: list[Exception] = []
+
+    def _mark_nlm_cost_start() -> None:
+        # 메인 스레드의 취소 결정과 NLM의 비용 진입을
+        # 하나의 임계 구역으로 만들어, 취소 직후에 provider가
+        # 시작되는 TOCTOU(확인과 사용 사이 경쟁) 문제를 막는다.
+        with nlm_cost_decision_guard:
+            if nlm_cost_cancelled.is_set():
+                nlm_cost_decided.set()
+                raise _NlmCostStartCancelled()
+            try:
+                if on_cost_start is not None:
+                    on_cost_start()
+            except Exception as exc:
+                # watch/yt-dlp가 먼저 성공해도 NLM worker의 임대 상실
+                # 예외를 메인 스레드가 정확히 전파할 수 있게 보존한다.
+                nlm_cost_error.append(exc)
+                raise
+            finally:
+                # 콜백이 성공했다면 이 시점에 charge state가 이미
+                # committed이므로, 경쟁에서 진 NLM이 진행 중이어도
+                # 단축 바이패스가 선예약을 환불하지 못한다.
+                nlm_cost_decided.set()
+
     executor = ThreadPoolExecutor(max_workers=3)
     futures = {
         executor.submit(_try_watch_page_fallback, video_id): 'watch_page',
         executor.submit(_try_ytdlp_fallback, video_id): 'ytdlp',
-        executor.submit(_try_nlm_fallback, video_id): 'nlm',
+        executor.submit(
+            _try_nlm_fallback,
+            video_id,
+            _mark_nlm_cost_start if on_cost_start is not None else None,
+            nlm_cost_decided,
+        ): 'nlm',
     }
 
     try:
@@ -384,6 +451,24 @@ def _run_parallel_fallbacks(
                 res = future.result()
                 if res is not None:
                     source_name, text, quality, is_auto = res
+                    if source_name != 'nlm' and on_cost_start is not None:
+                        # 다른 무비용 worker가 이겨도, 이미 실행 중인
+                        # NLM이 유료 소스 할당을 시작할지를 알기 전에
+                        # 반환하면 요청 종료 환불과 경쟁한다. NLM은 콜백
+                        # 직후에 이 이벤트를 세팅하므로 실제 CLI 작업
+                        # 완료까지 기다리지는 않는다.
+                        decided = nlm_cost_decided.wait(
+                            timeout=NLM_COST_DECISION_WAIT_SECONDS,
+                        )
+                        if not decided:
+                            # 상태 파일 잠금 등으로 NLM이 비용 경계에
+                            # 도달하지 못하면, 이미 얻은 무비용 자막을
+                            # 반환하고 NLM worker의 뒤늦은 유료 진입은 차단한다.
+                            with nlm_cost_decision_guard:
+                                if not nlm_cost_decided.is_set():
+                                    nlm_cost_cancelled.set()
+                        if nlm_cost_error:
+                            raise nlm_cost_error[0]
                     _log_info(f"Parallel fallback succeeded: {source_name} for video_id={video_id}")
                     executor.shutdown(wait=False, cancel_futures=True)
                     return _build_transcript_result(
@@ -391,8 +476,17 @@ def _run_parallel_fallbacks(
                         requested_language=requested_language,
                     )
             except Exception as e:
+                if nlm_cost_error:
+                    raise nlm_cost_error[0]
                 _log_warning(f"Parallel fallback {futures[future]} error: {str(e)[:100]}")
     finally:
+        if on_cost_start is not None and not nlm_cost_decided.is_set():
+            # 전체 폴백 timeout·예외로 메인 요청이 종료될 때도
+            # 지연된 NLM worker가 환불 후 유료 작업을 시작하지
+            # 못하게 비용 결정 임계 구역에서 취소한다.
+            with nlm_cost_decision_guard:
+                if not nlm_cost_decided.is_set():
+                    nlm_cost_cancelled.set()
         executor.shutdown(wait=False, cancel_futures=True)
 
     return None
@@ -433,7 +527,11 @@ def _build_transcript_result(
     return result
 
 
-def get_transcript(video_id: str, transcript_language: Optional[str] = None) -> TranscriptResult:
+def get_transcript(
+    video_id: str,
+    transcript_language: Optional[str] = None,
+    on_cost_start: Optional[Callable[[], None]] = None,
+) -> TranscriptResult:
     """
     YouTube 자막을 가져옵니다.
     Supadata API 키는 환경변수(SUPADATA_API_KEY)에서 로드됩니다.
@@ -443,6 +541,8 @@ def get_transcript(video_id: str, transcript_language: Optional[str] = None) -> 
         transcript_language: 사용자가 지정한 자막 언어 코드(예: 'ko', 'en', 'ja').
             None이면 기존 기본 동작(PREFERRED_LANGUAGES 순서)과 동일하게 처리한다.
             지정 언어의 자막이 없어도 생성 실패로 이어지지 않고 기존 우선순위로 자동 폴백한다.
+        on_cost_start: NotebookLM/Supadata 유료 폴백 호출 직전에
+            실행할 사용량 확정 콜백. 무비용 자막 경로에서는 호출하지 않는다.
 
     Returns:
         성공: {'text': '자막 내용', 'source': 'api'|'watch'|'supadata'|'cache'}
@@ -522,7 +622,12 @@ def get_transcript(video_id: str, transcript_language: Optional[str] = None) -> 
         _log_warning(f"youtube-transcript-api unexpected error for video_id={video_id}: {last_error}")
 
     # ── 병렬 폴백: watch_page + yt-dlp + NLM 동시 실행 ──
-    parallel_result = _run_parallel_fallbacks(video_id, overall_start, requested_language=transcript_language)
+    parallel_result = _run_parallel_fallbacks(
+        video_id,
+        overall_start,
+        requested_language=transcript_language,
+        on_cost_start=on_cost_start,
+    )
     if parallel_result:
         return parallel_result
 
@@ -549,7 +654,12 @@ def get_transcript(video_id: str, transcript_language: Optional[str] = None) -> 
     # Supadata API (유료 - 마지막 폴백)
     if supadata_api_key:
         _log_info(f"Trying Supadata API fallback for video_id={video_id}")
-        supadata_result = get_transcript_via_supadata(video_id, supadata_api_key, preferred_language=transcript_language)
+        supadata_result = get_transcript_via_supadata(
+            video_id,
+            supadata_api_key,
+            preferred_language=transcript_language,
+            on_cost_start=on_cost_start,
+        )
         if isinstance(supadata_result, str) and supadata_result.strip():
             _log_info(f"Transcript fetched via Supadata for video_id={video_id}")
             return _build_transcript_result(
@@ -573,7 +683,10 @@ def get_transcript(video_id: str, transcript_language: Optional[str] = None) -> 
 
 # ==================== YouTube API Functions ====================
 
-def get_youtube_title(video_id: str) -> Optional[str]:
+def get_youtube_title(
+    video_id: str,
+    on_cost_start: Optional[Callable[[], None]] = None,
+) -> Optional[str]:
     """YouTube 영상 제목을 가져옵니다."""
     try:
         from googleapiclient.errors import HttpError
@@ -582,6 +695,8 @@ def get_youtube_title(video_id: str) -> Optional[str]:
             return None
 
         youtube = _get_youtube_build()('youtube', 'v3', developerKey=api_key)
+        if on_cost_start is not None:
+            on_cost_start()
         results = youtube.videos().list(part="snippet", id=video_id).execute()
 
         items = results.get("items", [])
@@ -589,26 +704,40 @@ def get_youtube_title(video_id: str) -> Optional[str]:
             return items[0]["snippet"]["title"]
         return None
 
-    except HttpError as e:
-        _log_warning(f"YouTube API error getting title: {e}")
+    except UsageLockUnavailable:
+        raise
+    except HttpError as exc:
+        status = getattr(getattr(exc, 'resp', None), 'status', 'unknown')
+        _log_warning(f"YouTube API error getting title: status={status}")
         return None
-    except Exception as e:
-        _log_warning(f"Error getting YouTube title: {e}")
+    except Exception as exc:
+        _log_warning(
+            f"Error getting YouTube title: type={type(exc).__name__}"
+        )
         return None
 
 
-def get_content_title(url: str) -> Optional[str]:
+def get_content_title(
+    url: str,
+    on_cost_start: Optional[Callable[[], None]] = None,
+) -> Optional[str]:
     """URL에서 콘텐츠 제목을 가져옵니다."""
     if not is_youtube_url(url):
         return None
 
     video_id = get_video_id(url)
     if video_id:
-        return get_youtube_title(video_id)
+        return get_youtube_title(
+            video_id,
+            on_cost_start=on_cost_start,
+        )
     return None
 
 
-def get_top_comments(video_id: str) -> List[str]:
+def get_top_comments(
+    video_id: str,
+    on_cost_start: Optional[Callable[[], None]] = None,
+) -> List[str]:
     """YouTube 영상의 인기 댓글을 가져옵니다."""
     # 캐시 확인
     cached = _load_cache(video_id, 'comments')
@@ -624,6 +753,8 @@ def get_top_comments(video_id: str) -> List[str]:
             return []
 
         youtube = _get_youtube_build()('youtube', 'v3', developerKey=api_key)
+        if on_cost_start is not None:
+            on_cost_start()
         results = youtube.commentThreads().list(
             part="snippet",
             videoId=video_id,
@@ -643,216 +774,31 @@ def get_top_comments(video_id: str) -> List[str]:
 
         return comments
 
-    except HttpError as e:
-        if e.resp.status == 403:
+    except UsageLockUnavailable:
+        raise
+    except HttpError as exc:
+        if exc.resp.status == 403:
             _log_warning("YouTube API quota exceeded or comments disabled")
         else:
-            _log_warning(f"YouTube API error: {e}")
+            _log_warning(f"YouTube API error: status={exc.resp.status}")
         return []
-    except Exception as e:
-        _log_warning(f"Error getting comments: {e}")
+    except Exception as exc:
+        _log_warning(f"Error getting comments: type={type(exc).__name__}")
         return []
 
 
-# ==================== Playlist / Channel ====================
-
-# URL 패턴
-PLAYLIST_URL_PATTERNS = [
-    re.compile(r'[?&]list=(PL[\w-]+)'),
-    re.compile(r'playlist\?list=(PL[\w-]+)'),
-]
-
-CHANNEL_URL_PATTERNS = [
-    re.compile(r'youtube\.com/@([\w.-]+)'),
-    re.compile(r'youtube\.com/channel/(UC[\w-]+)'),
-    re.compile(r'youtube\.com/c/([\w.-]+)'),
-]
-
-
-def is_playlist_url(url: str) -> bool:
-    """URL이 YouTube 재생목록 URL인지 확인합니다."""
-    if not url:
-        return False
-    return any(p.search(url) for p in PLAYLIST_URL_PATTERNS)
-
-
-def is_channel_url(url: str) -> bool:
-    """URL이 YouTube 채널 URL인지 확인합니다."""
-    if not url:
-        return False
-    return any(p.search(url) for p in CHANNEL_URL_PATTERNS)
-
-
-def _get_playlist_id(url: str) -> Optional[str]:
-    """URL에서 재생목록 ID를 추출합니다."""
-    for pattern in PLAYLIST_URL_PATTERNS:
-        match = pattern.search(url)
-        if match:
-            return match.group(1)
-    return None
-
-
-def _get_channel_identifier(url: str) -> Optional[Dict[str, str]]:
-    """URL에서 채널 식별자를 추출합니다.
-
-    Returns:
-        {'type': 'handle'|'id'|'custom', 'value': '...'} 또는 None
-    """
-    # @handle
-    match = re.search(r'youtube\.com/@([\w.-]+)', url)
-    if match:
-        return {'type': 'handle', 'value': match.group(1)}
-
-    # /channel/UCxxxx
-    match = re.search(r'youtube\.com/channel/(UC[\w-]+)', url)
-    if match:
-        return {'type': 'id', 'value': match.group(1)}
-
-    # /c/CustomName
-    match = re.search(r'youtube\.com/c/([\w.-]+)', url)
-    if match:
-        return {'type': 'custom', 'value': match.group(1)}
-
-    return None
-
-
-def get_playlist_videos(url: str, max_results: int = 10) -> Dict[str, Any]:
-    """재생목록에서 영상 목록을 가져옵니다.
-
-    Args:
-        url: YouTube 재생목록 URL
-        max_results: 최대 결과 수 (기본 10, 최대 50)
-
-    Returns:
-        {'videos': [{'videoId': '...', 'title': '...', 'thumbnail': '...'}], 'total': N}
-    """
-    api_key = os.getenv('YOUTUBE_API_KEY', '')
-    if not api_key:
-        return {'error': 'YouTube API 키가 설정되지 않았습니다.'}
-
-    playlist_id = _get_playlist_id(url)
-    if not playlist_id:
-        return {'error': '유효한 재생목록 URL이 아닙니다.'}
-
-    max_results = min(max_results, 50)
-
-    try:
-        from googleapiclient.errors import HttpError
-        youtube = _get_youtube_build()('youtube', 'v3', developerKey=api_key)
-        response = youtube.playlistItems().list(
-            part='snippet',
-            playlistId=playlist_id,
-            maxResults=max_results
-        ).execute()
-
-        videos = []
-        for item in response.get('items', []):
-            snippet = item.get('snippet', {})
-            vid = snippet.get('resourceId', {}).get('videoId')
-            if vid:
-                videos.append({
-                    'videoId': vid,
-                    'title': snippet.get('title', ''),
-                    'thumbnail': snippet.get('thumbnails', {}).get('medium', {}).get('url', '')
-                })
-
-        total = response.get('pageInfo', {}).get('totalResults', len(videos))
-        return {'videos': videos, 'total': total}
-
-    except HttpError as e:
-        _log_warning(f"Playlist API error: {e}")
-        return {'error': f'재생목록 조회 실패: {e.resp.status}'}
-    except Exception as e:
-        _log_warning(f"Playlist fetch error: {e}")
-        return {'error': '재생목록 영상 목록을 가져올 수 없습니다.'}
-
-
-def get_channel_videos(url: str, max_results: int = 10) -> Dict[str, Any]:
-    """채널에서 최신 영상 목록을 가져옵니다.
-
-    Args:
-        url: YouTube 채널 URL
-        max_results: 최대 결과 수 (기본 10, 최대 50)
-
-    Returns:
-        {'videos': [{'videoId': '...', 'title': '...', 'thumbnail': '...'}], 'total': N}
-    """
-    api_key = os.getenv('YOUTUBE_API_KEY', '')
-    if not api_key:
-        return {'error': 'YouTube API 키가 설정되지 않았습니다.'}
-
-    identifier = _get_channel_identifier(url)
-    if not identifier:
-        return {'error': '유효한 채널 URL이 아닙니다.'}
-
-    max_results = min(max_results, 50)
-
-    try:
-        from googleapiclient.errors import HttpError
-        youtube = _get_youtube_build()('youtube', 'v3', developerKey=api_key)
-
-        # 채널 ID 조회
-        channel_id = None
-        if identifier['type'] == 'id':
-            channel_id = identifier['value']
-        else:
-            # handle 또는 custom name으로 채널 검색
-            if identifier['type'] == 'handle':
-                search_query = f"@{identifier['value']}"
-            else:
-                search_query = identifier['value']
-
-            search_resp = youtube.search().list(
-                part='snippet',
-                q=search_query,
-                type='channel',
-                maxResults=1
-            ).execute()
-            items = search_resp.get('items', [])
-            if items:
-                channel_id = items[0]['snippet']['channelId']
-
-        if not channel_id:
-            return {'error': '채널을 찾을 수 없습니다.'}
-
-        # 채널의 uploads 재생목록 ID 조회
-        channel_resp = youtube.channels().list(
-            part='contentDetails',
-            id=channel_id
-        ).execute()
-        channel_items = channel_resp.get('items', [])
-        if not channel_items:
-            return {'error': '채널 정보를 가져올 수 없습니다.'}
-
-        uploads_id = channel_items[0]['contentDetails']['relatedPlaylists']['uploads']
-
-        # uploads 재생목록에서 영상 목록 조회
-        playlist_resp = youtube.playlistItems().list(
-            part='snippet',
-            playlistId=uploads_id,
-            maxResults=max_results
-        ).execute()
-
-        videos = []
-        for item in playlist_resp.get('items', []):
-            snippet = item.get('snippet', {})
-            vid = snippet.get('resourceId', {}).get('videoId')
-            if vid:
-                videos.append({
-                    'videoId': vid,
-                    'title': snippet.get('title', ''),
-                    'thumbnail': snippet.get('thumbnails', {}).get('medium', {}).get('url', '')
-                })
-
-        total = playlist_resp.get('pageInfo', {}).get('totalResults', len(videos))
-        return {'videos': videos, 'total': total}
-
-    except HttpError as e:
-        _log_warning(f"Channel API error: {e}")
-        return {'error': f'채널 조회 실패: {e.resp.status}'}
-    except Exception as e:
-        _log_warning(f"Channel fetch error: {e}")
-        return {'error': '채널 영상 목록을 가져올 수 없습니다.'}
+# 재생목록·채널 조회는 별도 provider 어댑터로 분리하고,
+# 기존 import 경로 호환을 위해 이 모듈에서 재노출한다.
+from services.core.youtube_collection_service import (  # noqa: E402,F401
+    CHANNEL_URL_PATTERNS,
+    PLAYLIST_URL_PATTERNS,
+    _get_channel_identifier,
+    _get_playlist_id,
+    get_channel_videos,
+    get_playlist_videos,
+    is_channel_url,
+    is_playlist_url,
+)
 
 
 # ==================== Utilities ====================
@@ -866,4 +812,3 @@ def truncate_text(text: str, max_tokens: int) -> str:
     if len(tokens) > max_tokens:
         return " ".join(tokens[:max_tokens]) + "..."
     return text
-

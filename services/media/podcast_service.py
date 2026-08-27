@@ -4,10 +4,11 @@
 콘텐츠를 2인 대화체 스크립트로 변환 후 TTS로 MP3를 생성합니다.
 """
 import logging
-from typing import Dict
+from typing import Callable, Dict, Optional
 
 from services.core import ai_service
 from services.media.tts_service import TTSService, EDGE_VOICE_KO
+from services.usage.usage_lock import UsageLockUnavailable
 
 logger = logging.getLogger(__name__)
 
@@ -33,10 +34,20 @@ VOICE_HOST = 'ko-KR-InJoonNeural'   # 남성
 VOICE_GUEST = EDGE_VOICE_KO          # 여성
 
 
-def _generate_script(content: str, title: str, model: str) -> str:
+def _generate_script(
+    content: str,
+    title: str,
+    model: str,
+    on_cost_start: Optional[Callable[[], None]] = None,
+) -> str:
     """AI로 팟캐스트 대화 스크립트를 생성합니다."""
     input_text = f"[제목] {title}\n\n[콘텐츠]\n{content[:8000]}"
-    result = ai_service.create_content(input_text, model, PODCAST_SCRIPT_PROMPT)
+    result = ai_service.create_content(
+        input_text,
+        model,
+        PODCAST_SCRIPT_PROMPT,
+        on_cost_start=on_cost_start,
+    )
     return result.get('content', '')
 
 
@@ -52,7 +63,10 @@ def _parse_script(script_text: str):
     return lines
 
 
-def _synthesize_podcast(parsed_lines) -> bytes:
+def _synthesize_podcast(
+    parsed_lines,
+    on_cost_start: Optional[Callable[[], None]] = None,
+) -> bytes:
     """파싱된 스크립트를 TTS로 합성 후 MP3 바이트로 반환합니다."""
     chunks = []
     for speaker, text in parsed_lines:
@@ -60,10 +74,21 @@ def _synthesize_podcast(parsed_lines) -> bytes:
             continue
         voice = VOICE_HOST if speaker == 'host' else VOICE_GUEST
         try:
-            audio_bytes = TTSService.synthesize(text, voice=voice, preprocess=False)
+            audio_bytes = TTSService.synthesize(
+                text,
+                voice=voice,
+                preprocess=False,
+                on_cost_start=on_cost_start,
+            )
             chunks.append(audio_bytes)
-        except Exception as e:
-            logger.warning('TTS 합성 실패 (speaker=%s): %s', speaker, e)
+        except UsageLockUnavailable:
+            raise
+        except Exception as exc:
+            logger.warning(
+                'TTS 합성 실패 (speaker=%s, type=%s)',
+                speaker,
+                type(exc).__name__,
+            )
             continue
 
     if not chunks:
@@ -73,13 +98,19 @@ def _synthesize_podcast(parsed_lines) -> bytes:
     return b''.join(chunks)
 
 
-def generate_podcast_episode(content: str, title: str, model: str = '') -> Dict:
+def generate_podcast_episode(
+    content: str,
+    title: str,
+    model: str = '',
+    on_cost_start: Optional[Callable[[], None]] = None,
+) -> Dict:
     """콘텐츠에서 팟캐스트 에피소드를 생성합니다.
 
     Args:
         content: 원본 콘텐츠 (마크다운)
         title: 에피소드 제목
         model: AI 모델 ID
+        on_cost_start: AI·TTS 공급자 호출 직전에 실행할 콜백
 
     Returns:
         {
@@ -100,9 +131,15 @@ def generate_podcast_episode(content: str, title: str, model: str = '') -> Dict:
     if not model:
         from routes.blog_routes import DEFAULT_MODEL
         model = DEFAULT_MODEL
+    model = ai_service.resolve_public_model(model, allow_auto=False)
 
     # 1. 스크립트 생성
-    script = _generate_script(content, title, model)
+    script = _generate_script(
+        content,
+        title,
+        model,
+        on_cost_start=on_cost_start,
+    )
     if not script.strip():
         raise RuntimeError('팟캐스트 스크립트 생성 결과가 비어 있습니다.')
 
@@ -112,7 +149,10 @@ def generate_podcast_episode(content: str, title: str, model: str = '') -> Dict:
         raise RuntimeError('유효한 대화가 2개 미만입니다. 스크립트 생성을 다시 시도해 주세요.')
 
     # 3. TTS 합성
-    audio_bytes = _synthesize_podcast(parsed)
+    audio_bytes = _synthesize_podcast(
+        parsed,
+        on_cost_start=on_cost_start,
+    )
 
     # 4. 예상 길이 (한국어 약 3~4글자/초 기준)
     total_chars = sum(len(text) for _, text in parsed)

@@ -8,12 +8,19 @@ import logging
 import os
 import pkgutil
 
-from agent.registry import registry
+from agent.registry import TOOL_EXECUTION_ERROR_MESSAGE, registry
+from agent.tools._auto_register import build_parameters_schema
+from services.usage.usage_lock import UsageLockUnavailable
 
 logger = logging.getLogger(__name__)
 
 _SERVICE_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "services", "rag")
-_SKIP_MODULES = set()
+_SKIP_MODULES = {"chroma_client_factory"}
+_HIDDEN_PARAMETERS = frozenset({"model", "on_cost_start", "user_id"})
+_PREFERRED_FUNCTIONS = {
+    "corrective_rag": "evaluate_retrieval_quality",
+}
+_AUTHENTICATION_REQUIRED_ERROR = "[인증 실패] 사용자 데이터 도구는 인증이 필요합니다."
 
 
 def _register_tools():
@@ -26,18 +33,52 @@ def _register_tools():
             for name, fn in inspect.getmembers(mod, inspect.isfunction):
                 if name.startswith("_") or fn.__module__ != mod.__name__:
                     continue
+                preferred_name = _PREFERRED_FUNCTIONS.get(module_name)
+                if preferred_name is not None and name != preferred_name:
+                    continue
                 doc = (fn.__doc__ or "").strip().split("\n")[0][:200] or module_name
                 sig = inspect.signature(fn)
-                params = _build_schema(sig)
+                params = _build_schema(fn)
                 pnames = [p for p in sig.parameters if p not in ("self", "cls", "kwargs", "args")]
+                accepts_cost_callback = "on_cost_start" in pnames
+                accepts_user_id = "user_id" in pnames
 
-                def make_handler(func, pn):
+                def make_handler(
+                    func,
+                    pn,
+                    accepts_on_cost_start,
+                    accepts_authenticated_user,
+                ):
                     def handler(args, **kw):
+                        call_args = {
+                            key: args[key]
+                            for key in pn
+                            if key not in _HIDDEN_PARAMETERS and key in args
+                        }
+                        if accepts_authenticated_user:
+                            authenticated_user_id = kw.get("user_id")
+                            if (
+                                not isinstance(authenticated_user_id, str)
+                                or not authenticated_user_id.strip()
+                            ):
+                                return json.dumps(
+                                    {"error": _AUTHENTICATION_REQUIRED_ERROR},
+                                    ensure_ascii=False,
+                                )
+                            call_args["user_id"] = authenticated_user_id.strip()
+                        on_cost_start = kw.get("on_cost_start")
+                        if accepts_on_cost_start and callable(on_cost_start):
+                            call_args["on_cost_start"] = on_cost_start
                         try:
-                            r = func(**{k: args[k] for k in pn if k in args})
+                            r = func(**call_args)
                             return r if isinstance(r, str) else json.dumps(r, ensure_ascii=False, default=str)
-                        except Exception as e:
-                            return json.dumps({"error": str(e)}, ensure_ascii=False)
+                        except UsageLockUnavailable:
+                            raise
+                        except Exception:
+                            return json.dumps(
+                                {"error": TOOL_EXECUTION_ERROR_MESSAGE},
+                                ensure_ascii=False,
+                            )
                     return handler
 
                 registry.register(
@@ -45,7 +86,12 @@ def _register_tools():
                     toolset="rag",
                     description=doc,
                     parameters=params,
-                    handler=make_handler(fn, pnames),
+                    handler=make_handler(
+                        fn,
+                        pnames,
+                        accepts_cost_callback,
+                        accepts_user_id,
+                    ),
                 )
                 count += 1
                 break  # 모듈당 첫 번째 공개 함수만 등록
@@ -54,28 +100,12 @@ def _register_tools():
     logger.info("[RAG] tools registered: %d", count)
 
 
-def _build_schema(sig):
-    props, req = {}, []
-    for pname, param in sig.parameters.items():
-        if pname in ("self", "cls", "kwargs", "args"):
-            continue
-        ann = param.annotation
-        t = "string"
-        if ann == int:
-            t = "integer"
-        elif ann == float:
-            t = "number"
-        elif ann == bool:
-            t = "boolean"
-        prop_def = {"type": t}
-        if t == "array": prop_def["items"] = {"type": "string"}
-        props[pname] = prop_def
-        if param.default is inspect.Parameter.empty:
-            req.append(pname)
-    if not props:
-        props = {"content": {"type": "string"}}
-        req = ["content"]
-    return {"type": "object", "properties": props, "required": req}
+def _build_schema(function_or_signature):
+    return build_parameters_schema(
+        function_or_signature,
+        default_content_description="입력 텍스트",
+        excluded_parameters=_HIDDEN_PARAMETERS,
+    )
 
 
 _register_tools()

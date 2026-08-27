@@ -15,17 +15,34 @@
 """
 import threading
 import time
-from typing import Dict
+from collections import OrderedDict
+from contextlib import contextmanager
+from typing import Optional
 
 
 # ============================================================
 # 클라이언트 트래커 (heartbeat 기반)
 # ============================================================
-_CLIENT_TRACKER: Dict[str, float] = {}
+_CLIENT_TRACKER: "OrderedDict[str, float]" = OrderedDict()
+_CLIENT_TRACKER_LOCK = threading.Lock()
+_CLIENT_TRACKER_TTL: int = 300
+_CLIENT_TRACKER_MAX_ITEMS: int = 2_000
 
 # 재생목록/채널 조회 결과 캐시 (5분 TTL)
-_PLAYLIST_CACHE: Dict[str, dict] = {}
+_PLAYLIST_CACHE: "OrderedDict[str, dict]" = OrderedDict()
+_PLAYLIST_CACHE_LOCK = threading.Lock()
 _PLAYLIST_CACHE_TTL: int = 300  # 초
+_PLAYLIST_CACHE_MAX_ITEMS: int = 256
+_PLAYLIST_FLIGHT_LOCKS: dict[str, tuple[threading.Lock, int]] = {}
+_PLAYLIST_FLIGHT_LOCKS_GUARD = threading.Lock()
+
+
+class PlaylistCacheUnavailable(RuntimeError):
+    """A configured cross-process cache/lock cannot be used safely."""
+
+
+class PlaylistLoadError(ValueError):
+    """The upstream provider returned a valid, non-cacheable error."""
 
 
 # ============================================================
@@ -96,9 +113,182 @@ def get_active_requests() -> int:
     return _active_requests_counter
 
 
-def _cleanup_stale_clients():
+def _cleanup_stale_clients(now: Optional[float] = None):
     """5분 이상 heartbeat 없는 클라이언트 정리."""
-    now = time.time()
-    stale = [cid for cid, ts in _CLIENT_TRACKER.items() if now - ts > 300]
-    for cid in stale:
-        del _CLIENT_TRACKER[cid]
+    current = time.time() if now is None else now
+    with _CLIENT_TRACKER_LOCK:
+        stale = [
+            cid
+            for cid, ts in _CLIENT_TRACKER.items()
+            if current - ts > _CLIENT_TRACKER_TTL
+        ]
+        for cid in stale:
+            _CLIENT_TRACKER.pop(cid, None)
+
+
+def record_client_heartbeat(client_id: str, now: Optional[float] = None) -> None:
+    """Record one client without allowing the public tracker to grow unbounded."""
+    current = time.time() if now is None else now
+    with _CLIENT_TRACKER_LOCK:
+        stale = [
+            cid
+            for cid, ts in _CLIENT_TRACKER.items()
+            if current - ts > _CLIENT_TRACKER_TTL
+        ]
+        for cid in stale:
+            _CLIENT_TRACKER.pop(cid, None)
+
+        _CLIENT_TRACKER[client_id] = current
+        _CLIENT_TRACKER.move_to_end(client_id)
+        while len(_CLIENT_TRACKER) > _CLIENT_TRACKER_MAX_ITEMS:
+            _CLIENT_TRACKER.popitem(last=False)
+
+
+def get_playlist_cache(cache_key: str, now: Optional[float] = None) -> Optional[dict]:
+    """Return a copy of a live cache entry and purge expired entries."""
+    current = time.time() if now is None else now
+    with _PLAYLIST_CACHE_LOCK:
+        expired = [
+            key
+            for key, value in _PLAYLIST_CACHE.items()
+            if current - float(value.get('ts', 0)) >= _PLAYLIST_CACHE_TTL
+        ]
+        for key in expired:
+            _PLAYLIST_CACHE.pop(key, None)
+
+        cached = _PLAYLIST_CACHE.get(cache_key)
+        if cached is None:
+            return None
+        _PLAYLIST_CACHE.move_to_end(cache_key)
+        return dict(cached.get('data') or {})
+
+
+def set_playlist_cache(cache_key: str, data: dict, now: Optional[float] = None) -> None:
+    """Store a bounded playlist/channel response cache entry."""
+    current = time.time() if now is None else now
+    with _PLAYLIST_CACHE_LOCK:
+        expired = [
+            key
+            for key, value in _PLAYLIST_CACHE.items()
+            if current - float(value.get('ts', 0)) >= _PLAYLIST_CACHE_TTL
+        ]
+        for key in expired:
+            _PLAYLIST_CACHE.pop(key, None)
+
+        _PLAYLIST_CACHE[cache_key] = {'data': dict(data), 'ts': current}
+        _PLAYLIST_CACHE.move_to_end(cache_key)
+        while len(_PLAYLIST_CACHE) > _PLAYLIST_CACHE_MAX_ITEMS:
+            _PLAYLIST_CACHE.popitem(last=False)
+
+
+@contextmanager
+def _local_playlist_flight(cache_key: str):
+    with _PLAYLIST_FLIGHT_LOCKS_GUARD:
+        lock, refs = _PLAYLIST_FLIGHT_LOCKS.get(
+            cache_key,
+            (threading.Lock(), 0),
+        )
+        _PLAYLIST_FLIGHT_LOCKS[cache_key] = (lock, refs + 1)
+    try:
+        with lock:
+            yield
+    finally:
+        with _PLAYLIST_FLIGHT_LOCKS_GUARD:
+            current = _PLAYLIST_FLIGHT_LOCKS.get(cache_key)
+            if current is None or current[0] is not lock:
+                return
+            if current[1] <= 1:
+                _PLAYLIST_FLIGHT_LOCKS.pop(cache_key, None)
+            else:
+                _PLAYLIST_FLIGHT_LOCKS[cache_key] = (lock, current[1] - 1)
+
+
+def _redis_playlist_client():
+    import os
+
+    redis_url = (os.getenv('REDIS_URL') or '').strip()
+    if not redis_url:
+        return None
+    try:
+        import redis
+        return redis.Redis.from_url(
+            redis_url,
+            decode_responses=True,
+            socket_connect_timeout=1,
+            socket_timeout=3,
+        )
+    except Exception as exc:
+        raise PlaylistCacheUnavailable('재생목록 캐시를 초기화할 수 없습니다.') from exc
+
+
+def _redis_cache_key(cache_key: str) -> str:
+    import hashlib
+
+    digest = hashlib.sha256(cache_key.encode('utf-8')).hexdigest()
+    return f'insight-engine:playlist-cache:{digest}'
+
+
+def get_or_load_playlist_cache(cache_key: str, loader) -> tuple[dict, bool]:
+    """Singleflight one external lookup locally and across Redis-backed workers."""
+    cached = get_playlist_cache(cache_key)
+    if cached is not None:
+        return cached, True
+
+    redis_client = _redis_playlist_client()
+    if redis_client is None:
+        with _local_playlist_flight(cache_key):
+            cached = get_playlist_cache(cache_key)
+            if cached is not None:
+                return cached, True
+            result = loader()
+            set_playlist_cache(cache_key, result)
+            return dict(result), False
+
+    import json
+
+    redis_key = _redis_cache_key(cache_key)
+    lock = redis_client.lock(
+        redis_key + ':lock',
+        timeout=60,
+        blocking_timeout=10,
+        thread_local=False,
+    )
+    try:
+        raw = redis_client.get(redis_key)
+        if raw:
+            cached = json.loads(raw)
+            if isinstance(cached, dict):
+                set_playlist_cache(cache_key, cached)
+                return cached, True
+
+        if not lock.acquire(blocking=True):
+            raise PlaylistCacheUnavailable('재생목록 조회가 이미 처리 중입니다.')
+        try:
+            # Another worker may have filled Redis while this one waited.
+            raw = redis_client.get(redis_key)
+            if raw:
+                cached = json.loads(raw)
+                if isinstance(cached, dict):
+                    set_playlist_cache(cache_key, cached)
+                    return cached, True
+            result = loader()
+            redis_client.setex(
+                redis_key,
+                _PLAYLIST_CACHE_TTL,
+                json.dumps(result, ensure_ascii=False, separators=(',', ':')),
+            )
+            set_playlist_cache(cache_key, result)
+            return dict(result), False
+        finally:
+            try:
+                lock.release()
+            except Exception:
+                pass
+    except PlaylistCacheUnavailable:
+        raise
+    except PlaylistLoadError:
+        raise
+    except Exception as exc:
+        # A configured Redis dependency failing must not fan out into multiple
+        # expensive YouTube calls across gunicorn workers.
+        raise PlaylistCacheUnavailable('재생목록 캐시를 사용할 수 없습니다.') from exc

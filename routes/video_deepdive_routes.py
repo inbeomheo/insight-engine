@@ -5,25 +5,44 @@ markdown-backed deep-dive 라이브러리로 저장/조회합니다.
 """
 from __future__ import annotations
 
-from pathlib import Path
+import math
 
-from flask import current_app, jsonify, request, send_file
+from flask import current_app, g, jsonify, request, send_file
+from flask_limiter.util import get_remote_address
 
+from extensions import limiter
 from routes.blog_routes import blog_bp
 from services.media.video_deepdive_service import (
+    VideoDeepDiveBusyError,
     VideoDeepDiveLibrary,
+    VideoDeepDiveLimitError,
+    VideoDeepDiveLimits,
     VideoSlide,
     build_visual_deepdive_from_video,
     extract_visual_suggestions,
     normalize_youtube_id,
     transcript_segments_to_text,
 )
+from services.usage import capture_usage_charge_callback, require_usage
+from services.usage.usage_lock import UsageLockUnavailable
 from src.contexts.identity.interface.auth_decorators import require_auth
 from utils.responses import api_error
 
 
 def _library() -> VideoDeepDiveLibrary:
-    return VideoDeepDiveLibrary(current_app.config.get("VIDEO_DEEPDIVE_DIR"))
+    # Supabase가 꺼진 로컬 모드도 명시적 네임스페이스를 사용해 기존의
+    # 전역 공개 디렉터리로 되돌아가지 않게 한다.
+    owner_id = str(g.get("user_id") or "local-anonymous")
+    limits = VideoDeepDiveLimits.from_config(current_app.config)
+    return VideoDeepDiveLibrary(
+        current_app.config.get("VIDEO_DEEPDIVE_DIR"),
+        owner_id=owner_id,
+        limits=limits,
+    )
+
+
+def _extract_rate_limit_key() -> str:
+    return f"video-deepdive:{g.get('user_id') or get_remote_address()}"
 
 
 def _json_error(message: str, status: int):
@@ -41,9 +60,15 @@ def _slides_from_payload(raw_slides) -> list[VideoSlide | dict]:
             t = float(raw.get("t", raw.get("start", 0)) or 0)
         except (TypeError, ValueError):
             t = 0.0
+        if not math.isfinite(t) or t < 0:
+            t = 0.0
+        try:
+            slide_idx = int(raw.get("idx") or idx)
+        except (TypeError, ValueError):
+            slide_idx = idx
         slides.append(
             VideoSlide(
-                idx=int(raw.get("idx") or idx),
+                idx=slide_idx,
                 t=t,
                 title=str(raw.get("title") or f"화면 {idx}"),
                 note=str(raw.get("note") or ""),
@@ -82,20 +107,27 @@ def create_video_deepdive_from_result():
         transcript = transcript_segments_to_text(data.get("transcript_segments") or [])
 
     content = str(data.get("content") or "")
-    item = _library().write_item(
-        video_id=video_id,
-        title=str(data.get("title") or "YouTube Deep Dive"),
-        source_url=str(data.get("source_url") or f"https://www.youtube.com/watch?v={video_id}"),
-        transcript=transcript,
-        slides=_slides_from_payload(data.get("slides")),
-        visual_suggestions=extract_visual_suggestions(content),
-        tags=["youtube", "generated-result"],
-    )
+    try:
+        item = _library().write_item(
+            video_id=video_id,
+            title=str(data.get("title") or "YouTube Deep Dive"),
+            source_url=str(data.get("source_url") or f"https://www.youtube.com/watch?v={video_id}"),
+            transcript=transcript,
+            slides=_slides_from_payload(data.get("slides")),
+            visual_suggestions=extract_visual_suggestions(content),
+            tags=["youtube", "generated-result"],
+        )
+    except VideoDeepDiveLimitError as exc:
+        return api_error(str(exc), exc.status_code, exc.code)
+    except (TypeError, ValueError) as exc:
+        return _json_error(str(exc), 400)
     return jsonify({"item": item, "viewer_url": f"/deepdives/{video_id}"}), 201
 
 
 @blog_bp.route("/api/video-deepdives/extract", methods=["POST"])
 @require_auth
+@limiter.limit("2/hour;5/day", key_func=_extract_rate_limit_key)
+@require_usage
 def extract_video_deepdive():
     """Download a YouTube video, extract representative frames, and save a deep-dive.
 
@@ -107,19 +139,36 @@ def extract_video_deepdive():
     url = str(data.get("url") or data.get("video_id") or "").strip()
     if not url:
         return _json_error("YouTube URL 또는 영상 ID가 필요합니다.", 400)
+    library = _library()
     try:
-        result = build_visual_deepdive_from_video(
-            url_or_id=url,
-            transcript=str(data.get("transcript") or ""),
-            title=str(data.get("title") or ""),
-            content=str(data.get("content") or ""),
-            library=_library(),
-            max_slides=min(max(int(data.get("max_slides") or 18), 1), 40),
-            scene_threshold=float(data.get("scene_threshold") or 0.30),
-            min_gap=float(data.get("min_gap") or 12.0),
-        )
+        max_slides = int(data.get("max_slides") or 18)
+        scene_threshold = float(data.get("scene_threshold") or 0.30)
+        min_gap = float(data.get("min_gap") or 12.0)
+        if not math.isfinite(scene_threshold) or not math.isfinite(min_gap):
+            raise ValueError("scene_threshold와 min_gap은 유한한 숫자여야 합니다.")
+        with library.extraction_slot():
+            result = build_visual_deepdive_from_video(
+                url_or_id=url,
+                transcript=str(data.get("transcript") or ""),
+                title=str(data.get("title") or ""),
+                content=str(data.get("content") or ""),
+                library=library,
+                max_slides=min(max(max_slides, 1), library.limits.max_slides),
+                scene_threshold=scene_threshold,
+                min_gap=min_gap,
+                limits=library.limits,
+                on_cost_start=capture_usage_charge_callback(),
+            )
     except ValueError as exc:
         return _json_error(str(exc), 400)
+    except VideoDeepDiveBusyError as exc:
+        return api_error(str(exc), 409, "VIDEO_DEEPDIVE_BUSY")
+    except VideoDeepDiveLimitError as exc:
+        return api_error(str(exc), exc.status_code, exc.code)
+    except UsageLockUnavailable:
+        # require_usage가 표준 503/USAGE_LOCK_UNAVAILABLE 응답으로
+        # 변환할 수 있도록 임대 상실 신호를 보존한다.
+        raise
     except RuntimeError as exc:
         return _json_error(str(exc), 503)
     return jsonify({**result, "viewer_url": f"/deepdives/{result['meta']['id']}"}), 201
@@ -148,6 +197,8 @@ def patch_video_deepdive(video_id: str):
         return _json_error("slides 배열이 필요합니다.", 400)
     try:
         item = _library().update_slide_notes(video_id, slides)
+    except VideoDeepDiveLimitError as exc:
+        return api_error(str(exc), exc.status_code, exc.code)
     except ValueError as exc:
         return _json_error(str(exc), 400)
     except FileNotFoundError as exc:
@@ -159,11 +210,9 @@ def patch_video_deepdive(video_id: str):
 @require_auth
 def get_video_deepdive_media(video_id: str, filename: str):
     try:
-        safe_id = normalize_youtube_id(video_id)
+        media_path = _library().media_path(video_id, filename, require_referenced=True)
     except ValueError as exc:
         return _json_error(str(exc), 400)
-    clean = Path(filename).name
-    media_path = _library().media_dir(safe_id) / clean
-    if not media_path.exists() or not media_path.is_file():
+    except FileNotFoundError:
         return _json_error("미디어 파일을 찾을 수 없습니다.", 404)
     return send_file(media_path)

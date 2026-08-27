@@ -15,6 +15,9 @@ CRAG 모드 (CRAG_ENABLED=true):
 """
 import logging
 import os
+from typing import Callable, Optional
+
+from services.usage.usage_lock import UsageLockUnavailable
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +46,14 @@ class RAGContextBuilder:
         self._reranker_enabled = reranker_enabled or _RERANKER_ENABLED
         self._crag_enabled = crag_enabled or _CRAG_ENABLED
 
-    def build_context(self, user_id: str, query: str, top_k: int = 5) -> str:
+    def build_context(
+        self,
+        user_id: str,
+        query: str,
+        top_k: int = 5,
+        *,
+        on_cost_start: Optional[Callable[[], None]] = None,
+    ) -> str:
         """쿼리로 관련 문서 검색 후 프롬프트 삽입용 텍스트 반환.
 
         처리 순서:
@@ -51,13 +61,29 @@ class RAGContextBuilder:
           2. CRAG 활성화 시 품질 평가 → 재검색 또는 웹 폴백
         """
         if self._graph_rag_enabled and self.graph_store is not None:
-            chunks = self._retrieve_graph_rag_chunks(user_id, query, top_k)
+            chunks = self._retrieve_graph_rag_chunks(
+                user_id,
+                query,
+                top_k,
+                on_cost_start=on_cost_start,
+            )
         else:
-            chunks = self._retrieve_vector_chunks(user_id, query, top_k)
+            chunks = self._retrieve_vector_chunks(
+                user_id,
+                query,
+                top_k,
+                on_cost_start=on_cost_start,
+            )
 
         # CRAG: 검색 품질 교정 루프 (활성화 시)
         if self._crag_enabled and chunks:
-            chunks = self._apply_crag(query, chunks, user_id, top_k)
+            chunks = self._apply_crag(
+                query,
+                chunks,
+                user_id,
+                top_k,
+                on_cost_start=on_cost_start,
+            )
 
         return self._format_context(chunks)
 
@@ -65,16 +91,35 @@ class RAGContextBuilder:
     # 내부 검색 메서드 (청크 리스트 반환)
     # ------------------------------------------------------------------
 
-    def _retrieve_vector_chunks(self, user_id: str, query: str, top_k: int) -> list[dict]:
+    def _retrieve_vector_chunks(
+        self,
+        user_id: str,
+        query: str,
+        top_k: int,
+        *,
+        on_cost_start: Optional[Callable[[], None]] = None,
+    ) -> list[dict]:
         """벡터 검색 결과를 청크 리스트로 반환합니다."""
         results = self.vector_store.search(user_id, query, top_k)
         if not results:
             return []
         if self._reranker_enabled:
-            results = self._apply_reranker(query, results, top_k)
+            results = self._apply_reranker(
+                query,
+                results,
+                top_k,
+                on_cost_start=on_cost_start,
+            )
         return results
 
-    def _retrieve_graph_rag_chunks(self, user_id: str, query: str, top_k: int) -> list[dict]:
+    def _retrieve_graph_rag_chunks(
+        self,
+        user_id: str,
+        query: str,
+        top_k: int,
+        *,
+        on_cost_start: Optional[Callable[[], None]] = None,
+    ) -> list[dict]:
         """GraphRAG 검색 결과를 청크 리스트로 반환합니다."""
         vector_results = self.vector_store.search(user_id, query, top_k * 2)
         graph_context = self._search_graph(user_id, query)
@@ -91,7 +136,12 @@ class RAGContextBuilder:
             return []
 
         if self._reranker_enabled:
-            combined = self._apply_reranker(query, combined, top_k)
+            combined = self._apply_reranker(
+                query,
+                combined,
+                top_k,
+                on_cost_start=on_cost_start,
+            )
         else:
             combined = combined[:top_k]
 
@@ -103,6 +153,8 @@ class RAGContextBuilder:
         chunks: list[dict],
         user_id: str,
         top_k: int,
+        *,
+        on_cost_start: Optional[Callable[[], None]] = None,
     ) -> list[dict]:
         """CRAG 루프: 품질 평가 → 교정 검색."""
         try:
@@ -114,7 +166,10 @@ class RAGContextBuilder:
                 user_id=user_id,
                 top_k=top_k,
                 max_retries=1,
+                on_cost_start=on_cost_start,
             )
+        except UsageLockUnavailable:
+            raise
         except Exception as e:
             logger.warning(f"CRAG 적용 실패, 원본 청크 사용: {e}")
             return chunks
@@ -164,11 +219,25 @@ class RAGContextBuilder:
             return "지식 그래프 참조:\n" + "\n".join(parts)
         return ""
 
-    def _apply_reranker(self, query: str, chunks: list[dict], top_k: int) -> list[dict]:
+    def _apply_reranker(
+        self,
+        query: str,
+        chunks: list[dict],
+        top_k: int,
+        *,
+        on_cost_start: Optional[Callable[[], None]] = None,
+    ) -> list[dict]:
         """LLM 리랭커를 적용합니다. 실패 시 원본 순서로 폴백."""
         try:
             from .reranker import rerank_with_fallback
-            return rerank_with_fallback(query, chunks, top_k)
+            return rerank_with_fallback(
+                query,
+                chunks,
+                top_k,
+                on_cost_start=on_cost_start,
+            )
+        except UsageLockUnavailable:
+            raise
         except Exception as e:
             logger.warning(f"리랭커 import 실패, 폴백: {e}")
             return chunks[:top_k]

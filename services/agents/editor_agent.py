@@ -9,6 +9,7 @@ import re
 import logging
 
 from .base_agent import BaseAgent
+from services.usage.usage_lock import UsageLockUnavailable
 
 logger = logging.getLogger(__name__)
 
@@ -97,6 +98,8 @@ class EditorAgent(BaseAgent):
 
         try:
             edited = self._call_ai(edit_prompt, temperature=0.3, max_tokens=12000)
+        except UsageLockUnavailable:
+            raise
         except Exception as e:
             self._logger.error(f'[EditorAgent] 교정 실패: {e}')
             # 교정 실패 시 원본 초안 사용
@@ -120,6 +123,8 @@ class EditorAgent(BaseAgent):
             feedback_prompt = _FEEDBACK_PROMPT.format(content=content[:3000])
             raw = self._call_ai(feedback_prompt, temperature=0.1, max_tokens=500)
             return self._parse_json(raw)
+        except UsageLockUnavailable:
+            raise
         except Exception as e:
             self._logger.warning(f'[EditorAgent] 품질 평가 실패 (무시): {e}')
             return {

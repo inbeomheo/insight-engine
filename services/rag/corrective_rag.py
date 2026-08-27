@@ -12,9 +12,11 @@ RAG 검색 결과의 품질을 LLM으로 평가하고,
 import json
 import logging
 import re
-from typing import Dict, List, Any
+from typing import Any, Callable, Dict, List, Optional
 
 import litellm
+
+from services.usage.usage_lock import UsageLockUnavailable
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +68,8 @@ def evaluate_retrieval_quality(
     query: str,
     chunks: List[Dict[str, Any]],
     model: str = None,
+    *,
+    on_cost_start: Optional[Callable[[], None]] = None,
 ) -> Dict[str, Any]:
     """검색된 청크들의 쿼리 관련성을 LLM으로 평가합니다.
 
@@ -111,6 +115,8 @@ def evaluate_retrieval_quality(
     chunk_scores = []
     feedback = ""
     try:
+        if callable(on_cost_start):
+            on_cost_start()
         response = litellm.completion(
             model=eval_model,
             messages=[{"role": "user", "content": prompt}],
@@ -125,7 +131,9 @@ def evaluate_retrieval_quality(
             chunk_scores = data.get("chunk_scores", [])
             feedback = data.get("feedback", "")
 
-    except (json.JSONDecodeError, KeyError, IndexError, Exception) as e:
+    except UsageLockUnavailable:
+        raise
+    except Exception as e:
         logger.warning(f"CRAG 품질 평가 LLM 호출 실패, 중간 점수로 폴백: {e}")
 
     # 점수 수가 불일치하면 중간 점수로 채움
@@ -177,6 +185,8 @@ def reformulate_query(
     original_query: str,
     feedback: str,
     model: str = None,
+    *,
+    on_cost_start: Optional[Callable[[], None]] = None,
 ) -> str:
     """검색 피드백을 반영하여 쿼리를 재구성합니다.
 
@@ -196,6 +206,8 @@ def reformulate_query(
     )
 
     try:
+        if callable(on_cost_start):
+            on_cost_start()
         response = litellm.completion(
             model=reformat_model,
             messages=[{"role": "user", "content": prompt}],
@@ -212,7 +224,9 @@ def reformulate_query(
                 logger.info(f"CRAG 쿼리 재구성: '{original_query}' → '{reformulated}'")
                 return reformulated
 
-    except (json.JSONDecodeError, KeyError, Exception) as e:
+    except UsageLockUnavailable:
+        raise
+    except Exception as e:
         logger.warning(f"CRAG 쿼리 재구성 실패, 원본 쿼리 사용: {e}")
 
     return original_query
@@ -221,6 +235,8 @@ def reformulate_query(
 def web_search_fallback(
     query: str,
     max_results: int = 5,
+    *,
+    on_cost_start: Optional[Callable[[], None]] = None,
 ) -> List[Dict[str, Any]]:
     """RAG 검색이 실패(incorrect)할 때 웹 검색으로 폴백합니다.
 
@@ -235,14 +251,26 @@ def web_search_fallback(
     """
     try:
         from services.data import web_search_service
-        results = web_search_service.search(query, max_results=max_results)
+        results = web_search_service.search(
+            query,
+            max_results=max_results,
+            on_cost_start=on_cost_start,
+        )
     except ImportError:
         try:
             import services.data.web_search_service as web_search_service
-            results = web_search_service.search(query, max_results=max_results)
+            results = web_search_service.search(
+                query,
+                max_results=max_results,
+                on_cost_start=on_cost_start,
+            )
+        except UsageLockUnavailable:
+            raise
         except Exception as e:
             logger.warning(f"웹 검색 서비스 import 실패: {e}")
             return []
+    except UsageLockUnavailable:
+        raise
     except Exception as e:
         logger.warning(f"CRAG 웹 검색 폴백 실패: {e}")
         return []
@@ -315,6 +343,8 @@ def corrective_search(
     top_k: int = 5,
     max_retries: int = 2,
     model: str = None,
+    *,
+    on_cost_start: Optional[Callable[[], None]] = None,
 ) -> List[Dict[str, Any]]:
     """CRAG 강화 루프: 품질 평가 → 관련 청크 필터링 → 재검색 → 웹 폴백.
 
@@ -337,7 +367,12 @@ def corrective_search(
         최종 청크 목록 (correct이면 원본, ambiguous이면 필터링+재검색 결과,
         incorrect이면 웹 검색+재검색 결과. 모두 실패하면 원본 반환).
     """
-    eval_result = evaluate_retrieval_quality(query, chunks, model=model)
+    eval_result = evaluate_retrieval_quality(
+        query,
+        chunks,
+        model=model,
+        on_cost_start=on_cost_start,
+    )
     decision = eval_result["decision"]
 
     if decision == "correct":
@@ -348,16 +383,29 @@ def corrective_search(
         logger.info("CRAG: 품질 incorrect, 웹 검색 폴백 시도")
 
         # 1차: 웹 검색 폴백
-        web_chunks = web_search_fallback(query, max_results=top_k)
+        web_chunks = web_search_fallback(
+            query,
+            max_results=top_k,
+            on_cost_start=on_cost_start,
+        )
         if web_chunks:
             return web_chunks
 
         # 2차: 쿼리 재구성 후 웹 검색 재시도
         feedback = eval_result.get("feedback", "")
-        new_query = reformulate_query(query, feedback, model=model)
+        new_query = reformulate_query(
+            query,
+            feedback,
+            model=model,
+            on_cost_start=on_cost_start,
+        )
         if new_query != query:
             logger.info(f"CRAG: 재구성 쿼리로 웹 검색 재시도: '{new_query}'")
-            web_chunks2 = web_search_fallback(new_query, max_results=top_k)
+            web_chunks2 = web_search_fallback(
+                new_query,
+                max_results=top_k,
+                on_cost_start=on_cost_start,
+            )
             if web_chunks2:
                 return web_chunks2
 
@@ -365,9 +413,16 @@ def corrective_search(
             try:
                 new_chunks = vector_store.search(user_id, new_query, top_k)
                 if new_chunks:
-                    re_eval = evaluate_retrieval_quality(new_query, new_chunks, model=model)
+                    re_eval = evaluate_retrieval_quality(
+                        new_query,
+                        new_chunks,
+                        model=model,
+                        on_cost_start=on_cost_start,
+                    )
                     if re_eval["decision"] != "incorrect":
                         return _filter_relevant_chunks(new_chunks, re_eval)
+            except UsageLockUnavailable:
+                raise
             except Exception as e:
                 logger.warning(f"CRAG incorrect 재검색 실패: {e}")
 
@@ -385,7 +440,12 @@ def corrective_search(
     while retry_count < max_retries and decision == "ambiguous":
         logger.info(f"CRAG: 품질 ambiguous, 쿼리 재구성 후 재검색 (시도 {retry_count + 1}/{max_retries})")
 
-        new_query = reformulate_query(current_query, feedback, model=model)
+        new_query = reformulate_query(
+            current_query,
+            feedback,
+            model=model,
+            on_cost_start=on_cost_start,
+        )
 
         try:
             new_chunks = vector_store.search(user_id, new_query, top_k)
@@ -395,12 +455,21 @@ def corrective_search(
 
         if not new_chunks:
             logger.info("CRAG 재검색: 결과 없음, 웹 폴백 시도")
-            web_chunks = web_search_fallback(new_query, max_results=top_k)
+            web_chunks = web_search_fallback(
+                new_query,
+                max_results=top_k,
+                on_cost_start=on_cost_start,
+            )
             if web_chunks:
                 return web_chunks
             break
 
-        re_eval = evaluate_retrieval_quality(new_query, new_chunks, model=model)
+        re_eval = evaluate_retrieval_quality(
+            new_query,
+            new_chunks,
+            model=model,
+            on_cost_start=on_cost_start,
+        )
         decision = re_eval["decision"]
         score = re_eval.get("overall_score", 0.0)
 

@@ -7,9 +7,11 @@ import html as html_lib
 import os
 markdown = None  # 지연 로딩 (cold start 최적화)
 from datetime import datetime
-from typing import Any, Dict, Generator, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Generator, List, Optional, Tuple, Union
 from zoneinfo import ZoneInfo
 from flask import current_app
+
+from services.usage.usage_lock import UsageLockUnavailable
 
 # SEO/GEO/FAQ/CTA 메타데이터 추출은 별도 모듈로 분리됨.
 # 외부 호환을 위해 동일 이름으로 re-export.
@@ -33,6 +35,42 @@ CHATMOCK_CONNECTION_HINT = (
     "터미널에서 `chatmock login` 후 `chatmock serve`를 실행하고 "
     "CHATMOCK_BASE_URL=http://127.0.0.1:8000/v1 설정을 확인해주세요."
 )
+
+
+def get_public_model_allowlist() -> frozenset[str]:
+    """Return the centrally configured model IDs accepted from API clients."""
+    from config import SUPPORTED_PROVIDERS
+
+    return frozenset(
+        model['id']
+        for provider in SUPPORTED_PROVIDERS.values()
+        for model in provider.get('models', [])
+        if isinstance(model, dict) and isinstance(model.get('id'), str)
+    )
+
+
+def resolve_public_model(
+    model: Optional[str],
+    default: str = 'chatmock/gpt-5.4-mini',
+    *,
+    allow_auto: bool = False,
+) -> str:
+    """Resolve a client-selected model against the central allow-list.
+
+    This check belongs at paid public AI boundaries.  Internal adapters may
+    still use provider-specific IDs while untrusted requests cannot route
+    LiteLLM to an arbitrary provider or URL-like model identifier.
+    """
+    candidate = model.strip() if isinstance(model, str) else ''
+    candidate = candidate or default
+    if candidate == 'auto':
+        if allow_auto:
+            return candidate
+        candidate = default
+    allowed = get_public_model_allowlist()
+    if candidate not in allowed:
+        raise ValueError('지원하지 않는 AI 모델입니다.')
+    return candidate
 
 def _build_modifier_instructions(modifiers, style_modifiers):
     """세부 옵션에서 추가 지시사항을 생성합니다.
@@ -174,9 +212,55 @@ def _build_completion_kwargs(model, prompt, style_id=None, modifiers=None, strea
     return kwargs
 
 
-def _call_completion_with_model_retry(model: str, completion_kwargs: Dict[str, Any]) -> Any:
+def call_litellm(
+    messages: List[Dict[str, str]],
+    model: Optional[str] = None,
+    max_tokens: int = 4000,
+    temperature: float = 0.7,
+    *,
+    on_cost_start: Optional[Callable[[], None]] = None,
+) -> Any:
+    """Call the shared ChatMock/LiteLLM boundary for legacy AI services.
+
+    Repurposing and realtime translation historically imported this helper.
+    Keeping them on the same boundary preserves proxy configuration and usage
+    lease validation instead of letting each service call LiteLLM directly.
+    """
+    target_model = model or 'chatmock/gpt-5.4-mini'
+    completion_kwargs = _build_completion_kwargs(
+        target_model,
+        "",
+        style_id="summary",
+        modifiers={"length": "medium"},
+    )
+    completion_kwargs["messages"] = messages
+    completion_kwargs["max_tokens"] = max_tokens
+    if "temperature" in completion_kwargs:
+        completion_kwargs["temperature"] = temperature
+    return _call_completion_with_model_retry(
+        target_model,
+        completion_kwargs,
+        on_cost_start=on_cost_start,
+    )
+
+
+def _call_completion_with_model_retry(
+    model: str,
+    completion_kwargs: Dict[str, Any],
+    on_cost_start: Optional[Callable[[], None]] = None,
+) -> Any:
     """LiteLLM completion을 호출합니다. 단일 ChatMock 경로라 별도 프로바이더 재시도 분기는 없습니다."""
-    return _get_completion()(**completion_kwargs)
+    completion = _get_completion()
+
+    # 함수 로딩·인자 구성 실패는 무비용으로 남기고, 실제 외부 AI
+    # 호출을 시작하는 순간부터는 응답 성공 여부와 관계없이 예약을 차감한다.
+    from services.usage.usage_decorator import mark_usage_charge_committed
+
+    if callable(on_cost_start):
+        on_cost_start()
+    else:
+        mark_usage_charge_committed()
+    return completion(**completion_kwargs)
 
 
 def _extract_title_and_content(markdown_content):
@@ -246,7 +330,8 @@ def _convert_error_message(error_msg, model=None):
 def create_content(content: str, model: str, style_prompt: Optional[str] = None, return_prompt: bool = False,
                    modifiers: Optional[Dict[str, Any]] = None, style_id: Optional[str] = None,
                    user_id: Optional[str] = None, segments: Optional[List[Dict[str, Any]]] = None,
-                   web_search: bool = False, detail_level: Optional[str] = None) -> Union[Dict[str, Any], Tuple[Dict[str, Any], str]]:
+                   web_search: bool = False, detail_level: Optional[str] = None,
+                   on_cost_start: Optional[Callable[[], None]] = None) -> Union[Dict[str, Any], Tuple[Dict[str, Any], str]]:
     """
     LiteLLM을 사용하여 ChatMock(OpenAI 호환)으로 AI 콘텐츠를 생성합니다.
     ChatMock 서버 기본 URL은 CHATMOCK_BASE_URL 환경변수로 조정할 수 있습니다.
@@ -270,7 +355,12 @@ def create_content(content: str, model: str, style_prompt: Optional[str] = None,
         # 독립적인 컨텍스트 빌드들을 병렬 실행 (150-600ms 절감)
         from services.core.ai_prompt_context import build_optional_prompt_contexts
         rag_context, web_context, web_sources, style_memory_context, memory_context = (
-            build_optional_prompt_contexts(content, user_id=user_id, web_search=web_search)
+            build_optional_prompt_contexts(
+                content,
+                user_id=user_id,
+                web_search=web_search,
+                on_cost_start=on_cost_start,
+            )
         )
 
         prompt = _build_prompt(content, style_prompt, modifiers, rag_context=rag_context,
@@ -280,7 +370,11 @@ def create_content(content: str, model: str, style_prompt: Optional[str] = None,
                                memory_context=memory_context)
         completion_kwargs = _build_completion_kwargs(model, prompt, style_id, modifiers,
                                                      detail_level=detail_level)
-        response = _call_completion_with_model_retry(model, completion_kwargs)
+        response = _call_completion_with_model_retry(
+            model,
+            completion_kwargs,
+            on_cost_start=on_cost_start,
+        )
 
         markdown_content = response.choices[0].message.content
         title, body = _extract_title_and_content(markdown_content)
@@ -321,6 +415,8 @@ def create_content(content: str, model: str, style_prompt: Optional[str] = None,
             return result, prompt
         return result
 
+    except UsageLockUnavailable:
+        raise
     except Exception as e:
         current_app.logger.error(f"AI content generation failed: model={model}, error={e}")
         raise Exception(_convert_error_message(str(e), model)) from e
@@ -331,7 +427,8 @@ def create_content_stream(content: str, model: str, style_prompt: Optional[str] 
                           detail_level: Optional[str] = None,
                           user_id: Optional[str] = None,
                           segments: Optional[List[Dict[str, Any]]] = None,
-                          web_search: bool = False) -> Generator[str, None, Dict[str, Any]]:
+                          web_search: bool = False,
+                          on_cost_start: Optional[Callable[[], None]] = None) -> Generator[str, None, Dict[str, Any]]:
     """LiteLLM 스트리밍 콘텐츠 생성 래퍼. 실제 구현은 ai_streaming 모듈에 위임합니다."""
     from services.core.ai_streaming import create_content_stream as _create_content_stream
 
@@ -339,6 +436,7 @@ def create_content_stream(content: str, model: str, style_prompt: Optional[str] 
         content, model, style_prompt,
         modifiers=modifiers, style_id=style_id, detail_level=detail_level,
         user_id=user_id, segments=segments, web_search=web_search,
+        on_cost_start=on_cost_start,
     )
 
 def create_chat_response(
@@ -346,6 +444,7 @@ def create_chat_response(
     model: str,
     max_tokens: int = 1200,
     temperature: float = 0.2,
+    on_cost_start: Optional[Callable[[], None]] = None,
 ) -> Dict[str, Any]:
     """LiteLLM chat completion thin wrapper."""
     try:
@@ -359,7 +458,11 @@ def create_chat_response(
         completion_kwargs["max_tokens"] = max_tokens
         completion_kwargs["temperature"] = temperature
 
-        response = _call_completion_with_model_retry(model, completion_kwargs)
+        response = _call_completion_with_model_retry(
+            model,
+            completion_kwargs,
+            on_cost_start=on_cost_start,
+        )
         answer = response.choices[0].message.content or ""
 
         usage_data = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
@@ -372,6 +475,8 @@ def create_chat_response(
             }
 
         return {"answer": answer.strip(), "usage": usage_data}
+    except UsageLockUnavailable:
+        raise
     except Exception as e:
         current_app.logger.error(f"AI chat failed: model={model}, error={e}")
         raise Exception(_convert_error_message(str(e), model)) from e
@@ -379,7 +484,8 @@ def create_chat_response(
 
 def create_content_with_fallback(content: str, models: List[str], style_prompt: Optional[str] = None,
                                  return_prompt: bool = False, modifiers: Optional[Dict[str, Any]] = None,
-                                 style_id: Optional[str] = None, user_id: Optional[str] = None) -> Union[Dict[str, Any], Tuple[Dict[str, Any], str]]:
+                                 style_id: Optional[str] = None, user_id: Optional[str] = None,
+                                 on_cost_start: Optional[Callable[[], None]] = None) -> Union[Dict[str, Any], Tuple[Dict[str, Any], str]]:
     """
     모델 리스트를 순차 시도하여 첫 성공 결과를 반환합니다.
     API 키가 없는 모델은 자동 스킵합니다.
@@ -420,7 +526,8 @@ def create_content_with_fallback(content: str, models: List[str], style_prompt: 
             result = create_content(
                 content, model_id, style_prompt,
                 return_prompt=return_prompt, modifiers=modifiers,
-                style_id=style_id, user_id=user_id
+                style_id=style_id, user_id=user_id,
+                on_cost_start=on_cost_start,
             )
 
             # 결과에 사용된 모델 정보 추가
@@ -432,6 +539,8 @@ def create_content_with_fallback(content: str, models: List[str], style_prompt: 
                 result['used_model'] = model_id
                 return result
 
+        except UsageLockUnavailable:
+            raise
         except Exception as e:
             errors.append(f"{model_id}: {str(e)}")
             current_app.logger.warning(f"폴백 체인 실패 ({model_id}): {e}")

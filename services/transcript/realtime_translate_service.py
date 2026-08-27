@@ -5,7 +5,9 @@ LiteLLM 기반 AI 번역 + DeepL API 폴백
 """
 import logging
 import os
-from typing import Optional
+from typing import Callable, Optional
+
+from services.usage.usage_lock import UsageLockUnavailable
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +32,12 @@ _TRANSLATE_PROMPTS = {
 }
 
 
-def _translate_with_deepl(text: str, target_lang: str) -> Optional[str]:
+def _translate_with_deepl(
+    text: str,
+    target_lang: str,
+    *,
+    on_cost_start: Optional[Callable[[], None]] = None,
+) -> Optional[str]:
     """DeepL API로 번역"""
     if not DEEPL_API_KEY:
         return None
@@ -49,6 +56,11 @@ def _translate_with_deepl(text: str, target_lang: str) -> Optional[str]:
         )
 
         with httpx.Client(timeout=30) as client:
+            if callable(on_cost_start):
+                on_cost_start()
+            else:
+                from services.usage.usage_decorator import mark_usage_charge_committed
+                mark_usage_charge_committed()
             resp = client.post(
                 base_url,
                 headers={"Authorization": f"DeepL-Auth-Key {DEEPL_API_KEY}"},
@@ -59,24 +71,41 @@ def _translate_with_deepl(text: str, target_lang: str) -> Optional[str]:
             )
         resp.raise_for_status()
         return resp.json()['translations'][0]['text']
-    except Exception as e:
-        logger.warning("DeepL 번역 실패: %s", e)
+    except UsageLockUnavailable:
+        raise
+    except Exception as exc:
+        logger.warning("DeepL 번역 실패 (type=%s)", type(exc).__name__)
         return None
 
 
-def _translate_with_ai(text: str, target_lang: str, model: Optional[str] = None) -> str:
+def _translate_with_ai(
+    text: str,
+    target_lang: str,
+    model: Optional[str] = None,
+    *,
+    on_cost_start: Optional[Callable[[], None]] = None,
+) -> str:
     """LiteLLM AI 번역"""
-    from services.core.ai_service import call_litellm
+    from services.core.ai_service import call_litellm, resolve_public_model
 
     prompt = _TRANSLATE_PROMPTS.get(target_lang, _TRANSLATE_PROMPTS['en'])
-    target_model = model or os.getenv('TRANSLATION_MODEL', 'chatmock/gpt-5.4-mini')
+    target_model = resolve_public_model(
+        model,
+        os.getenv('TRANSLATION_MODEL', 'chatmock/gpt-5.4-mini'),
+    )
 
     messages = [
         {"role": "system", "content": prompt},
         {"role": "user", "content": text},
     ]
 
-    result = call_litellm(messages, model=target_model, max_tokens=4000, temperature=0.3)
+    result = call_litellm(
+        messages,
+        model=target_model,
+        max_tokens=4000,
+        temperature=0.3,
+        on_cost_start=on_cost_start,
+    )
     return result.choices[0].message.content.strip()
 
 
@@ -96,6 +125,8 @@ class RealtimeTranslateService:
         source_lang: Optional[str] = None,
         use_ai_only: bool = False,
         model: Optional[str] = None,
+        *,
+        on_cost_start: Optional[Callable[[], None]] = None,
     ) -> dict:
         """
         텍스트 번역
@@ -118,7 +149,11 @@ class RealtimeTranslateService:
 
         # DeepL 우선 시도
         if not use_ai_only:
-            deepl_result = _translate_with_deepl(text, target_lang)
+            deepl_result = _translate_with_deepl(
+                text,
+                target_lang,
+                on_cost_start=on_cost_start,
+            )
             if deepl_result:
                 return {
                     'translated': deepl_result,
@@ -128,21 +163,30 @@ class RealtimeTranslateService:
 
         # AI 번역
         try:
-            ai_result = _translate_with_ai(text, target_lang, model=model)
+            ai_result = _translate_with_ai(
+                text,
+                target_lang,
+                model=model,
+                on_cost_start=on_cost_start,
+            )
             return {
                 'translated': ai_result,
                 'source': 'ai',
                 'target_lang': target_lang,
             }
-        except Exception as e:
-            logger.error("AI 번역 실패: %s", e)
-            raise RuntimeError(f"번역 실패: {e}") from e
+        except UsageLockUnavailable:
+            raise
+        except Exception as exc:
+            logger.error("AI 번역 실패 (type=%s)", type(exc).__name__)
+            raise RuntimeError("번역에 실패했습니다.") from exc
 
     def translate_content(
         self,
         content: str,
         target_lang: str,
         chunk_size: int = 2000,
+        *,
+        on_cost_start: Optional[Callable[[], None]] = None,
     ) -> str:
         """
         장문 콘텐츠 번역 (단락 단위 청크 처리)
@@ -164,7 +208,11 @@ class RealtimeTranslateService:
             if not current_chunk:
                 return
             chunk_text = '\n\n'.join(current_chunk)
-            result = self.translate(chunk_text, target_lang)
+            result = self.translate(
+                chunk_text,
+                target_lang,
+                on_cost_start=on_cost_start,
+            )
             translated_paragraphs.append(result['translated'])
 
         for para in paragraphs:

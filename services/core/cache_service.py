@@ -9,9 +9,32 @@ import random
 import sqlite3
 import threading
 import time
-from typing import Any, Dict, Optional
+import unicodedata
+from typing import Any, Dict, Mapping, Optional
 
 _local = threading.local()
+
+# v1 keys did not include the authenticated account, custom/style prompt, or
+# several output-affecting options.  Keeping the version in the one-way key
+# makes every legacy entry unreachable without destructively deleting the DB.
+CACHE_KEY_VERSION = 'ai-cache-v2-20260827'
+_PRIVATE_RESULT_FIELDS = frozenset({'prompt', 'prompt_length'})
+
+
+def _normalize_key_text(value: Any) -> str:
+    """Return a deterministic, lossless-enough representation for key inputs."""
+    if value is None:
+        return ''
+    return unicodedata.normalize('NFKC', str(value)).replace('\r\n', '\n').replace('\r', '\n')
+
+
+def _public_cache_result(result: Mapping[str, Any]) -> Dict[str, Any]:
+    """Strip internal prompt material before cache persistence or retrieval."""
+    return {
+        key: value
+        for key, value in dict(result).items()
+        if key not in _PRIVATE_RESULT_FIELDS
+    }
 
 
 class AICacheService:
@@ -34,7 +57,10 @@ class AICacheService:
 
         db_path 해시 기반 키를 사용하여 id() 재사용으로 인한 stale 연결 문제를 방지한다.
         """
-        attr = f'conn_{hashlib.md5(self.db_path.encode()).hexdigest()}'
+        path_digest = hashlib.md5(
+            self.db_path.encode(), usedforsecurity=False,
+        ).hexdigest()
+        attr = f'conn_{path_digest}'
         conn = getattr(_local, attr, None)
         if conn is None:
             conn = sqlite3.connect(self.db_path, timeout=5.0, check_same_thread=False)
@@ -72,14 +98,51 @@ class AICacheService:
         writing_style: str = 'conversational',
         transcript_language: Optional[str] = None,
         enable_citations: bool = False,
+        *,
+        context_scope: str = 'anonymous',
+        style_prompt: Optional[str] = None,
+        modifiers: Optional[Mapping[str, Any]] = None,
+        detail_level: str = 'standard',
+        web_search: bool = False,
+        agent_mode: bool = False,
+        analyze: bool = False,
+        output_format: str = 'html',
+        max_chars: Optional[int] = None,
     ) -> str:
-        """캐시 키 생성 (SHA256). 언어/인용 모드별로 캐시를 분리합니다."""
-        raw = f"{video_id}|{style_id}|{model}|{length}|{writing_style}"
-        if transcript_language:
-            raw = f"{raw}|lang={transcript_language}"
-        if enable_citations:
-            raw = f"{raw}|citations=1"
-        return hashlib.sha256(raw.encode()).hexdigest()
+        """Build a versioned SHA-256 key from every request-side output input.
+
+        ``context_scope`` is an opaque account scope produced by
+        :func:`services.core.ai_prompt_context.get_prompt_context_cache_scope`.
+        The actual prompt is never embedded in the key; only its digest is.
+        """
+        normalized_modifiers = {
+            _normalize_key_text(key): _normalize_key_text(value)
+            for key, value in sorted((modifiers or {}).items(), key=lambda item: str(item[0]))
+        }
+        prompt_digest = hashlib.sha256(
+            _normalize_key_text(style_prompt).encode('utf-8')
+        ).hexdigest()
+        payload = {
+            'version': CACHE_KEY_VERSION,
+            'video_id': _normalize_key_text(video_id),
+            'style_id': _normalize_key_text(style_id),
+            'model': _normalize_key_text(model),
+            'length': _normalize_key_text(length),
+            'writing_style': _normalize_key_text(writing_style),
+            'transcript_language': _normalize_key_text(transcript_language),
+            'enable_citations': bool(enable_citations),
+            'context_scope': _normalize_key_text(context_scope),
+            'style_prompt_sha256': prompt_digest,
+            'modifiers': normalized_modifiers,
+            'detail_level': _normalize_key_text(detail_level),
+            'web_search': bool(web_search),
+            'agent_mode': bool(agent_mode),
+            'analyze': bool(analyze),
+            'output_format': _normalize_key_text(output_format),
+            'max_chars': max_chars if isinstance(max_chars, int) else None,
+        }
+        raw = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(',', ':'))
+        return hashlib.sha256(raw.encode('utf-8')).hexdigest()
 
     def get(self, cache_key: str) -> Optional[Dict[str, Any]]:
         """캐시에서 결과 조회. TTL 만료 시 None 반환.
@@ -114,14 +177,14 @@ class AICacheService:
                 (now, cache_key)
             )
             self._hits += 1
-            result = json.loads(row['result_json'])
+            result = _public_cache_result(json.loads(row['result_json']))
             result['_cached_at'] = row['created_at']
             return result
 
     def put(self, cache_key: str, video_id: str, style_id: str, model: str, length: str, writing_style: str, result: Dict[str, Any]) -> None:
         """캐시에 결과 저장. 용량 초과 시 LRU eviction."""
         now = time.time()
-        result_json = json.dumps(result, ensure_ascii=False)
+        result_json = json.dumps(_public_cache_result(result), ensure_ascii=False)
         size_bytes = len(result_json.encode('utf-8'))
 
         with self._get_conn() as conn:

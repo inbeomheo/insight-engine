@@ -9,7 +9,8 @@ from __future__ import annotations
 import json
 import logging
 
-from agent.registry import registry
+from agent.registry import TOOL_EXECUTION_ERROR_MESSAGE, registry
+from services.usage.usage_lock import UsageLockUnavailable
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 def _handle_create_content(args: dict, **kwargs) -> str:
     """AI 모델로 콘텐츠를 생성합니다."""
-    from services.core.ai_service import create_content
+    from services.core.ai_service import create_content, resolve_public_model
 
     transcript = args.get("transcript", "")
     style_prompt = args.get("style_prompt", "")
@@ -39,15 +40,20 @@ def _handle_create_content(args: dict, **kwargs) -> str:
             style_prompt = f"다음 자막을 기반으로 {style_id} 스타일의 콘텐츠를 작성하세요."
 
     try:
+        model = resolve_public_model(model)
+        on_cost_start = kwargs.get("on_cost_start")
         result = create_content(
-            transcript=transcript,
+            content=transcript,
             style_prompt=style_prompt,
             model=model,
             style_id=style_id,
+            on_cost_start=(on_cost_start if callable(on_cost_start) else None),
         )
         return json.dumps(result, ensure_ascii=False, default=str)
-    except Exception as e:
-        return json.dumps({"error": f"콘텐츠 생성 실패: {e}"}, ensure_ascii=False)
+    except UsageLockUnavailable:
+        raise
+    except Exception:
+        return json.dumps({"error": TOOL_EXECUTION_ERROR_MESSAGE}, ensure_ascii=False)
 
 
 registry.register(
@@ -109,7 +115,14 @@ def _handle_get_transcript(args: dict, **kwargs) -> str:
         return json.dumps({"error": "url 또는 video_id가 필요합니다."})
 
     try:
-        result = get_transcript(video_id)
+        result = get_transcript(
+            video_id,
+            on_cost_start=(
+                kwargs.get("on_cost_start")
+                if callable(kwargs.get("on_cost_start"))
+                else None
+            ),
+        )
         if isinstance(result, dict):
             if result.get("error"):
                 return json.dumps({"error": result["error"]})
@@ -129,8 +142,10 @@ def _handle_get_transcript(args: dict, **kwargs) -> str:
             "source": source,
             "length": len(text),
         }, ensure_ascii=False)
-    except Exception as e:
-        return json.dumps({"error": f"자막 추출 실패: {e}"}, ensure_ascii=False)
+    except UsageLockUnavailable:
+        raise
+    except Exception:
+        return json.dumps({"error": TOOL_EXECUTION_ERROR_MESSAGE}, ensure_ascii=False)
 
 
 registry.register(
@@ -175,15 +190,24 @@ def _handle_get_comments(args: dict, **kwargs) -> str:
         return json.dumps({"error": "url 또는 video_id가 필요합니다."})
 
     try:
-        from services.core.content_service import get_video_comments
-        comments = get_video_comments(video_id, max_results=max_comments)
+        from services.core.content_service import get_top_comments
+        comments = get_top_comments(
+            video_id,
+            on_cost_start=(
+                kwargs.get("on_cost_start")
+                if callable(kwargs.get("on_cost_start"))
+                else None
+            ),
+        )
         return json.dumps({
             "video_id": video_id,
             "comments": comments[:max_comments],
             "count": len(comments),
         }, ensure_ascii=False, default=str)
-    except Exception as e:
-        return json.dumps({"error": f"댓글 수집 실패: {e}"}, ensure_ascii=False)
+    except UsageLockUnavailable:
+        raise
+    except Exception:
+        return json.dumps({"error": TOOL_EXECUTION_ERROR_MESSAGE}, ensure_ascii=False)
 
 
 registry.register(
@@ -221,8 +245,20 @@ def _handle_get_title(args: dict, **kwargs) -> str:
     if not url:
         return json.dumps({"error": "url이 필요합니다."})
 
-    title = get_content_title(url) or ""
-    return json.dumps({"url": url, "title": title}, ensure_ascii=False)
+    try:
+        title = get_content_title(
+            url,
+            on_cost_start=(
+                kwargs.get("on_cost_start")
+                if callable(kwargs.get("on_cost_start"))
+                else None
+            ),
+        ) or ""
+        return json.dumps({"url": url, "title": title}, ensure_ascii=False)
+    except UsageLockUnavailable:
+        raise
+    except Exception:
+        return json.dumps({"error": TOOL_EXECUTION_ERROR_MESSAGE}, ensure_ascii=False)
 
 
 registry.register(

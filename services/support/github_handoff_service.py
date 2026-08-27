@@ -55,7 +55,8 @@ def _github_request(method: str, path: str, payload: dict[str, Any] | None = Non
         },
     )
     try:
-        with urllib.request.urlopen(req, timeout=20) as res:
+        # URL origin is constructed above from the fixed GitHub HTTPS API host.
+        with urllib.request.urlopen(req, timeout=20) as res:  # nosec B310
             raw = res.read().decode("utf-8")
             return json.loads(raw) if raw else {}
     except urllib.error.HTTPError as exc:

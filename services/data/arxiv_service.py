@@ -3,13 +3,13 @@ arXiv 논문 추출 서비스
 
 arXiv API(http://export.arxiv.org/api/query)를 사용하여
 논문 메타데이터와 초록을 가져옵니다.
-추가 패키지 없이 requests + xml.etree.ElementTree 사용.
 """
 from __future__ import annotations
 
 import re
 from typing import Dict, List
-from xml.etree import ElementTree
+
+from defusedxml import ElementTree
 
 import requests
 import logging

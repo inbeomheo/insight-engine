@@ -2,10 +2,11 @@
 import logging
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Any, Dict, List
+from typing import Any, Callable, Dict, List, Optional
 
 from services.core import ai_service, content_service
 from services.data import web_research_service
+from services.usage.usage_lock import UsageLockUnavailable
 from prompts import build_full_prompt
 from prompts.fusion.fusion_prompt import FUSION_PROMPT, build_fusion_context
 
@@ -16,7 +17,10 @@ MIN_URLS = 2
 MAX_COMMENTS_PER_VIDEO = 50
 
 
-def _phase1_collect(urls: List[str]) -> tuple:
+def _phase1_collect(
+    urls: List[str],
+    on_cost_start: Optional[Callable[[], None]] = None,
+) -> tuple:
     """Phase 1: URL 목록에서 자막과 댓글을 병렬 수집합니다.
 
     Returns:
@@ -37,10 +41,14 @@ def _phase1_collect(urls: List[str]) -> tuple:
                 failed_urls.append(url)
                 continue
             transcript_futures[executor.submit(
-                content_service.get_transcript, vid
+                content_service.get_transcript,
+                vid,
+                on_cost_start=on_cost_start,
             )] = (vid, url)
             comment_futures[executor.submit(
-                content_service.get_top_comments, vid, MAX_COMMENTS_PER_VIDEO
+                content_service.get_top_comments,
+                vid,
+                on_cost_start=on_cost_start,
             )] = vid
 
         for future in as_completed(transcript_futures):
@@ -51,6 +59,9 @@ def _phase1_collect(urls: List[str]) -> tuple:
                     transcripts.append({'video_id': vid, 'url': url, 'text': result['text']})
                 else:
                     failed_urls.append(url)
+            except UsageLockUnavailable:
+                # 비용 경계 콜백 실패를 일반 자막 실패로 낮추지 않는다.
+                raise
             except Exception as e:
                 logger.warning('자막 추출 실패 (%s): %s', url, e)
                 failed_urls.append(url)
@@ -59,8 +70,11 @@ def _phase1_collect(urls: List[str]) -> tuple:
             try:
                 comments = future.result()
                 if comments:
-                    all_comments.extend(comments)
-                    total_comments += len(comments)
+                    limited_comments = comments[:MAX_COMMENTS_PER_VIDEO]
+                    all_comments.extend(limited_comments)
+                    total_comments += len(limited_comments)
+            except UsageLockUnavailable:
+                raise
             except Exception:
                 pass
 
@@ -70,6 +84,7 @@ def _phase1_collect(urls: List[str]) -> tuple:
 def _phase2_analyze(
     transcripts: list, all_comments: list, model: str,
     enable_web_research: bool, enable_deep_comments: bool,
+    on_cost_start: Optional[Callable[[], None]] = None,
 ) -> tuple:
     """Phase 2: 자막 요약, 댓글 분석, 웹 리서치를 병렬 수행합니다.
 
@@ -84,16 +99,32 @@ def _phase2_analyze(
     with ThreadPoolExecutor(max_workers=3) as executor:
         futures = {}
         for t in transcripts:
-            fut = executor.submit(_summarize_transcript, t['text'], t['video_id'], model)
+            fut = executor.submit(
+                _summarize_transcript,
+                t['text'],
+                t['video_id'],
+                model,
+                on_cost_start,
+            )
             futures[fut] = ('summary', t)
 
         if enable_deep_comments and all_comments:
-            fut = executor.submit(_analyze_comments, all_comments, model)
+            fut = executor.submit(
+                _analyze_comments,
+                all_comments,
+                model,
+                on_cost_start,
+            )
             futures[fut] = ('comments', None)
 
         if enable_web_research:
             transcript_texts = [t['text'] for t in transcripts]
-            fut = executor.submit(web_research_service.research_topic, transcript_texts, model)
+            fut = executor.submit(
+                _research_topic,
+                transcript_texts,
+                model,
+                on_cost_start,
+            )
             futures[fut] = ('web', None)
 
         for future in as_completed(futures):
@@ -112,14 +143,25 @@ def _phase2_analyze(
                     tokens_used += result.get('usage', {}).get('total_tokens', 0)
                 elif task_type == 'web' and result:
                     web_sources = result
+            except UsageLockUnavailable:
+                for pending in futures:
+                    pending.cancel()
+                raise
             except Exception as e:
                 logger.warning('Phase 2 작업 실패 (%s): %s', task_type, e)
 
     return video_summaries, comment_analysis, web_sources, tokens_used
 
 
-def generate_fusion(urls: List[str], style_id: str, model: str, modifiers: Dict[str, Any],
-                    enable_web_research: bool = True, enable_deep_comments: bool = True) -> Dict[str, Any]:
+def generate_fusion(
+    urls: List[str],
+    style_id: str,
+    model: str,
+    modifiers: Dict[str, Any],
+    enable_web_research: bool = True,
+    enable_deep_comments: bool = True,
+    on_cost_start: Optional[Callable[[], None]] = None,
+) -> Dict[str, Any]:
     """퓨전 파이프라인 실행: Phase 1(수집) → Phase 2(분석) → Phase 3(생성)
 
     Args:
@@ -129,6 +171,7 @@ def generate_fusion(urls: List[str], style_id: str, model: str, modifiers: Dict[
         modifiers: {'length': str, 'writing_style': str}
         enable_web_research: 웹 리서치 활성화
         enable_deep_comments: 댓글 심층 분석 활성화
+        on_cost_start: 외부 비용 함수 호출 직전에 실행할 선택 콜백
 
     Returns:
         dict: {title, content, html, sections, fusion_meta, usage}
@@ -144,13 +187,17 @@ def generate_fusion(urls: List[str], style_id: str, model: str, modifiers: Dict[
     start_time = time.time()
 
     # Phase 1: 소스 수집
-    transcripts, all_comments, total_comments, failed_urls = _phase1_collect(urls)
+    transcripts, all_comments, total_comments, failed_urls = _phase1_collect(
+        urls,
+        on_cost_start=on_cost_start,
+    )
     if not transcripts:
         raise ValueError('모든 영상의 자막 추출에 실패했습니다')
 
     # Phase 2: 분석 & 압축
     video_summaries, comment_analysis, web_sources, phase2_tokens = _phase2_analyze(
         transcripts, all_comments, model, enable_web_research, enable_deep_comments,
+        on_cost_start,
     )
 
     # Phase 3: 융합 & 생성 (모디파이어는 create_content가 [추가 지시사항]으로 1회 주입)
@@ -161,6 +208,7 @@ def generate_fusion(urls: List[str], style_id: str, model: str, modifiers: Dict[
     final_result = ai_service.create_content(
         content=fusion_context, model=model,
         style_prompt=combined_prompt, modifiers=modifiers, style_id=style_id,
+        on_cost_start=on_cost_start,
     )
     total_tokens = phase2_tokens + final_result.get('usage', {}).get('total_tokens', 0)
 
@@ -190,7 +238,11 @@ def generate_fusion(urls: List[str], style_id: str, model: str, modifiers: Dict[
     }
 
 
-def _analyze_comments(comments: list, model: str) -> dict:
+def _analyze_comments(
+    comments: list,
+    model: str,
+    on_cost_start: Optional[Callable[[], None]] = None,
+) -> dict:
     """댓글 목록을 AI로 분석하여 핵심 인사이트를 추출합니다."""
     comments_text = "\n".join(comments[:100])
     prompt = (
@@ -201,7 +253,8 @@ def _analyze_comments(comments: list, model: str) -> dict:
     result = ai_service.create_content(
         content=prompt, model=model,
         style_prompt="댓글 분석 요약. JSON 형식.",
-        style_id="summary"
+        style_id="summary",
+        on_cost_start=on_cost_start,
     )
     return {
         'content': result.get('content', ''),
@@ -210,7 +263,12 @@ def _analyze_comments(comments: list, model: str) -> dict:
     }
 
 
-def _summarize_transcript(text, video_id, model):
+def _summarize_transcript(
+    text,
+    video_id,
+    model,
+    on_cost_start: Optional[Callable[[], None]] = None,
+):
     """개별 영상 자막을 구조화된 요약으로 변환"""
     prompt = (
         '다음 YouTube 영상 자막을 500자 이내로 구조화하여 요약하세요.\n'
@@ -221,5 +279,19 @@ def _summarize_transcript(text, video_id, model):
     return ai_service.create_content(
         content=prompt, model=model,
         style_prompt='구조화된 요약. 제목 + 핵심 주장 + 근거 + 결론.',
-        style_id='summary'
+        style_id='summary',
+        on_cost_start=on_cost_start,
+    )
+
+
+def _research_topic(
+    transcript_texts: list,
+    model: str,
+    on_cost_start: Optional[Callable[[], None]] = None,
+) -> list:
+    """웹 리서치 외부 파이프라인의 비용 경계를 명시한다."""
+    return web_research_service.research_topic(
+        transcript_texts,
+        model,
+        on_cost_start=on_cost_start,
     )

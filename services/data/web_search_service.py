@@ -4,7 +4,7 @@ YouTube 자막 내용을 웹 검색으로 보강하여 더 정확하고 풍부�
 """
 import os
 import logging
-from typing import List, Dict, Any
+from typing import Callable, List, Dict, Any, Optional
 
 import requests
 
@@ -13,7 +13,12 @@ logger = logging.getLogger(__name__)
 TAVILY_API_URL = 'https://api.tavily.com/search'
 
 
-def search(query: str, max_results: int = 5) -> List[Dict[str, Any]]:
+def search(
+    query: str,
+    max_results: int = 5,
+    *,
+    on_cost_start: Optional[Callable[[], None]] = None,
+) -> List[Dict[str, Any]]:
     """Tavily 웹 검색을 수행합니다.
 
     Args:
@@ -28,6 +33,11 @@ def search(query: str, max_results: int = 5) -> List[Dict[str, Any]]:
     if not api_key:
         logger.debug("TAVILY_API_KEY 미설정 — 웹 검색 건너뜀")
         return []
+
+    # 키가 있을 때만 실제 외부 비용 경계를 넘는다. 콜백 예외는 네트워크
+    # 폴백으로 삼키지 않고 호출자까지 전파해 예약을 환불/중단하게 한다.
+    if callable(on_cost_start):
+        on_cost_start()
 
     try:
         resp = requests.post(
@@ -59,7 +69,11 @@ def _parse_search_results(data: dict) -> List[Dict[str, Any]]:
     ]
 
 
-def extract_grounding_context(transcript_summary: str) -> Dict[str, Any]:
+def extract_grounding_context(
+    transcript_summary: str,
+    *,
+    on_cost_start: Optional[Callable[[], None]] = None,
+) -> Dict[str, Any]:
     """자막 요약에서 검색 쿼리를 추출하고 웹 검색으로 보강 컨텍스트를 반환합니다.
 
     Args:
@@ -74,7 +88,11 @@ def extract_grounding_context(transcript_summary: str) -> Dict[str, Any]:
     """
     from config import WEB_SEARCH_MAX_RESULTS
 
-    results = search(transcript_summary[:300], max_results=WEB_SEARCH_MAX_RESULTS)
+    results = search(
+        transcript_summary[:300],
+        max_results=WEB_SEARCH_MAX_RESULTS,
+        on_cost_start=on_cost_start,
+    )
 
     if not results:
         return {'results': [], 'context_text': '', 'enabled': False}

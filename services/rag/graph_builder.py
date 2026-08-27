@@ -5,9 +5,11 @@ LiteLLM을 통해 LLM 기반 추출 수행 (JSON 구조화 출력)
 import json
 import logging
 import re
-from typing import Any
+from typing import Any, Callable, Optional
 
 import litellm
+
+from services.usage.usage_lock import UsageLockUnavailable
 
 logger = logging.getLogger(__name__)
 
@@ -39,18 +41,29 @@ _ENTITY_RELATION_PROMPT = """다음 텍스트에서 주요 엔티티와 관계�
 {text}"""
 
 
-def _call_llm(text: str, model: str) -> dict[str, Any]:
+def _call_llm(
+    text: str,
+    model: str,
+    *,
+    on_cost_start: Optional[Callable[[], None]] = None,
+) -> dict[str, Any]:
     """LLM을 호출하여 엔티티/관계를 추출합니다."""
     truncated = text[:3000]  # 토큰 제한을 위해 앞부분만 사용
     prompt = _ENTITY_RELATION_PROMPT.format(text=truncated)
+    completion_kwargs = {
+        "model": model,
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.1,  # 정밀 추출이므로 낮은 temperature
+        "max_tokens": 2000,
+    }
 
     try:
-        response = litellm.completion(
-            model=model,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.1,   # 정밀 추출이므로 낮은 temperature
-            max_tokens=2000,
-        )
+        if callable(on_cost_start):
+            on_cost_start()
+        else:
+            from services.usage.usage_decorator import mark_usage_charge_committed
+            mark_usage_charge_committed()
+        response = litellm.completion(**completion_kwargs)
         raw = response.choices[0].message.content.strip()
 
         # JSON 블록 추출 (```json ... ``` 형식 처리)
@@ -62,12 +75,19 @@ def _call_llm(text: str, model: str) -> dict[str, Any]:
     except (json.JSONDecodeError, KeyError, IndexError) as e:
         logger.warning(f"LLM 응답 파싱 실패: {e}")
         return {"entities": [], "relations": []}
+    except UsageLockUnavailable:
+        raise
     except Exception as e:
         logger.error(f"LLM 호출 실패: {e}")
         return {"entities": [], "relations": []}
 
 
-def extract_entities(text: str, model: str = _DEFAULT_MODEL) -> list[dict]:
+def extract_entities(
+    text: str,
+    model: str = _DEFAULT_MODEL,
+    *,
+    on_cost_start: Optional[Callable[[], None]] = None,
+) -> list[dict]:
     """텍스트에서 엔티티 목록을 추출합니다.
 
     Args:
@@ -77,7 +97,7 @@ def extract_entities(text: str, model: str = _DEFAULT_MODEL) -> list[dict]:
     Returns:
         엔티티 딕셔너리 리스트. 각 엔티티: {"name": str, "type": str, "description": str}
     """
-    result = _call_llm(text, model)
+    result = _call_llm(text, model, on_cost_start=on_cost_start)
     entities = result.get("entities", [])
 
     # 필수 필드 검증 및 정규화
@@ -92,7 +112,13 @@ def extract_entities(text: str, model: str = _DEFAULT_MODEL) -> list[dict]:
     return validated
 
 
-def extract_relations(text: str, entities: list[dict], model: str = _DEFAULT_MODEL) -> list[dict]:
+def extract_relations(
+    text: str,
+    entities: list[dict],
+    model: str = _DEFAULT_MODEL,
+    *,
+    on_cost_start: Optional[Callable[[], None]] = None,
+) -> list[dict]:
     """텍스트에서 엔티티 간 관계를 추출합니다.
 
     엔티티 추출과 관계 추출을 분리하지 않고, extract_entities와 동일한
@@ -107,7 +133,7 @@ def extract_relations(text: str, entities: list[dict], model: str = _DEFAULT_MOD
     Returns:
         관계 딕셔너리 리스트. 각 관계: {"source": str, "target": str, "relation": str, "weight": float}
     """
-    result = _call_llm(text, model)
+    result = _call_llm(text, model, on_cost_start=on_cost_start)
     relations = result.get("relations", [])
 
     entity_names = {e["name"] for e in entities}
@@ -138,7 +164,12 @@ def extract_relations(text: str, entities: list[dict], model: str = _DEFAULT_MOD
     return validated
 
 
-def extract_graph(text: str, model: str = _DEFAULT_MODEL) -> dict[str, list]:
+def extract_graph(
+    text: str,
+    model: str = _DEFAULT_MODEL,
+    *,
+    on_cost_start: Optional[Callable[[], None]] = None,
+) -> dict[str, list]:
     """텍스트에서 엔티티와 관계를 한 번에 추출합니다 (단일 LLM 호출).
 
     Args:
@@ -148,7 +179,7 @@ def extract_graph(text: str, model: str = _DEFAULT_MODEL) -> dict[str, list]:
     Returns:
         {"entities": [...], "relations": [...]}
     """
-    raw = _call_llm(text, model)
+    raw = _call_llm(text, model, on_cost_start=on_cost_start)
 
     entities = []
     for ent in raw.get("entities", []):
@@ -188,6 +219,8 @@ def extract_graph(text: str, model: str = _DEFAULT_MODEL) -> dict[str, list]:
 def extract_graph_from_chunks(
     chunks: list[str],
     model: str = _DEFAULT_MODEL,
+    *,
+    on_cost_start: Optional[Callable[[], None]] = None,
 ) -> dict[str, list]:
     """여러 청크에서 엔티티/관계를 추출하고 병합합니다.
 
@@ -209,7 +242,11 @@ def extract_graph_from_chunks(
         if not chunk or not chunk.strip():
             continue
 
-        result = extract_graph(chunk, model=model)
+        result = extract_graph(
+            chunk,
+            model=model,
+            on_cost_start=on_cost_start,
+        )
 
         # 엔티티 병합 (같은 이름이면 description 보강)
         for ent in result.get("entities", []):

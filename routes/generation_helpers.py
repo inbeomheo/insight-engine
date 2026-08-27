@@ -10,6 +10,7 @@ from flask import current_app, g, jsonify
 from services.core import ai_service, content_service
 from src.contexts.content_library import save_history_entry as save_history
 from services.usage.usage_decorator import get_usage_for_response
+from services.usage.usage_lock import UsageLockUnavailable
 from services.platform.webhook_service import WebhookService
 from config import get_model_max_tokens, WEBHOOK_URL, WEBHOOK_ENABLED
 from utils.responses import api_error, sanitize_error_for_client
@@ -44,7 +45,11 @@ def _truncate_for_model(model_id: str, label: str, source_content: str) -> str:
     return content_service.truncate_text(f"[{label}]\n{source_content}", max_tokens)
 
 
-def _generate_from_source(params: dict, truncated_content: str):
+def _generate_from_source(
+    params: dict,
+    truncated_content: str,
+    on_cost_start=None,
+):
     """소스 핸들러 공통 AI 호출: 스타일 프롬프트 결합 + create_content.
 
     Returns:
@@ -56,6 +61,7 @@ def _generate_from_source(params: dict, truncated_content: str):
         return_prompt=True, modifiers=params['modifiers'],
         style_id=params['style'],
         detail_level=params.get('detail_level'),
+        on_cost_start=on_cost_start,
     )
 
 
@@ -85,7 +91,6 @@ def _base_generation_response(result: dict, params: dict, start_time: float,
         'id': str(uuid.uuid4()),
         **result,
         'elapsed_time': round(time.time() - start_time, 2),
-        'prompt': used_prompt,
         'style_label': _get_style_label(params['style']),
         'cached': False,
         'comment_summary_included': False,
@@ -94,7 +99,7 @@ def _base_generation_response(result: dict, params: dict, start_time: float,
     }
 
 
-def _handle_direct_text(params: dict, start_time: float):
+def _handle_direct_text(params: dict, start_time: float, on_cost_start=None):
     """직접 텍스트 입력 모드: URL 없이 content만 전달된 경우."""
     direct_content = params.get('content', '')
     validation_error = _validate_direct_text_content(direct_content)
@@ -102,7 +107,11 @@ def _handle_direct_text(params: dict, start_time: float):
         return api_error(validation_error, 400)
 
     truncated_content = _truncate_for_model(params['model'], '사용자 입력 텍스트', direct_content)
-    result, used_prompt = _generate_from_source(params, truncated_content)
+    result, used_prompt = _generate_from_source(
+        params,
+        truncated_content,
+        on_cost_start=on_cost_start,
+    )
 
     result = _apply_output_format(result, params.get('output_format', 'html'), params.get('max_chars'))
 
@@ -124,7 +133,6 @@ def _handle_direct_text(params: dict, start_time: float):
 
     response = _base_generation_response(result, params, start_time, used_prompt)
     response['id'] = report_id
-    response['prompt_length'] = len(used_prompt) if used_prompt else 0
     response['transcript'] = direct_content[:5000]
     response['transcript_source'] = 'direct_input'
     response['source_type'] = 'text'
@@ -138,12 +146,23 @@ def _handle_direct_text(params: dict, start_time: float):
     return jsonify(response)
 
 
-def _handle_web_source(params: dict, url: str, source_type: str, start_time: float):
+def _handle_web_source(
+    params: dict,
+    url: str,
+    source_type: str,
+    start_time: float,
+    on_cost_start=None,
+):
     """비YouTube URL (웹페이지/RSS/arXiv) → 콘텐츠 생성."""
     from services.content.multi_source_collector import SOURCE_WEBPAGE
 
     if source_type in {SOURCE_WEBPAGE, 'article'}:
-        return _handle_article_source(params, url, start_time)
+        return _handle_article_source(
+            params,
+            url,
+            start_time,
+            on_cost_start=on_cost_start,
+        )
 
     from services.content.multi_source_collector import collect_content
     collected = collect_content(url, source_type=source_type)
@@ -159,7 +178,11 @@ def _handle_web_source(params: dict, url: str, source_type: str, start_time: flo
         'hackernews': 'Hacker News 게시물', 'podcast': '팟캐스트 전사',
     }.get(source_type, '본문')
     truncated_content = _truncate_for_model(params['model'], content_label, source_content)
-    result, used_prompt = _generate_from_source(params, truncated_content)
+    result, used_prompt = _generate_from_source(
+        params,
+        truncated_content,
+        on_cost_start=on_cost_start,
+    )
 
     elapsed_time = round(time.time() - start_time, 2)
 
@@ -180,8 +203,6 @@ def _handle_web_source(params: dict, url: str, source_type: str, start_time: flo
     response_data = {
         **result,
         'id': str(uuid.uuid4()),
-        'prompt': used_prompt,
-        'prompt_length': len(used_prompt) if used_prompt else 0,
         'elapsed_time': elapsed_time,
         'source_type': source_type,
         'source_title': source_title,
@@ -194,7 +215,12 @@ def _handle_web_source(params: dict, url: str, source_type: str, start_time: flo
     return jsonify(response_data)
 
 
-def _handle_article_source(params: dict, url: str, start_time: float):
+def _handle_article_source(
+    params: dict,
+    url: str,
+    start_time: float,
+    on_cost_start=None,
+):
     """일반 웹 아티클 → YouTube와 같은 메인 생성 경로로 콘텐츠 생성."""
     from flask import request
     from services.content.article_service import fetch_article
@@ -223,6 +249,7 @@ def _handle_article_source(params: dict, url: str, start_time: float):
         source_content,
         max_tokens,
         web_search=bool(request_data.get('web_search', False)),
+        on_cost_start=on_cost_start,
     )
 
     result = _apply_output_format(
@@ -250,7 +277,6 @@ def _handle_article_source(params: dict, url: str, start_time: float):
     response = _base_generation_response(result, params, start_time, used_prompt)
     response.update({
         'id': report_id,
-        'prompt_length': len(used_prompt) if used_prompt else 0,
         'elapsed_time': elapsed_time,
         'source_type': 'article',
         'source_title': source_title,
@@ -304,13 +330,19 @@ def _apply_output_format(result: dict, output_format: str, max_chars: int = None
     return result
 
 
-def _fetch_youtube_content(video_id, transcript_language=None):
+def _fetch_youtube_content(
+    video_id,
+    transcript_language=None,
+    on_cost_start=None,
+):
     """YouTube 영상의 자막과 댓글을 분리하여 가져옵니다.
     Supadata API 키는 환경변수에서 자동으로 로드됩니다.
 
     Args:
         video_id: YouTube 비디오 ID
         transcript_language: 사용자가 지정한 자막 언어 코드('ko'/'en'/'ja' 등). None이면 기존 기본 동작.
+        on_cost_start: NotebookLM/Supadata 유료 자막 폴백 직전
+            사용량을 확정할 선택 콜백.
 
     Returns:
         tuple: (transcript_text, comments_list, error, raw_transcript, transcript_source, transcript_segments)
@@ -318,7 +350,11 @@ def _fetch_youtube_content(video_id, transcript_language=None):
         - transcript_source: 'api' | 'watch' | 'supadata' | 'cache'
         - transcript_segments: 타임스탬프 포함 세그먼트 목록 [{'start': float, 'text': str}, ...]
     """
-    transcript_result = content_service.get_transcript(video_id, transcript_language=transcript_language)
+    transcript_result = content_service.get_transcript(
+        video_id,
+        transcript_language=transcript_language,
+        on_cost_start=on_cost_start,
+    )
     if isinstance(transcript_result, dict) and transcript_result.get('error'):
         return None, [], _sanitize_transcript_error(transcript_result['error']), None, None, []
 
@@ -335,7 +371,12 @@ def _fetch_youtube_content(video_id, transcript_language=None):
         return None, [], '[서버 오류] 자막 정보를 불러오는 중 문제가 발생했습니다.', None, None, []
 
     try:
-        comments = content_service.get_top_comments(video_id) or []
+        comments = content_service.get_top_comments(
+            video_id,
+            on_cost_start=on_cost_start,
+        ) or []
+    except UsageLockUnavailable:
+        raise
     except Exception as e:
         current_app.logger.warning('Top comments fetch failed for %s: %s', video_id, e)
         comments = []
@@ -357,7 +398,10 @@ def _build_combined_content(transcript_text, comments):
     return f"[영상 자막]\n{transcript_text}\n\n[시청자 댓글]\n{comments_text}"
 
 
-def _generate_main_content(app, content, model, style_prompt, modifiers, style_id=None):
+def _generate_main_content(
+    app, content, model, style_prompt, modifiers, style_id=None,
+    on_cost_start=None,
+):
     """스레드에서 메인 콘텐츠를 생성합니다.
 
     Returns:
@@ -367,11 +411,12 @@ def _generate_main_content(app, content, model, style_prompt, modifiers, style_i
         return ai_service.create_content(
             content, model, style_prompt,
             return_prompt=True, modifiers=modifiers,
-            style_id=style_id
+            style_id=style_id,
+            on_cost_start=on_cost_start,
         )
 
 
-def _generate_comment_summary(app, comments, model):
+def _generate_comment_summary(app, comments, model, on_cost_start=None):
     """스레드에서 댓글 요약을 생성합니다. 실패 시 None 반환.
 
     Args:
@@ -391,9 +436,12 @@ def _generate_comment_summary(app, comments, model):
 
             result = ai_service.create_content(
                 comment_content, model, COMMENT_SUMMARY_PROMPT,
-                style_id='comment_summary'
+                style_id='comment_summary',
+                on_cost_start=on_cost_start,
             )
             return result
+        except UsageLockUnavailable:
+            raise
         except Exception as e:
             current_app.logger.warning(f"댓글 요약 생성 실패 (무시): {e}")
             return None
@@ -463,7 +511,6 @@ def _handle_short_content_bypass(transcript_text, style, youtube_title,
         'content': transcript_text,
         'html': bypass_html,
         'id': str(uuid.uuid4()),
-        'prompt': '',
         'elapsed_time': elapsed_time,
         'youtube_title': youtube_title,
         'transcript': raw_transcript,
@@ -475,7 +522,15 @@ def _handle_short_content_bypass(transcript_text, style, youtube_title,
     })
 
 
-def _handle_cache_hit(cache_key, force, video_id, url, start_time, transcript_language=None):
+def _handle_cache_hit(
+    cache_key,
+    force,
+    video_id,
+    url,
+    start_time,
+    transcript_language=None,
+    on_cost_start=None,
+):
     """캐시 히트 체크. 히트 시 Response 반환, 아니면 None.
 
     자막/제목 추출 전에 호출된다 — 히트 시 YouTube 왕복(제목 API + 자막
@@ -494,6 +549,10 @@ def _handle_cache_hit(cache_key, force, video_id, url, start_time, transcript_la
     g.skip_usage_decrement = True
     elapsed_time = round(time.time() - start_time, 2)
     cached.pop('_cached_at', None)
+    # Defense in depth for legacy/custom cache backends that may still carry
+    # pre-v2 internal prompt metadata.
+    cached.pop('prompt', None)
+    cached.pop('prompt_length', None)
 
     transcript_cache = {} if transcript_language else (content_service.get_cached_transcript(video_id) or {})
     raw_transcript = transcript_cache.get('text', '')
@@ -503,18 +562,27 @@ def _handle_cache_hit(cache_key, force, video_id, url, start_time, transcript_la
         # — 캐시 응답에도 transcript 페이로드는 항상 포함돼야 한다
         try:
             fetched = content_service.get_transcript(
-                video_id, transcript_language=transcript_language
+                video_id,
+                transcript_language=transcript_language,
+                on_cost_start=on_cost_start,
             )
             if fetched and not fetched.get('error'):
                 raw_transcript = fetched.get('text', '')
                 transcript_source = fetched.get('source', 'cache')
+        except UsageLockUnavailable:
+            # 사용량 임대를 잃은 후 유료 자막 작업을 시작하지
+            # 않도록 캐시 페이로드 복원의 graceful fallback으로 삼키지 않는다.
+            raise
         except Exception:
             pass  # 자막 재추출 실패가 캐시 응답 자체를 막지 않도록
 
     youtube_title = cached.pop('youtube_title', None)
     if not youtube_title:
         # 구버전 캐시 엔트리 폴백 (신규 저장분은 페이로드에 제목 포함)
-        youtube_title = content_service.get_content_title(url) or 'YouTube 영상'
+        youtube_title = content_service.get_content_title(
+            url,
+            on_cost_start=on_cost_start,
+        ) or 'YouTube 영상'
 
     return jsonify({
         **cached,
@@ -530,7 +598,10 @@ def _handle_cache_hit(cache_key, force, video_id, url, start_time, transcript_la
     })
 
 
-def _generate_main_content_with_web_search(app, content, model, style_prompt, modifiers, style_id=None, web_search=False, detail_level=None):
+def _generate_main_content_with_web_search(
+    app, content, model, style_prompt, modifiers, style_id=None,
+    web_search=False, detail_level=None, on_cost_start=None,
+):
     """스레드에서 메인 콘텐츠를 생성합니다 (웹 검색 지원).
 
     Returns:
@@ -542,11 +613,13 @@ def _generate_main_content_with_web_search(app, content, model, style_prompt, mo
             return_prompt=True, modifiers=modifiers,
             style_id=style_id, web_search=web_search,
             detail_level=detail_level,
+            on_cost_start=on_cost_start,
         )
 
 
 def _call_ai_with_comments(truncated_content, model, style_prompt, params,
-                            comments, transcript_text, max_tokens, web_search=False):
+                            comments, transcript_text, max_tokens, web_search=False,
+                            on_cost_start=None):
     """AI 호출 + 댓글 병렬 처리. (result, used_prompt, comment_result) 반환."""
     # RAG 컨텍스트를 위한 user_id (없으면 None → RAG 스킵)
     user_id = getattr(g, 'user_id', None)
@@ -564,7 +637,8 @@ def _call_ai_with_comments(truncated_content, model, style_prompt, params,
         result, used_prompt = ai_service.create_content_with_fallback(
             truncated_content, FALLBACK_CHAIN, style_prompt,
             return_prompt=True, modifiers=params['modifiers'],
-            style_id=params['style'], user_id=user_id
+            style_id=params['style'], user_id=user_id,
+            on_cost_start=on_cost_start,
         )
         return result, used_prompt, comment_result
 
@@ -578,9 +652,11 @@ def _call_ai_with_comments(truncated_content, model, style_prompt, params,
                 model, style_prompt, params['modifiers'],
                 style_id=params['style'], web_search=web_search,
                 detail_level=detail_level,
+                on_cost_start=on_cost_start,
             )
             comment_future = executor.submit(
-                _generate_comment_summary, app, comments, model
+                _generate_comment_summary, app, comments, model,
+                on_cost_start
             )
 
             result, used_prompt = main_future.result()
@@ -596,16 +672,42 @@ def _call_ai_with_comments(truncated_content, model, style_prompt, params,
             style_id=params['style'], user_id=user_id,
             web_search=web_search,
             detail_level=detail_level,
+            on_cost_start=on_cost_start,
         )
 
     return result, used_prompt, comment_result
 
 
-def _run_chapter_split(app, raw_transcript, model, transcript_segments):
+def _run_chapter_split(
+    app, raw_transcript, model, transcript_segments, on_cost_start=None,
+):
     """스레드에서 챕터 분할 LLM 호출을 실행합니다 (메인 생성과 병렬)."""
     from services.transcript.chapter_service import split_chapters
     with app.app_context():
-        return split_chapters(raw_transcript, model, transcript_segments)
+        return split_chapters(
+            raw_transcript,
+            model,
+            transcript_segments,
+            on_cost_start=on_cost_start,
+        )
+
+
+def _queue_style_profile_update(
+    user_id: str,
+    generation_params: dict,
+    validated_access_token: str | None,
+) -> None:
+    """검증된 요청 토큰을 스타일 메모리 백그라운드 작업에 명시 전달한다."""
+    import threading
+
+    from services.data.style_memory_service import update_profile
+
+    threading.Thread(
+        target=update_profile,
+        args=(user_id, generation_params),
+        kwargs={'validated_access_token': validated_access_token},
+        daemon=True,
+    ).start()
 
 
 def _persist_generation_result(cache_key, video_id, params, url, youtube_title,
@@ -619,12 +721,22 @@ def _persist_generation_result(cache_key, video_id, params, url, youtube_title,
     modifiers = params['modifiers'] or {}
     _cache = current_app.ai_cache
     _user_id = user_id if user_id is not None else getattr(g, 'user_id', None)
+    _request_user_id = getattr(g, 'user_id', None)
+    _history_access_token = (
+        getattr(g, 'access_token', None)
+        if _user_id and _user_id == _request_user_id
+        else None
+    )
+    cache_result = _apply_output_format(
+        result,
+        params.get('output_format', 'html'),
+        params.get('max_chars'),
+    )
     _cache_data = {
-        'title': result.get('title', ''),
-        'content': result.get('content', ''),
-        'html': result.get('html', ''),
+        'title': cache_result.get('title', ''),
+        'content': cache_result.get('content', ''),
+        'html': cache_result.get('html', ''),
         'comment_summary_included': bool(comments and comment_result),
-        'prompt': used_prompt,
         # 캐시 히트 시 YouTube 제목 API 재호출을 피하기 위해 함께 저장
         'youtube_title': youtube_title,
     }
@@ -645,14 +757,22 @@ def _persist_generation_result(cache_key, video_id, params, url, youtube_title,
     }
 
     def _background_save():
-        _cache.put(
-            cache_key, video_id, params['style'], model,
-            modifiers.get('length', 'medium'),
-            modifiers.get('writing_style', 'conversational'),
-            _cache_data,
-        )
+        # Authenticated generation can include mutable private RAG, style
+        # memory, and AI memory.  Do not persist it in the shared SQLite cache;
+        # account history remains the user-owned persistence layer.
+        if not _user_id:
+            _cache.put(
+                cache_key, video_id, params['style'], model,
+                modifiers.get('length', 'medium'),
+                modifiers.get('writing_style', 'conversational'),
+                _cache_data,
+            )
         if _user_id:
-            save_history(_user_id, _history_data)
+            save_history(
+                _user_id,
+                _history_data,
+                validated_access_token=_history_access_token,
+            )
 
     threading.Thread(target=_background_save, daemon=True).start()
 
@@ -728,6 +848,8 @@ def _save_and_respond(result, used_prompt, comment_result, cache_key,
         try:
             from services.analysis.nlp_analysis_service import analyze_content
             analysis = analyze_content(result.get('content', ''))
+        except UsageLockUnavailable:
+            raise
         except Exception as analysis_err:
             current_app.logger.warning(f"NLP 분석 실패 (무시): {analysis_err}")
 
@@ -749,13 +871,16 @@ def _save_and_respond(result, used_prompt, comment_result, cache_key,
     # 스타일 메모리 프로필 업데이트 (fire-and-forget — 응답 블로킹 금지)
     if g.user_id:
         try:
-            import threading
-            from services.data.style_memory_service import update_profile as _update_style_profile
-            threading.Thread(
-                target=_update_style_profile,
-                args=(g.user_id, {'style': params['style'], 'modifiers': params.get('modifiers')}),
-                daemon=True
-            ).start()
+            _style_user_id = g.user_id
+            _style_access_token = getattr(g, 'access_token', None)
+            _queue_style_profile_update(
+                _style_user_id,
+                {
+                    'style': params['style'],
+                    'modifiers': params.get('modifiers'),
+                },
+                _style_access_token,
+            )
         except Exception:
             pass  # 스타일 메모리 업데이트 실패는 응답에 영향 없음
 
@@ -771,6 +896,8 @@ def _save_and_respond(result, used_prompt, comment_result, cache_key,
                 chapters = chapter_future.result(timeout=120)
             else:
                 chapters = split_chapters(raw_transcript, model, transcript_segments)
+        except UsageLockUnavailable:
+            raise
         except Exception as ch_err:
             current_app.logger.warning(f"챕터 분할 실패 (무시): {ch_err}")
 
@@ -787,8 +914,6 @@ def _save_and_respond(result, used_prompt, comment_result, cache_key,
     return jsonify({
         **result,
         "id": report_id,
-        "prompt": used_prompt,
-        "prompt_length": len(used_prompt) if used_prompt else 0,
         "elapsed_time": elapsed_time,
         "youtube_title": youtube_title,
         "transcript": raw_transcript,
@@ -811,7 +936,9 @@ def _save_and_respond(result, used_prompt, comment_result, cache_key,
     })
 
 
-def _process_single_url(app, url, model, style, modifiers, custom_prompt):
+def _process_single_url(
+    app, url, model, style, modifiers, custom_prompt, on_cost_start=None,
+):
     """배치 처리에서 단일 URL을 처리하는 헬퍼 함수입니다.
     API 키는 서버 환경변수에서 자동으로 로드됩니다.
     """
@@ -838,10 +965,16 @@ def _process_single_url(app, url, model, style, modifiers, custom_prompt):
                     'error': '유효하지 않은 YouTube URL입니다'
                 }
 
-            title = content_service.get_content_title(url) or 'YouTube 영상'
+            title = content_service.get_content_title(
+                url,
+                on_cost_start=on_cost_start,
+            ) or 'YouTube 영상'
             current_app.logger.info(f"Content title: {title}")
 
-            transcript_text, comments, error, raw_transcript, transcript_source, _ = _fetch_youtube_content(video_id)
+            transcript_text, comments, error, raw_transcript, transcript_source, _ = _fetch_youtube_content(
+                video_id,
+                on_cost_start=on_cost_start,
+            )
             if error:
                 return {
                     'success': False,
@@ -859,7 +992,8 @@ def _process_single_url(app, url, model, style, modifiers, custom_prompt):
             result, used_prompt = ai_service.create_content(
                 content, model, style_prompt,
                 return_prompt=True, modifiers=modifiers,
-                style_id=style
+                style_id=style,
+                on_cost_start=on_cost_start,
             )
 
             return {
@@ -868,10 +1002,12 @@ def _process_single_url(app, url, model, style, modifiers, custom_prompt):
                 'title': result.get('title', title),
                 'content': result.get('content', ''),
                 'html': result.get('html', ''),
-                'prompt': used_prompt,
                 'transcript_source': transcript_source
             }
 
+        except UsageLockUnavailable:
+            # 배치 라우트의 503/fail-closed 처리까지 전파한다.
+            raise
         except Exception as e:
             current_app.logger.error(f"Error processing URL {url}: {e}")
             return {

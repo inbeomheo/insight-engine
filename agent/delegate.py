@@ -17,6 +17,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed, Future
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Sequence
 
+from services.usage.usage_lock import UsageLockUnavailable
+
 logger = logging.getLogger(__name__)
 
 # 자식 에이전트가 사용 불가한 도구
@@ -31,8 +33,11 @@ DELEGATE_BLOCKED_TOOLS = frozenset([
 ])
 
 MAX_CONCURRENT_CHILDREN = 3
-MAX_DEPTH = 2  # 0=루트, 1=자식, 2=거부
+MAX_DELEGATION_DEPTH = 2  # 0=루트, 1=자식, 2=추가 위임 거부
+# 기존 import 호환용 별칭. 새 코드는 의미가 명확한 상수를 사용한다.
+MAX_DEPTH = MAX_DELEGATION_DEPTH
 DEFAULT_CHILD_MAX_ITERATIONS = 20
+DELEGATION_ERROR_MESSAGE = "서브에이전트 처리 중 문제가 발생했습니다."
 
 
 @dataclass
@@ -86,12 +91,16 @@ class DelegateManager:
         parent_model: str,
         parent_toolsets: Sequence[str],
         depth: int = 0,
+        parent_blocked_tools: Optional[Sequence[str]] = None,
         parent_interrupt: Optional[threading.Event] = None,
+        parent_on_cost_start: Optional[Callable[[], None]] = None,
     ):
         self._parent_model = parent_model
         self._parent_toolsets = list(parent_toolsets)
-        self._depth = depth
+        self._depth = max(0, int(depth))
+        self._parent_blocked_tools = frozenset(parent_blocked_tools or ())
         self._parent_interrupt = parent_interrupt or threading.Event()
+        self._parent_on_cost_start = parent_on_cost_start
         self._active_children: List[Any] = []
         self._lock = threading.Lock()
 
@@ -104,14 +113,17 @@ class DelegateManager:
         Returns:
             DelegateResult
         """
-        if self._depth >= MAX_DEPTH:
+        if self._depth >= MAX_DELEGATION_DEPTH:
             return DelegateResult(
                 task=task.task,
                 content="",
                 success=False,
                 tool_calls_count=0,
                 elapsed_seconds=0,
-                error=f"최대 위임 깊이 초과 (depth={self._depth}, max={MAX_DEPTH})",
+                error=(
+                    "최대 위임 깊이 초과 "
+                    f"(depth={self._depth}, max={MAX_DELEGATION_DEPTH})"
+                ),
             )
 
         child = self._create_child_agent(task)
@@ -131,15 +143,21 @@ class DelegateManager:
                 tool_calls_count=response.tool_calls_count,
                 elapsed_seconds=response.elapsed_seconds,
             )
-        except Exception as e:
-            logger.error("서브에이전트 실패: %s — %s", task.task[:50], e)
+        except UsageLockUnavailable:
+            raise
+        except Exception as exc:
+            logger.error(
+                "서브에이전트 실패 (depth=%d, type=%s)",
+                self._depth,
+                type(exc).__name__,
+            )
             return DelegateResult(
                 task=task.task,
                 content="",
                 success=False,
                 tool_calls_count=0,
                 elapsed_seconds=0,
-                error=str(e),
+                error=DELEGATION_ERROR_MESSAGE,
             )
         finally:
             with self._lock:
@@ -176,14 +194,26 @@ class DelegateManager:
                 idx = futures[future]
                 try:
                     results[idx] = future.result()
-                except Exception as e:
+                except UsageLockUnavailable:
+                    for pending in futures:
+                        if pending is not future:
+                            pending.cancel()
+                    self.interrupt_all()
+                    raise
+                except Exception as exc:
+                    logger.error(
+                        "병렬 서브에이전트 결과 수집 실패 "
+                        "(index=%d, type=%s)",
+                        idx,
+                        type(exc).__name__,
+                    )
                     results[idx] = DelegateResult(
                         task=tasks[idx].task,
                         content="",
                         success=False,
                         tool_calls_count=0,
                         elapsed_seconds=0,
-                        error=str(e),
+                        error=DELEGATION_ERROR_MESSAGE,
                     )
 
         return results
@@ -199,12 +229,24 @@ class DelegateManager:
     def _create_child_agent(self, task: DelegateTask):
         """자식 AIAgent 인스턴스를 생성합니다."""
         from agent.core import AIAgent
+        from agent.toolsets import resolve_toolset_names
 
         # 도구셋 결정: 명시적 지정 > 부모 도구셋
-        child_toolsets = task.toolsets or self._parent_toolsets
+        requested_toolsets = (
+            self._parent_toolsets if task.toolsets is None else task.toolsets
+        )
 
-        # 차단 도구 제거를 위해 agent_control은 제외
-        child_toolsets = [ts for ts in child_toolsets if ts != "agent_control"]
+        # 합성 toolset(full, role_writer 등)을 먼저 leaf로 펼쳐야 간접 포함된
+        # agent_control을 제거할 수 있다. 빈 목록은 AIAgent에서도 빈 목록으로
+        # 유지되어야 하며 full로 되돌아가면 안 된다.
+        child_toolsets = [
+            name
+            for name in resolve_toolset_names(requested_toolsets)
+            if name != "agent_control"
+        ]
+        child_blocked_tools = (
+            self._parent_blocked_tools | DELEGATE_BLOCKED_TOOLS
+        )
 
         # 시스템 프롬프트: 자식 역할 명시
         system_prompt = (
@@ -221,10 +263,13 @@ class DelegateManager:
             toolsets=child_toolsets,
             system_prompt=system_prompt,
             max_iterations=task.max_iterations,
+            delegation_depth=self._depth + 1,
+            blocked_tools=child_blocked_tools,
             # 자식은 콜백 없음 (부모가 결과만 수집)
             on_stream_delta=None,
             on_tool_start=None,
             on_tool_end=None,
+            on_cost_start=self._parent_on_cost_start,
         )
 
         return child

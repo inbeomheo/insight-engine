@@ -2,12 +2,18 @@
 import os
 import logging
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any, Callable, Optional
+
+from services.usage.usage_lock import UsageLockUnavailable
 
 logger = logging.getLogger(__name__)
 
 
-def get_latest_video(channel_id: str) -> Optional[dict]:
+def get_latest_video(
+    channel_id: str,
+    *,
+    on_cost_start: Optional[Callable[[], None]] = None,
+) -> Optional[dict]:
     """YouTube 채널의 최신 영상 정보를 가져옵니다.
 
     Returns:
@@ -21,6 +27,11 @@ def get_latest_video(channel_id: str) -> Optional[dict]:
     import requests
     try:
         # 채널의 최신 영상 검색
+        if callable(on_cost_start):
+            on_cost_start()
+        else:
+            from services.usage.usage_decorator import mark_usage_charge_committed
+            mark_usage_charge_committed()
         resp = requests.get(
             'https://www.googleapis.com/youtube/v3/search',
             params={
@@ -44,12 +55,22 @@ def get_latest_video(channel_id: str) -> Optional[dict]:
             'title': item['snippet']['title'],
             'published_at': item['snippet']['publishedAt'],
         }
-    except Exception as e:
-        logger.error(f"채널 {channel_id} 최신 영상 조회 실패: {e}")
+    except UsageLockUnavailable:
+        raise
+    except Exception as exc:
+        logger.error(
+            "채널 %s 최신 영상 조회 실패 (type=%s)",
+            channel_id,
+            type(exc).__name__,
+        )
         return None
 
 
-def check_monitors(supabase_client: Any = None) -> list:
+def check_monitors(
+    supabase_client: Any = None,
+    *,
+    on_cost_start: Optional[Callable[[], None]] = None,
+) -> list:
     """활성 모니터를 확인하고 신규 영상이 있으면 목록을 반환합니다.
 
     Returns:
@@ -68,7 +89,10 @@ def check_monitors(supabase_client: Any = None) -> list:
         new_videos = []
 
         for monitor in monitors:
-            latest = get_latest_video(monitor['channel_id'])
+            latest = get_latest_video(
+                monitor['channel_id'],
+                on_cost_start=on_cost_start,
+            )
             if not latest:
                 continue
 
@@ -94,6 +118,8 @@ def check_monitors(supabase_client: Any = None) -> list:
                     .execute()
 
         return new_videos
-    except Exception as e:
-        logger.error(f"모니터 체크 실패: {e}")
+    except UsageLockUnavailable:
+        raise
+    except Exception as exc:
+        logger.error("모니터 체크 실패 (type=%s)", type(exc).__name__)
         return []

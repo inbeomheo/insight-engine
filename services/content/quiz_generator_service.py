@@ -84,7 +84,11 @@ def _make_multiple_choice(sentence: str, keywords: list, difficulty: str) -> Qui
         wrong_options.append(f"{target}{suffix}")
 
     options = [target] + wrong_options
-    options.sort(key=lambda x: hashlib.md5(x.encode()).hexdigest())
+    options.sort(
+        key=lambda x: hashlib.md5(
+            x.encode(), usedforsecurity=False,
+        ).hexdigest()
+    )
 
     return QuizQuestion(
         question_id=_new_id(),

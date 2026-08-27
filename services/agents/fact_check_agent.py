@@ -9,6 +9,7 @@ import logging
 import re
 
 from .base_agent import BaseAgent
+from services.usage.usage_lock import UsageLockUnavailable
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +58,8 @@ class FactCheckAgent(BaseAgent):
         try:
             raw = self._call_ai(prompt, temperature=0.3, max_tokens=2000)
             claims = _parse_claims(raw)
+        except UsageLockUnavailable:
+            raise
         except Exception as e:
             logger.warning(f"팩트체크 실패: {e}")
             claims = []

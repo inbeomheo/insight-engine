@@ -2,7 +2,10 @@
 from __future__ import annotations
 
 import logging
+import http.client
 import re
+import socket
+import ssl
 from typing import Any
 from urllib.parse import urljoin, urlparse
 
@@ -10,7 +13,12 @@ import requests
 from bs4 import BeautifulSoup
 
 from services.core import content_service
-from utils.url_safety import is_safe_public_url
+from utils.url_safety import (
+    ResolvedPublicURL,
+    UnsafeURLError,
+    is_safe_public_url,
+    resolve_public_url,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -95,19 +103,99 @@ def _is_youtube_host(hostname: str) -> bool:
     return hostname in _YOUTUBE_HOSTS or hostname.endswith(".youtube.com")
 
 
+def _connect_to_ip(target: ResolvedPublicURL, timeout: float) -> socket.socket:
+    """검증된 IP에 직접 연결해 URL 검사 후 DNS 재해석을 막습니다."""
+    family = socket.AF_INET6 if ':' in target.ip else socket.AF_INET
+    sock = socket.socket(family, socket.SOCK_STREAM)
+    sock.settimeout(timeout)
+    destination = (
+        (target.ip, target.port, 0, 0)
+        if family == socket.AF_INET6
+        else (target.ip, target.port)
+    )
+    try:
+        sock.connect(destination)
+        return sock
+    except Exception:
+        sock.close()
+        raise
+
+
+def _get_from_resolved_url(
+    target: ResolvedPublicURL,
+    headers: dict[str, str],
+    timeout: tuple[int, int],
+) -> requests.Response:
+    """고정 IP로 GET하되 원래 Host/SNI/인증서 검증을 유지합니다."""
+    connect_timeout, read_timeout = timeout
+    sock = _connect_to_ip(target, connect_timeout)
+    connection = http.client.HTTPConnection(
+        target.hostname,
+        target.port,
+        timeout=read_timeout,
+    )
+    try:
+        if target.scheme == 'https':
+            context = ssl.create_default_context(cafile=requests.certs.where())
+            sock = context.wrap_socket(sock, server_hostname=target.hostname)
+        sock.settimeout(read_timeout)
+        connection.sock = sock
+        connection.request(
+            'GET',
+            target.request_target,
+            headers={
+                **headers,
+                'Host': target.host_header,
+                'Connection': 'close',
+            },
+        )
+        raw_response = connection.getresponse()
+        response = requests.Response()
+        response.status_code = raw_response.status
+        response.reason = raw_response.reason
+        response.url = (
+            f'{target.scheme}://{target.host_header}{target.request_target}'
+        )
+        response.headers = requests.structures.CaseInsensitiveDict(
+            raw_response.getheaders()
+        )
+        content_length = response.headers.get('Content-Length')
+        is_redirect = 300 <= response.status_code < 400
+        if is_redirect or (
+            content_length
+            and content_length.isdigit()
+            and int(content_length) > MAX_ARTICLE_BYTES
+        ):
+            response._content = b''
+        else:
+            # 상한보다 한 바이트 더 읽어 스트리밍 길이 초과도 탐지합니다.
+            response._content = raw_response.read(MAX_ARTICLE_BYTES + 1)
+        # raw가 없는 합성 requests.Response이므로 이미 본문을 모두 읽었다고
+        # 표시해야 iter_content()가 raw.stream을 호출하지 않습니다.
+        response._content_consumed = True
+        response.encoding = requests.utils.get_encoding_from_headers(response.headers)
+        return response
+    finally:
+        connection.close()
+        sock.close()
+
+
 def _fetch_html(url: str) -> tuple[bytes, str]:
     """리다이렉트마다 URL 안전성과 최종 HTML 타입을 검증해 바이트 본문을 반환합니다."""
     current_url = url
     headers = {"User-Agent": USER_AGENT, "Accept": "text/html,application/xhtml+xml"}
 
     for _ in range(_MAX_REDIRECTS + 1):
-        response = requests.get(
-            current_url,
-            headers=headers,
-            timeout=REQUEST_TIMEOUT,
-            stream=True,
-            allow_redirects=False,
-        )
+        try:
+            target = resolve_public_url(current_url)
+        except UnsafeURLError as exc:
+            raise ValueError(
+                "[아티클 추출 실패] 안전하지 않은 URL은 가져올 수 없습니다."
+            ) from exc
+        try:
+            response = _get_from_resolved_url(target, headers, REQUEST_TIMEOUT)
+        except (OSError, ssl.SSLError, http.client.HTTPException) as exc:
+            raise requests.RequestException('article request failed') from exc
         try:
             status_code = getattr(response, "status_code", 200)
             if status_code in {301, 302, 303, 307, 308}:
@@ -143,11 +231,17 @@ def _read_limited_response(response) -> bytes:
     content_length = response.headers.get("Content-Length")
     if content_length:
         try:
-            if int(content_length) > MAX_ARTICLE_BYTES:
-                raise ValueError("[아티클 추출 실패] 페이지가 너무 큽니다.")
+            declared_length = int(content_length)
         except (TypeError, ValueError) as exc:
-            if str(exc).startswith("[아티클 추출 실패]"):
-                raise
+            raise ValueError(
+                "[아티클 추출 실패] Content-Length가 올바르지 않습니다."
+            ) from exc
+        if declared_length < 0:
+            raise ValueError(
+                "[아티클 추출 실패] Content-Length가 올바르지 않습니다."
+            )
+        if declared_length > MAX_ARTICLE_BYTES:
+            raise ValueError("[아티클 추출 실패] 페이지가 너무 큽니다.")
 
     chunks: list[bytes] = []
     total = 0

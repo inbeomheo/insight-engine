@@ -5,8 +5,11 @@ CrossEncoder ML 모델 없이 LLM을 활용하여 무거운 의존성 회피
 import json
 import logging
 import re
+from typing import Callable, Optional
 
 import litellm
+
+from services.usage.usage_lock import UsageLockUnavailable
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +36,14 @@ _RERANK_PROMPT = """다음 쿼리에 대해 각 문서 청크의 관련도 점�
 청크 개수와 정확히 같은 수의 점수를 출력하세요."""
 
 
-def rerank(query: str, chunks: list[dict], top_k: int = 5, model: str = _DEFAULT_MODEL) -> list[dict]:
+def rerank(
+    query: str,
+    chunks: list[dict],
+    top_k: int = 5,
+    model: str = _DEFAULT_MODEL,
+    *,
+    on_cost_start: Optional[Callable[[], None]] = None,
+) -> list[dict]:
     """LLM을 사용하여 청크를 쿼리 관련도로 재정렬합니다.
 
     Args:
@@ -64,6 +74,8 @@ def rerank(query: str, chunks: list[dict], top_k: int = 5, model: str = _DEFAULT
     prompt = _RERANK_PROMPT.format(query=query, chunks_text=chunks_text)
 
     try:
+        if callable(on_cost_start):
+            on_cost_start()
         response = litellm.completion(
             model=model,
             messages=[{"role": "user", "content": prompt}],
@@ -80,7 +92,9 @@ def rerank(query: str, chunks: list[dict], top_k: int = 5, model: str = _DEFAULT
         else:
             scores = []
 
-    except (json.JSONDecodeError, KeyError, IndexError, Exception) as e:
+    except UsageLockUnavailable:
+        raise
+    except Exception as e:
         logger.warning(f"리랭킹 LLM 호출 실패, 원본 순서 반환: {e}")
         scores = []
 
@@ -112,6 +126,8 @@ def rerank_with_fallback(
     chunks: list[dict],
     top_k: int = 5,
     model: str = _DEFAULT_MODEL,
+    *,
+    on_cost_start: Optional[Callable[[], None]] = None,
 ) -> list[dict]:
     """리랭킹을 시도하고 실패 시 거리 기반 정렬로 폴백합니다.
 
@@ -125,7 +141,15 @@ def rerank_with_fallback(
         재정렬된 청크 목록
     """
     try:
-        return rerank(query, chunks, top_k, model)
+        return rerank(
+            query,
+            chunks,
+            top_k,
+            model,
+            on_cost_start=on_cost_start,
+        )
+    except UsageLockUnavailable:
+        raise
     except Exception as e:
         logger.warning(f"리랭킹 전체 실패, 거리 기반 폴백: {e}")
         # 벡터 거리 기반 정렬 (distance가 낮을수록 관련성 높음)

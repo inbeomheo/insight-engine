@@ -145,7 +145,7 @@ TOOLSETS: Dict[str, Dict[str, list]] = {
             "memory_search", "clarify",
         ],
         "includes": [],
-        "description": "서브에이전트 위임, 메모리 관리, 사용자 질문",
+        "description": "서브에이전트 위임, 사용자별 격리 메모리 관리, 사용자 질문",
     },
 
     # ── 분석 대시보드 ──
@@ -207,17 +207,18 @@ TOOLSETS: Dict[str, Dict[str, list]] = {
         "description": "미디어 에셋 생성 역할",
     },
 
-    # Full: 모든 도구 (Supervisor 또는 디버깅용)
+    # Full: 일반 자동화 도구. 발행/예약처럼 외부 상태를 바꾸는 도구는
+    # 명시적인 role_publisher 선택 없이는 노출하지 않는다.
     "full": {
         "tools": [],
         "includes": [
             "collector", "analysis", "seo", "content", "core",
             "quality", "media", "transcript", "platform", "rag",
-            "export", "integrations", "mcp", "schedule",
+            "export", "integrations",
             "agent_control", "analytics",
             "notebooklm",
         ],
-        "description": "모든 도구 (Supervisor용)",
+        "description": "일반 자동화 도구 (발행·예약 제외)",
     },
 }
 

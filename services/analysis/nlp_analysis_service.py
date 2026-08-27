@@ -6,6 +6,9 @@ ChatMock 기본 모델을 사용합니다.
 """
 import json
 import logging
+from typing import Callable, Optional
+
+from services.usage.usage_lock import UsageLockUnavailable
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +80,12 @@ def _apply_chatmock_kwargs(kwargs: dict, model: str) -> None:
     kwargs.pop("temperature", None)
 
 
-def _call_llm_for_analysis(content: str, model: str) -> dict:
+def _call_llm_for_analysis(
+    content: str,
+    model: str,
+    *,
+    on_cost_start: Optional[Callable[[], None]] = None,
+) -> dict:
     """LLM을 호출하여 분석 결과 dict를 반환합니다.
 
     Args:
@@ -102,6 +110,11 @@ def _call_llm_for_analysis(content: str, model: str) -> dict:
 
     _apply_chatmock_kwargs(kwargs, model)
 
+    if callable(on_cost_start):
+        on_cost_start()
+    else:
+        from services.usage.usage_decorator import mark_usage_charge_committed
+        mark_usage_charge_committed()
     response = completion(**kwargs)
     raw = response.choices[0].message.content or ''
     return _parse_analysis_json(raw)
@@ -213,7 +226,12 @@ def _validate_analysis(data: dict) -> dict:
     return result
 
 
-def analyze_content(content: str, model: str = None) -> dict:
+def analyze_content(
+    content: str,
+    model: str = None,
+    *,
+    on_cost_start: Optional[Callable[[], None]] = None,
+) -> dict:
     """생성된 콘텐츠를 LLM으로 분석합니다.
 
     Args:
@@ -235,11 +253,17 @@ def analyze_content(content: str, model: str = None) -> dict:
     if not content or not content.strip():
         return dict(_EMPTY_ANALYSIS)
 
-    if model is None:
-        model = _get_analysis_model()
+    from services.core.ai_service import resolve_public_model
+    model = resolve_public_model(model, _get_analysis_model())
 
     try:
-        return _call_llm_for_analysis(content, model)
+        return _call_llm_for_analysis(
+            content,
+            model,
+            on_cost_start=on_cost_start,
+        )
+    except UsageLockUnavailable:
+        raise
     except Exception as e:
         logger.warning(f"NLP 분석 실패 (무시): {e}")
         return dict(_EMPTY_ANALYSIS)
@@ -271,7 +295,12 @@ JSON만 반환하세요 (설명 없이):
 - overall_arc: 전체 감정 흐름 방향"""
 
 
-def analyze_sentiment_flow(content: str, model: str = None) -> dict:
+def analyze_sentiment_flow(
+    content: str,
+    model: str = None,
+    *,
+    on_cost_start: Optional[Callable[[], None]] = None,
+) -> dict:
     """문단별 감정 흐름을 분석합니다.
 
     Args:
@@ -290,8 +319,8 @@ def analyze_sentiment_flow(content: str, model: str = None) -> dict:
     if not content or not content.strip():
         return empty_flow
 
-    if model is None:
-        model = _get_analysis_model()
+    from services.core.ai_service import resolve_public_model
+    model = resolve_public_model(model, _get_analysis_model())
 
     # 최대 3000자
     truncated = content[:3000]
@@ -309,9 +338,16 @@ def analyze_sentiment_flow(content: str, model: str = None) -> dict:
 
         _apply_chatmock_kwargs(kwargs, model)
 
+        if callable(on_cost_start):
+            on_cost_start()
+        else:
+            from services.usage.usage_decorator import mark_usage_charge_committed
+            mark_usage_charge_committed()
         response = completion(**kwargs)
         raw = response.choices[0].message.content or ''
         return _parse_sentiment_flow(raw)
+    except UsageLockUnavailable:
+        raise
     except Exception as e:
         logger.warning(f"감정 흐름 분석 실패 (무시): {e}")
         return empty_flow

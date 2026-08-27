@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +29,7 @@ except ImportError:
     logger.warning("litellm이 설치되지 않아 영상 Q&A 기능이 비활성화됩니다.")
 
 from services.rag.chunker import chunk_text
+from services.usage.usage_lock import UsageLockUnavailable
 
 # 설정 기본값
 DEFAULT_CHUNK_SIZE = 600
@@ -223,29 +224,43 @@ def _build_qa_messages(
     return messages
 
 
-def _call_litellm(messages: List[Dict], model: str, video_id: str) -> Optional[str]:
+def _call_litellm(
+    messages: List[Dict],
+    model: str,
+    video_id: str,
+    on_cost_start: Callable[[], None] | None = None,
+) -> Optional[str]:
     """LiteLLM으로 답변을 생성합니다. 실패 시 None 반환."""
+    kwargs: Dict[str, Any] = {
+        "model": model,
+        "messages": messages,
+        "max_tokens": 1024,
+        "temperature": 0.3,
+    }
+
+    if model.startswith("chatmock/") or model.startswith("gpt-"):
+        actual_model = model.replace("chatmock/", "", 1)
+        kwargs["model"] = actual_model
+        kwargs["api_base"] = os.environ.get("CHATMOCK_BASE_URL", "http://127.0.0.1:8000/v1")
+        kwargs["api_key"] = os.environ.get("CHATMOCK_API_KEY", "dummy") or "dummy"
+        kwargs["reasoning_effort"] = "medium"
+        kwargs.pop("temperature", None)
+        kwargs["drop_params"] = True
+
+    if on_cost_start is not None:
+        on_cost_start()
     try:
-        kwargs: Dict[str, Any] = {
-            "model": model,
-            "messages": messages,
-            "max_tokens": 1024,
-            "temperature": 0.3,
-        }
-
-        if model.startswith("chatmock/") or model.startswith("gpt-"):
-            actual_model = model.replace("chatmock/", "", 1)
-            kwargs["model"] = actual_model
-            kwargs["api_base"] = os.environ.get("CHATMOCK_BASE_URL", "http://127.0.0.1:8000/v1")
-            kwargs["api_key"] = os.environ.get("CHATMOCK_API_KEY", "dummy") or "dummy"
-            kwargs["reasoning_effort"] = "medium"
-            kwargs.pop("temperature", None)
-            kwargs["drop_params"] = True
-
         response = litellm_completion(**kwargs)
         return response.choices[0].message.content or ""
-    except Exception as e:
-        logger.error(f"Q&A 답변 생성 실패 (video_id={video_id}, model={model}): {e}")
+    except UsageLockUnavailable:
+        raise
+    except Exception as exc:
+        logger.error(
+            "Q&A 답변 생성 실패 (video_id=%s, model=%s, type=%s)",
+            video_id,
+            model,
+            type(exc).__name__,
+        )
         return None
 
 
@@ -265,6 +280,7 @@ def answer_question(
     question: str,
     history: Optional[List[Dict[str, str]]] = None,
     model: Optional[str] = None,
+    on_cost_start: Callable[[], None] | None = None,
 ) -> Dict[str, Any]:
     """영상 자막 기반으로 질문에 답변을 생성합니다.
 
@@ -273,10 +289,14 @@ def answer_question(
         question: 사용자 질문
         history: 대화 히스토리 [{"role": "user"|"assistant", "content": str}]
         model: LiteLLM 모델 ID (없으면 기본값 사용)
+        on_cost_start: 실제 LiteLLM 호출 직전 실행할 선택 콜백
 
     Returns:
         {"answer": str, "sources": [{"text": str, "relevance": float}]}
     """
+    from services.core.ai_service import resolve_public_model
+    used_model = resolve_public_model(model, DEFAULT_QA_MODEL, allow_auto=False)
+
     if not _LITELLM_AVAILABLE:
         return {"answer": "AI 서비스를 사용할 수 없습니다. litellm 설치를 확인해주세요.", "sources": []}
 
@@ -289,7 +309,12 @@ def answer_question(
         f"[자막 구간 {i}]\n{chunk['text']}" for i, chunk in enumerate(relevant_chunks, 1)
     )
     messages = _build_qa_messages(context_text, question, history)
-    answer = _call_litellm(messages, model or DEFAULT_QA_MODEL, video_id)
+    answer = _call_litellm(
+        messages,
+        used_model,
+        video_id,
+        on_cost_start=on_cost_start,
+    )
 
     if answer is None:
         return {"answer": "답변 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.", "sources": []}

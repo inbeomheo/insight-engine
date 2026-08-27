@@ -16,6 +16,7 @@
 import concurrent.futures
 import html as html_lib
 import json
+import threading
 import time
 import uuid
 from datetime import datetime, timezone
@@ -33,10 +34,23 @@ from utils.responses import (
 from config import get_model_max_tokens
 from services.core import ai_service, content_service
 from src.contexts.identity.interface.auth_decorators import require_auth
+from src.contexts.identity.domain.exceptions import QuotaExceeded
 from src.shared.infrastructure.supabase_client import is_supabase_enabled, get_supabase
 from src.contexts.content_library import save_history_entry as save_history
-from services.usage import require_usage
-from services.usage.usage_decorator import get_usage_for_response
+from services.usage import UsageAccountingUnavailable, require_usage
+from services.usage.usage_decorator import (
+    UsageChargeState,
+    _ensure_usage_lease_valid,
+    _release_usage_lease,
+    capture_usage_charge_callback,
+    get_usage_for_response,
+    mark_usage_charge_committed,
+)
+from services.usage.usage_lock import (
+    UsageLockBusy,
+    UsageLockUnavailable,
+    acquire_usage_request_lock,
+)
 
 blog_bp = Blueprint('blog', __name__)
 
@@ -52,6 +66,12 @@ DOCUMENT_MAGIC_BYTES = {
 }
 AUDIO_UPLOAD_EXTENSIONS = ('.mp3', '.wav', '.m4a', '.ogg', '.flac', '.aac')
 MAX_MERGED_URLS = 5
+VIDEO_QA_MAX_URL_CHARS = 2048
+VIDEO_QA_MAX_QUESTION_CHARS = 500
+VIDEO_QA_MAX_HISTORY_MESSAGES = 10
+VIDEO_QA_MAX_HISTORY_USER_CHARS = 500
+VIDEO_QA_MAX_HISTORY_ASSISTANT_CHARS = 2000
+VIDEO_QA_MAX_HISTORY_TOTAL_CHARS = 10000
 
 # 에러 응답 헬퍼 (기존 호출 호환)
 _handle_error_response = handle_error
@@ -79,6 +99,42 @@ def _normalize_extracted_text(text: str) -> str:
     normalized = re.sub(r"[ \t]+", " ", normalized)
     normalized = re.sub(r"\n{3,}", "\n\n", normalized)
     return normalized.strip()
+
+
+def _validate_video_qa_history(history):
+    """Validate and normalize bounded follow-up conversation history."""
+    if history is None:
+        return [], None
+    if not isinstance(history, list):
+        return None, 'history는 배열 형식이어야 합니다.'
+    if len(history) > VIDEO_QA_MAX_HISTORY_MESSAGES:
+        return None, f'history는 최대 {VIDEO_QA_MAX_HISTORY_MESSAGES}개까지 허용됩니다.'
+
+    normalized = []
+    total_chars = 0
+    for item in history:
+        if not isinstance(item, dict):
+            return None, 'history 항목 형식이 올바르지 않습니다.'
+        role = item.get('role')
+        content = item.get('content')
+        if role not in {'user', 'assistant'} or not isinstance(content, str):
+            return None, 'history의 role/content 형식이 올바르지 않습니다.'
+        content = content.strip()
+        if not content:
+            return None, 'history 메시지는 비어 있을 수 없습니다.'
+        max_chars = (
+            VIDEO_QA_MAX_HISTORY_USER_CHARS
+            if role == 'user'
+            else VIDEO_QA_MAX_HISTORY_ASSISTANT_CHARS
+        )
+        if len(content) > max_chars:
+            return None, f'history의 {role} 메시지는 {max_chars}자 이내여야 합니다.'
+        total_chars += len(content)
+        if total_chars > VIDEO_QA_MAX_HISTORY_TOTAL_CHARS:
+            return None, f'history 전체는 {VIDEO_QA_MAX_HISTORY_TOTAL_CHARS}자 이내여야 합니다.'
+        normalized.append({'role': role, 'content': content})
+
+    return normalized, None
 
 
 def _get_document_extension(uploaded_file) -> str:
@@ -215,6 +271,16 @@ def _get_request_data(req):
     """
     data = req.get_json(silent=True)
     if isinstance(data, dict) and data:
+        from services.core.ai_service import resolve_public_model
+
+        try:
+            model = resolve_public_model(
+                data.get('model'), DEFAULT_MODEL, allow_auto=True
+            )
+            model_error = None
+        except ValueError as exc:
+            model = DEFAULT_MODEL
+            model_error = str(exc)
         # modifiers 검증
         modifiers, _ = _validate_modifiers(data.get('modifiers'))
         # custom_prompt 검증
@@ -269,7 +335,8 @@ def _get_request_data(req):
             'url': data.get('url') if isinstance(data.get('url'), str) else None,
             'urls': urls,
             'content': data.get('content') if isinstance(data.get('content'), str) else None,
-            'model': data.get('model', DEFAULT_MODEL) if isinstance(data.get('model'), str) else DEFAULT_MODEL,
+            'model': model,
+            'model_error': model_error,
             'style': style,
             'modifiers': modifiers,
             'custom_prompt': custom_prompt,
@@ -299,11 +366,22 @@ def _get_request_data(req):
     style = _validate_style(req.form.get('style', DEFAULT_STYLE), custom_prompt)
     transcript_language, transcript_language_error = _validate_transcript_language(req.form.get('transcript_language'))
 
+    from services.core.ai_service import resolve_public_model
+    try:
+        model = resolve_public_model(
+            req.form.get('model'), DEFAULT_MODEL, allow_auto=True
+        )
+        model_error = None
+    except ValueError as exc:
+        model = DEFAULT_MODEL
+        model_error = str(exc)
+
     return {
         'url': req.form.get('url'),
         'urls': [],
         'content': req.form.get('content'),
-        'model': req.form.get('model', DEFAULT_MODEL),
+        'model': model,
+        'model_error': model_error,
         'style': style,
         'modifiers': form_modifiers,
         'custom_prompt': custom_prompt,
@@ -569,6 +647,10 @@ def generate():
     try:
         start_time = time.time()
         params = _get_request_data(request)
+        on_cost_start = capture_usage_charge_callback()
+
+        if params.get('model_error'):
+            return api_error(params['model_error'], 400, 'UNSUPPORTED_MODEL')
 
         # transcript_language 유효성 검증 (지원하지 않는 값이면 400)
         if params.get('transcript_language_error'):
@@ -585,21 +667,37 @@ def generate():
             validation_error = _validate_direct_text_content(direct_content)
             if validation_error:
                 return api_error(validation_error, 400)
-            return _handle_direct_text(params, start_time)
+            if params['model'] == 'auto':
+                params['model'] = ai_service.resolve_public_model(
+                    params['model'], DEFAULT_MODEL, allow_auto=False
+                )
+            return _handle_direct_text(
+                params,
+                start_time,
+                on_cost_start=on_cost_start,
+            )
 
         if not url:
             return api_error('URL이 필요합니다.', 400)
 
         # ── 비YouTube 소스 (웹페이지 / RSS / arXiv) ──
         detected_source_type = detect_source_type(url)
-        source_type = (
-            SOURCE_YOUTUBE
-            if detected_source_type == SOURCE_YOUTUBE
-            else params.get('source_type') or detected_source_type
-        )
+        # 클라이언트 힌트로 수집기를 강제하면 임의 URL을 podcast/yt-dlp 경로로
+        # 보낼 수 있다. 네트워크 대상은 서버가 URL에서 감지한 타입만 사용한다.
+        source_type = detected_source_type
         if source_type != SOURCE_YOUTUBE:
             try:
-                return _handle_web_source(params, url, source_type, start_time)
+                if params['model'] == 'auto':
+                    params['model'] = ai_service.resolve_public_model(
+                        params['model'], DEFAULT_MODEL, allow_auto=False
+                    )
+                return _handle_web_source(
+                    params,
+                    url,
+                    source_type,
+                    start_time,
+                    on_cost_start=on_cost_start,
+                )
             except ValueError as e:
                 safe_message = safe_error_or_fallback(
                     str(e),
@@ -617,27 +715,57 @@ def generate():
 
         # 캐시 체크 — 자막/제목 추출 전에 선조회 (히트 시 YouTube I/O 전부 생략)
         from services.core.cache_service import AICacheService
-        force = (request.get_json(silent=True) or {}).get('force', False)
+        from services.core.ai_prompt_context import get_prompt_context_cache_scope
+        request_data_all = request.get_json(silent=True) or {}
+        force = bool(request_data_all.get('force', False))
+        # These modes add dynamic or post-generation data that the compact
+        # cache payload intentionally does not persist.  Recompute rather than
+        # returning a semantically incomplete cached response.
+        cache_bypass = force or any((
+            bool(getattr(g, 'user_id', None)),
+            bool(request_data_all.get('web_search', False)),
+            bool(request_data_all.get('agent_mode', False)),
+            bool(params.get('analyze', False)),
+            bool(request_data_all.get('quality_check', False)),
+        ))
         modifiers = params['modifiers'] or {}
+        cache_style_prompt = _get_style_prompt(params['style'], params.get('custom_prompt'))
         cache_key = AICacheService.make_key(
             video_id, params['style'], params['model'],
             modifiers.get('length', 'medium'),
             modifiers.get('writing_style', 'conversational'),
             transcript_language=params.get('transcript_language'),
             enable_citations=params.get('enable_citations', False),
+            context_scope=get_prompt_context_cache_scope(getattr(g, 'user_id', None)),
+            style_prompt=cache_style_prompt,
+            modifiers=modifiers,
+            detail_level=params.get('detail_level', 'standard'),
+            web_search=bool(request_data_all.get('web_search', False)),
+            agent_mode=bool(request_data_all.get('agent_mode', False)),
+            analyze=bool(params.get('analyze', False)),
+            output_format=params.get('output_format', 'html'),
+            max_chars=params.get('max_chars'),
         )
         cache_resp = _handle_cache_hit(
-            cache_key, force, video_id, url, start_time,
+            cache_key, cache_bypass, video_id, url, start_time,
             transcript_language=params.get('transcript_language'),
+            on_cost_start=on_cost_start,
         )
         if cache_resp:
             return cache_resp
 
         # 제목 조회와 자막/댓글 추출을 병렬 실행 (700-1500ms 절감)
         with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-            title_future = executor.submit(content_service.get_content_title, url)
+            title_future = executor.submit(
+                content_service.get_content_title,
+                url,
+                on_cost_start=on_cost_start,
+            )
             content_future = executor.submit(
-                _fetch_youtube_content, video_id, params.get('transcript_language')
+                _fetch_youtube_content,
+                video_id,
+                params.get('transcript_language'),
+                on_cost_start,
             )
             youtube_title = title_future.result() or 'YouTube 영상'
             transcript_text, comments, error, raw_transcript, transcript_source, transcript_segments = content_future.result()
@@ -668,7 +796,12 @@ def generate():
             _chapter_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
             chapter_future = _chapter_executor.submit(
                 _run_chapter_split, current_app._get_current_object(),
-                raw_transcript, params['model'], transcript_segments,
+                raw_transcript,
+                ai_service.resolve_public_model(
+                    params['model'], DEFAULT_MODEL, allow_auto=False
+                ),
+                transcript_segments,
+                on_cost_start,
             )
             _chapter_executor.shutdown(wait=False)
 
@@ -680,7 +813,12 @@ def generate():
             try:
                 from services.agents import Orchestrator
                 user_id = getattr(g, 'user_id', None)
-                orchestrator = Orchestrator(model=params['model'])
+                orchestrator = Orchestrator(
+                    model=ai_service.resolve_public_model(
+                        params['model'], DEFAULT_MODEL, allow_auto=False
+                    ),
+                    on_cost_start=on_cost_start,
+                )
                 agent_output = orchestrator.run(
                     transcript=transcript_text,
                     style=params['style'],
@@ -703,18 +841,22 @@ def generate():
                     'seo': agent_output.get('seo'),
                     'elapsed_time': agent_output.get('elapsed_time', 0),
                 }
+            except UsageLockUnavailable:
+                raise
             except Exception as ae:
                 current_app.logger.error(f'에이전트 모드 실패, 일반 모드로 폴백: {ae}')
                 web_search = bool(request_data_all.get('web_search', False))
                 result, used_prompt, comment_result = _call_ai_with_comments(
                     truncated_content, params['model'], style_prompt, params,
-                    comments, transcript_text, max_tokens, web_search=web_search
+                    comments, transcript_text, max_tokens, web_search=web_search,
+                    on_cost_start=on_cost_start,
                 )
         else:
             web_search = bool(request_data_all.get('web_search', False))
             result, used_prompt, comment_result = _call_ai_with_comments(
                 truncated_content, params['model'], style_prompt, params,
-                comments, transcript_text, max_tokens, web_search=web_search
+                comments, transcript_text, max_tokens, web_search=web_search,
+                on_cost_start=on_cost_start,
             )
 
         # 인용 타임스탬프 처리 (enable_citations: true 요청 시)
@@ -756,11 +898,14 @@ def generate():
                 quality_score = evaluate_quality(
                     content=result.get('content', ''),
                     source_summary=transcript_text[:500],
+                    on_cost_start=on_cost_start,
                 )
                 current_app.logger.info(
                     f"품질 평가 완료: grade={quality_score.get('grade')}, "
                     f"overall={quality_score.get('overall')}"
                 )
+            except UsageLockUnavailable:
+                raise
             except Exception as qe:
                 current_app.logger.warning(f"품질 평가 실패 (무시): {qe}")
 
@@ -775,6 +920,17 @@ def generate():
             chapter_future=chapter_future,
         )
 
+    except UsageLockUnavailable:
+        # 자막 유료 폴백 직전 임대 소유권을 잃은 경우
+        # @require_usage의 표준 503 처리와 환불 경로로 전파한다.
+        raise
+    except UsageAccountingUnavailable as e:
+        current_app.logger.error('Generate usage accounting unavailable: %s', e)
+        return api_error(
+            '사용량 기록 서비스에 일시적인 문제가 있습니다. 잠시 후 다시 시도해주세요.',
+            503,
+            'USAGE_ACCOUNTING_UNAVAILABLE',
+        )
     except ValueError as e:
         return handle_error(str(e))
     except Exception as e:
@@ -790,39 +946,60 @@ def generate_batch():
     API 키는 서버 환경변수에서 자동으로 로드됩니다.
     로그인 필수, 하루 5회 제한 적용 (배치 전체가 1회로 계산, 관리자는 무제한).
     """
-    from services.usage.usage_service import UsageService
+    from services.usage.usage_service import (
+        InvalidIdempotencyReplay,
+        InvalidIdempotencyKey,
+        MAX_USAGE_COUNT,
+        UsageReservationReplay,
+        UsageService,
+    )
 
+    usage_lease = None
+    usage_reservation = None
+    reservation_settled = False
+    usage_charge_state = UsageChargeState()
     try:
-        # 원자적 사용량 체크 + 차감 (Race Condition 방지)
-        can_use, usage = UsageService.try_consume_atomic(g.user_id)
-        if not can_use:
-            return jsonify({
-                'error': '오늘 사용 가능 횟수를 모두 소진했습니다. 내일 다시 시도해주세요.',
-                'code': 'USAGE_LIMIT_EXCEEDED',
-                'usage': usage
-            }), 429
-
         current_app.logger.info("Batch generate request received")
 
         data = request.get_json()
-        current_app.logger.info(f"Request data: {data}")
 
         if not data:
             current_app.logger.error("No JSON data received")
             return api_error('JSON 데이터가 제공되지 않았습니다', 400)
 
         urls = data.get('urls', [])
-        model = data.get('model', DEFAULT_MODEL)
+        try:
+            model = ai_service.resolve_public_model(
+                data.get('model'), DEFAULT_MODEL, allow_auto=False
+            )
+        except ValueError as exc:
+            return api_error(str(exc), 400, 'UNSUPPORTED_MODEL')
         style = data.get('style', DEFAULT_STYLE)
         modifiers = data.get('modifiers')
         custom_prompt = data.get('customPrompt')
 
-        current_app.logger.info(f"URLs to process: {urls}, Model: {model}, Style: {style}")
+        current_app.logger.info(
+            "Batch request accepted: url_count=%d model=%s",
+            len(urls) if isinstance(urls, list) else 0,
+            model,
+        )
 
         if not urls or not isinstance(urls, list):
             return api_error('URL 목록이 제공되지 않았습니다', 400)
         if len(urls) > MAX_BATCH_URLS:
             return api_error(f'최대 {MAX_BATCH_URLS}개의 URL만 처리할 수 있습니다', 400)
+
+        # 입력 검증 뒤, 비용 작업 제출 전 원자적·멱등 예약을 확보한다.
+        user_id = getattr(g, 'user_id', None)
+        if is_supabase_enabled() and user_id:
+            usage_lease = acquire_usage_request_lock(user_id)
+            _ensure_usage_lease_valid(usage_lease)
+        usage_reservation = UsageService.reserve_for_request(user_id)
+        g.usage_reservation = usage_reservation
+        g.usage_charge_state = usage_charge_state
+        g.usage = usage_reservation.usage_before
+        g.updated_usage = usage_reservation.usage_after
+        _ensure_usage_lease_valid(usage_lease)
 
         app = current_app._get_current_object()
         results = [None] * len(urls)
@@ -830,12 +1007,28 @@ def generate_batch():
 
         current_app.logger.info(f"Starting to process {len(urls)} URLs concurrently")
 
+        # 임대가 유효하고 사용량 예약이 완료된 뒤에만 비용 작업을 시작한다.
+        _ensure_usage_lease_valid(usage_lease)
+
+        def _commit_batch_charge():
+            # 자막 수집 중 임대를 잃었다면 AI 공급자에 들어가기 직전에
+            # 중단한다. 상태 확정은 모든 worker가 공유하는 단방향 이벤트다.
+            _ensure_usage_lease_valid(usage_lease)
+            mark_usage_charge_committed(usage_charge_state)
+
+        def _process_reserved_url(url):
+            # 큐에 대기하던 worker도 실제 시작 순간에 임대를 다시
+            # 확인해 소유권 상실 후 새 비용 작업에 진입하지 않는다.
+            _ensure_usage_lease_valid(usage_lease)
+            return _process_single_url(
+                app, url, model, style, modifiers, custom_prompt,
+                _commit_batch_charge,
+            )
+
         with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_BATCH_WORKERS) as executor:
             future_to_index = {
-                executor.submit(
-                    _process_single_url, app, url, model, style,
-                    modifiers, custom_prompt
-                ): i for i, url in enumerate(urls)
+                executor.submit(_process_reserved_url, url): i
+                for i, url in enumerate(urls)
             }
 
             try:
@@ -848,6 +1041,8 @@ def generate_batch():
 
                         if result['success'] and isinstance(result.get('content', ''), str):
                             combined_content.append(result['content'])
+                    except UsageLockUnavailable:
+                        raise
                     except concurrent.futures.TimeoutError:
                         current_app.logger.error(f"Timeout for URL {index + 1}")
                         results[index] = {
@@ -888,8 +1083,7 @@ def generate_batch():
 
         current_app.logger.info(f"Batch processing completed. Success: {success_count}, Failed: {fail_count}")
 
-        # 사용량은 try_consume_atomic()으로 이미 차감됨
-        updated_usage = usage
+        updated_usage = usage_reservation.usage_after
 
         # P2 버그 #7 수정: 배치 히스토리 저장 (N+1 → 배치 INSERT)
         # 배치에서는 transcript, usage, elapsed_time이 None (P3 #13 문서화)
@@ -916,6 +1110,14 @@ def generate_batch():
                 from src.contexts.content_library import save_many_history_entries
                 save_many_history_entries(g.user_id, histories_to_save)
 
+        if success_count == 0 and not usage_charge_state.committed:
+            # 어느 worker도 공급자에 들어가지 않은 전부 실패만 환불한다.
+            updated_usage = UsageService.refund_reservation(
+                user_id,
+                usage_reservation,
+            )
+        reservation_settled = True
+
         return jsonify({
             'success': True,
             'results': ordered_results,
@@ -926,12 +1128,64 @@ def generate_batch():
             'usage': updated_usage
         })
 
+    except InvalidIdempotencyKey as e:
+        return api_error(str(e), 400, 'INVALID_IDEMPOTENCY_KEY')
+    except (InvalidIdempotencyReplay, UsageReservationReplay) as e:
+        response = {
+            'error': str(e),
+            'code': 'IDEMPOTENCY_REPLAY',
+        }
+        if isinstance(e, UsageReservationReplay):
+            response['usage'] = e.usage
+        return jsonify(response), 409
+    except QuotaExceeded:
+        return jsonify({
+            'error': '오늘 사용 가능 횟수를 모두 소진했습니다. 내일 다시 시도해주세요.',
+            'code': 'USAGE_LIMIT_EXCEEDED',
+            'usage': {
+                'usage_count': 0,
+                'max_usage': MAX_USAGE_COUNT,
+                'can_use': False,
+            },
+        }), 429
+    except UsageLockBusy:
+        return api_error(
+            '이 계정의 콘텐츠 생성 요청이 이미 진행 중입니다.',
+            409,
+            'USAGE_REQUEST_IN_PROGRESS',
+        )
+    except UsageLockUnavailable as e:
+        current_app.logger.error('Batch usage lock unavailable: %s', e)
+        return api_error(
+            '사용량 확인 서비스에 일시적인 문제가 있습니다. 잠시 후 다시 시도해주세요.',
+            503,
+            'USAGE_LOCK_UNAVAILABLE',
+        )
+    except UsageAccountingUnavailable as e:
+        current_app.logger.error('Batch usage accounting unavailable: %s', e)
+        return api_error(
+            '사용량 기록 서비스에 일시적인 문제가 있습니다. 잠시 후 다시 시도해주세요.',
+            503,
+            'USAGE_ACCOUNTING_UNAVAILABLE',
+        )
     except ValueError as e:
         current_app.logger.error(f"ValueError in batch generate: {e}")
         return handle_error(str(e))
     except Exception as e:
         current_app.logger.error(f"Batch generate failed: {e}", exc_info=True)
         return api_error_from_exception(e, '배치 처리 중 오류가 발생했습니다.')
+    finally:
+        if (
+            usage_reservation is not None
+            and not reservation_settled
+            and not usage_charge_state.committed
+        ):
+            UsageService.refund_reservation_quietly(
+                getattr(g, 'user_id', None),
+                usage_reservation,
+            )
+        if usage_lease is not None:
+            _release_usage_lease(usage_lease)
 
 
 @blog_bp.route('/api/generate-merged', methods=['POST'])
@@ -945,6 +1199,12 @@ def generate_merged():
     try:
         start_time = time.time()
         params = _get_request_data(request)
+        on_cost_start = capture_usage_charge_callback()
+        if params.get('model_error'):
+            return api_error(params['model_error'], 400, 'UNSUPPORTED_MODEL')
+        params['model'] = ai_service.resolve_public_model(
+            params['model'], DEFAULT_MODEL, allow_auto=False
+        )
         if params.get('transcript_language_error'):
             return api_error(params['transcript_language_error'], 400)
 
@@ -971,9 +1231,14 @@ def generate_merged():
                     vid = content_service.get_video_id(url)
                     if not vid:
                         return {'url': url, 'error': '유효하지 않은 YouTube URL'}
-                    title = content_service.get_content_title(url) or 'YouTube 영상'
+                    title = content_service.get_content_title(
+                        url,
+                        on_cost_start=on_cost_start,
+                    ) or 'YouTube 영상'
                     transcript_text, comments, error, _, source, _ = _fetch_youtube_content(
-                        vid, transcript_language
+                        vid,
+                        transcript_language,
+                        on_cost_start,
                     )
                     if error:
                         return {'url': url, 'error': error, 'title': title}
@@ -982,6 +1247,8 @@ def generate_merged():
                         'transcript': transcript_text, 'comments': comments,
                         'transcript_source': source,
                     }
+                except UsageLockUnavailable:
+                    raise
                 except Exception as e:
                     current_app.logger.error('Merged fetch failed for %s: %s', url, e, exc_info=True)
                     return {
@@ -1040,6 +1307,7 @@ def generate_merged():
             return_prompt=True, modifiers=params['modifiers'],
             style_id=params['style'],
             detail_level=params.get('detail_level'),
+            on_cost_start=on_cost_start,
         )
 
         elapsed_time = round(time.time() - start_time, 2)
@@ -1072,7 +1340,6 @@ def generate_merged():
         return jsonify({
             **result,
             'id': report_id,
-            'prompt': used_prompt,
             'elapsed_time': elapsed_time,
             'source_videos': source_videos,
             'merged': True,
@@ -1081,6 +1348,8 @@ def generate_merged():
             'quota': get_usage_for_response(),
         })
 
+    except UsageLockUnavailable:
+        raise
     except ValueError as e:
         return handle_error(str(e))
     except Exception as e:
@@ -1095,12 +1364,85 @@ def generate_stream():
     """SSE 스트리밍으로 콘텐츠를 생성합니다.
     @require_usage 데코레이터 사용 불가 (generator 응답) → 수동 사용량 관리.
     """
-    from services.usage.usage_service import UsageService
+    from services.usage.usage_service import (
+        InvalidIdempotencyReplay,
+        InvalidIdempotencyKey,
+        MAX_USAGE_COUNT,
+        UsageReservationReplay,
+        UsageService,
+    )
     import markdown as md_lib
+
+    usage_lease = None
+    usage_lease_owned_by_response = False
+    usage_enabled = False
+    account_usage = None
+    usage_reservation = None
+    user_id = None
+    stream_state = {
+        'settled': False,
+        'charge_committed': False,
+    }
+    stream_state_guard = threading.Lock()
+
+    def _commit_stream_charge() -> bool:
+        """Finalize the existing DB reservation immediately before AI cost starts.
+
+        A client disconnect may race with generator progress. If the close path
+        already refunded the reservation, return False so no provider work starts
+        after that refund. Once cost starts, later disconnects/errors must not turn
+        the consumed provider work into a quota refund.
+        """
+        with stream_state_guard:
+            if stream_state['settled']:
+                return stream_state['charge_committed']
+            stream_state['settled'] = True
+            stream_state['charge_committed'] = True
+            return True
+
+    def _start_stream_cost() -> None:
+        """자막·AI 공급자 진입 직전의 단일 fail-closed 경계."""
+        _ensure_usage_lease_valid(usage_lease)
+        if not _commit_stream_charge():
+            raise UsageLockUnavailable(
+                '이미 종료된 스트림 예약으로 비용 작업을 시작할 수 없습니다.'
+            )
+
+    def _refund_stream_reservation(*, quiet: bool) -> dict | None:
+        """스트림 종료 경로에서 예약을 최대 한 번 논리적으로 환불한다.
+
+        종료 훅과 generator finally가 모두 호출될 수 있으므로 DB RPC 자체도
+        멱등이지만, 프로세스 내 중복 호출도 잠금으로 줄인다.
+        """
+        nonlocal account_usage
+        if usage_reservation is None:
+            return account_usage
+        with stream_state_guard:
+            if stream_state['settled']:
+                return account_usage
+            try:
+                account_usage = UsageService.refund_reservation(
+                    user_id,
+                    usage_reservation,
+                )
+            except UsageAccountingUnavailable:
+                if quiet:
+                    # generator 오류를 가리지는 않되, settled로 표시하지 않아
+                    # response close 훅에서 같은 멱등 RPC를 다시 시도할 수 있게 한다.
+                    return account_usage
+                raise
+            stream_state['settled'] = True
+            stream_state['charge_committed'] = False
+            return account_usage
 
     try:
         start_time = time.time()
         params = _get_request_data(request)
+        if params.get('model_error'):
+            return api_error(params['model_error'], 400, 'UNSUPPORTED_MODEL')
+        params['model'] = ai_service.resolve_public_model(
+            params['model'], DEFAULT_MODEL, allow_auto=False
+        )
         if params.get('transcript_language_error'):
             return api_error(params['transcript_language_error'], 400)
         if params.get('enable_citations'):
@@ -1140,19 +1482,26 @@ def generate_stream():
             'X-Accel-Buffering': 'no',
         }
 
-        # 사용량 체크 (수동)
+        # 스트리밍 응답은 generator 종료까지 잠금과 선예약 수명을 직접 관리한다.
         user_id = getattr(g, 'user_id', None)
-        if is_supabase_enabled() and user_id:
-            can_use, usage = UsageService.check_can_use(user_id)
-            if not can_use:
-                return jsonify({
-                    'error': '오늘 사용 가능 횟수를 모두 소진했습니다.',
-                    'code': 'USAGE_LIMIT_EXCEEDED',
-                    'usage': usage
-                }), 429
-            g.usage = usage
+        usage_enabled = is_supabase_enabled() and bool(user_id)
+        if usage_enabled:
+            usage_lease = acquire_usage_request_lock(user_id)
+            _ensure_usage_lease_valid(usage_lease)
+        usage_reservation = UsageService.reserve_for_request(user_id)
+        account_usage = usage_reservation.usage_after
+        g.usage_reservation = usage_reservation
+        g.usage = usage_reservation.usage_before
+        g.updated_usage = None
+        _ensure_usage_lease_valid(usage_lease)
 
-        force = request_data_all.get('force', False)
+        force = bool(request_data_all.get('force', False))
+        cache_bypass = any((
+            force,
+            bool(user_id),
+            bool(request_data_all.get('web_search', False)),
+            bool(request_data_all.get('quality_check', False)),
+        ))
         modifiers = params['modifiers'] or {}
 
         max_tokens = get_model_max_tokens(params['model'])
@@ -1180,18 +1529,34 @@ def generate_stream():
         else:
             # 캐시 체크 — /generate와 동일한 키/force 의미론
             from services.core.cache_service import AICacheService
+            from services.core.ai_prompt_context import get_prompt_context_cache_scope
+            cache_style_prompt = _get_style_prompt(
+                params['style'], params.get('custom_prompt')
+            )
             cache_key = AICacheService.make_key(
                 video_id, params['style'], params['model'],
                 modifiers.get('length', 'medium'),
                 modifiers.get('writing_style', 'conversational'),
                 transcript_language=params.get('transcript_language'),
+                context_scope=get_prompt_context_cache_scope(user_id),
+                style_prompt=cache_style_prompt,
+                modifiers=modifiers,
+                detail_level=params.get('detail_level', 'standard'),
+                web_search=bool(request_data_all.get('web_search', False)),
+                agent_mode=False,
+                analyze=False,
+                output_format=params.get('output_format', 'html'),
+                max_chars=params.get('max_chars'),
             )
             cache_resp = _handle_cache_hit(
-                cache_key, force, video_id, url, start_time,
+                cache_key, cache_bypass, video_id, url, start_time,
                 transcript_language=params.get('transcript_language'),
+                on_cost_start=_start_stream_cost,
             )
             if cache_resp:
                 cached_payload = cache_resp.get_json() or {}
+                # 캐시 응답은 AI 비용이 없으므로 방금 만든 예약만 즉시 환불한다.
+                _refund_stream_reservation(quiet=False)
 
                 def cached_sse():
                     yield _sse({
@@ -1207,9 +1572,14 @@ def generate_stream():
                     headers=sse_headers,
                 )
 
-            youtube_title = content_service.get_content_title(url) or 'YouTube 영상'
+            youtube_title = content_service.get_content_title(
+                url,
+                on_cost_start=_start_stream_cost,
+            ) or 'YouTube 영상'
             transcript_text, comments, error, raw_transcript, transcript_source, transcript_segments = _fetch_youtube_content(
-                video_id, params.get('transcript_language')
+                video_id,
+                params.get('transcript_language'),
+                _start_stream_cost,
             )
             if error:
                 return api_error(error, 400)
@@ -1241,25 +1611,35 @@ def generate_stream():
                         meta_event['youtube_title'] = youtube_title
                     yield _sse(meta_event)
 
+                    # 댓글 요약/본문 스트림 중 어느 비용 작업도 예약 및 유효한
+                    # 분산 임대보다 먼저 시작하지 못하게 마지막 경계를 확인한다.
+                    _ensure_usage_lease_valid(usage_lease)
                     if comments:
                         # 댓글 요약은 메인 스트림과 병렬 실행해 result 전 공백을 줄입니다.
                         comment_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
                         comment_future = comment_executor.submit(
-                            _generate_comment_summary, app, comments, model
+                            _generate_comment_summary,
+                            app,
+                            comments,
+                            model,
+                            _start_stream_cost,
                         )
                         comment_executor.shutdown(wait=False)
 
                     # AI 본문 delta만 실시간 전송합니다.
                     full_content = ''
                     stream_meta = {}
+                    _ensure_usage_lease_valid(usage_lease)
                     stream_iter = iter(ai_service.create_content_stream(
                         truncated_content, model, style_prompt,
                         modifiers=params['modifiers'], style_id=params['style'],
                         detail_level=params.get('detail_level'),
                         user_id=user_id,
                         web_search=web_search,
+                        on_cost_start=_start_stream_cost,
                     ))
                     while True:
+                        _ensure_usage_lease_valid(usage_lease)
                         try:
                             token = next(stream_iter)
                         except StopIteration as stop:
@@ -1270,6 +1650,7 @@ def generate_stream():
                             # 구버전 generator 호환
                             break
 
+                        _ensure_usage_lease_valid(usage_lease)
                         full_content += token
                         yield _sse({
                             'type': 'delta',
@@ -1310,21 +1691,24 @@ def generate_stream():
                         if comment_future is not None:
                             try:
                                 comment_result = comment_future.result()
+                            except UsageLockUnavailable:
+                                raise
                             except Exception as comment_err:
                                 current_app.logger.warning(f"댓글 요약 생성 실패 (무시): {comment_err}")
                                 comment_result = None
                         else:
                             # 예외적 경로: comment_future 생성 전 실패한 경우 메인 완료 후 순차 실행
-                            comment_result = _generate_comment_summary(app, comments, model)
+                            comment_result = _generate_comment_summary(
+                                app,
+                                comments,
+                                model,
+                                _start_stream_cost,
+                            )
                         base_result, prompt = _combine_results(base_result, prompt, comment_result)
                         title = base_result.get('title') or title
                         body = base_result.get('content') or body
                         html = base_result.get('html') or html
                         usage = base_result.get('usage') or usage
-
-                    # 사용량 차감 (성공 시)
-                    if is_supabase_enabled() and user_id:
-                        UsageService.decrement(user_id)
 
                     # 메타데이터 추출 — 비스트리밍 /generate와 동일하게 채워 회귀 방지
                     style = params['style']
@@ -1346,8 +1730,6 @@ def generate_stream():
                         **result,
                         'id': str(uuid.uuid4()),
                         'data': result.get('html', ''),
-                        'prompt': prompt,
-                        'prompt_length': len(prompt) if prompt else 0,
                         'elapsed_time': round(time.time() - start_time, 2),
                         'youtube_title': youtube_title,
                         'transcript': raw_transcript,
@@ -1366,7 +1748,7 @@ def generate_stream():
                         'transcript_segments': transcript_segments or [],
                         'chapters': [],
                         'total_duration_seconds': 0,
-                        'quota': get_usage_for_response(),
+                        'quota': account_usage or get_usage_for_response(),
                     }
                     if is_direct_text:
                         result_event.update({
@@ -1395,7 +1777,11 @@ def generate_stream():
                             result_event['elapsed_time'], result_event['id'],
                             user_id=user_id,
                         )
-                    yield _sse(result_event)
+
+                    # DB 예약은 첫 비용 작업 직전에 이미 최종 사용으로 확정됐다.
+                    # 성공 뒤 별도 RPC를 호출하지 않고 직렬화된 결과만 전송한다.
+                    serialized_result_event = _sse(result_event)
+                    yield serialized_result_event
 
                 except Exception as e:
                     # 스트림 실패 시 미시작 댓글 요약은 취소해 불필요한 AI 호출 방지
@@ -1410,19 +1796,83 @@ def generate_stream():
                         'error': safe_message,
                         'message': safe_message,
                     })
+                finally:
+                    if comment_future is not None and not comment_future.done():
+                        comment_future.cancel()
+                    if not stream_state['settled']:
+                        _refund_stream_reservation(quiet=True)
+                    if usage_lease is not None:
+                        _release_usage_lease(usage_lease)
 
-        return Response(
+        response = Response(
             stream_with_context(generate_sse()),
             mimetype='text/event-stream',
             headers=sse_headers,
         )
+        if usage_lease is not None:
+            # generator가 소비되지 않거나 응답이 조기 종료되면 비용 성공으로
+            # 확정되지 않은 자신의 예약을 환불하고 임대를 해제한다.
+            def _close_stream_response():
+                if not stream_state['settled']:
+                    _refund_stream_reservation(quiet=True)
+                _release_usage_lease(usage_lease)
 
+            response.call_on_close(_close_stream_response)
+            usage_lease_owned_by_response = True
+        return response
+
+    except InvalidIdempotencyKey as e:
+        return api_error(str(e), 400, 'INVALID_IDEMPOTENCY_KEY')
+    except (InvalidIdempotencyReplay, UsageReservationReplay) as e:
+        response = {
+            'error': str(e),
+            'code': 'IDEMPOTENCY_REPLAY',
+        }
+        if isinstance(e, UsageReservationReplay):
+            response['usage'] = e.usage
+        return jsonify(response), 409
+    except QuotaExceeded:
+        return jsonify({
+            'error': '오늘 사용 가능 횟수를 모두 소진했습니다.',
+            'code': 'USAGE_LIMIT_EXCEEDED',
+            'usage': {
+                'usage_count': 0,
+                'max_usage': MAX_USAGE_COUNT,
+                'can_use': False,
+            },
+        }), 429
+    except UsageLockBusy:
+        return jsonify({
+            'error': '이 계정의 콘텐츠 생성 요청이 이미 진행 중입니다.',
+            'code': 'USAGE_REQUEST_IN_PROGRESS',
+        }), 409
+    except UsageLockUnavailable as e:
+        current_app.logger.error('Generate stream usage lock unavailable: %s', e)
+        return jsonify({
+            'error': '사용량 확인 서비스에 일시적인 문제가 있습니다. 잠시 후 다시 시도해주세요.',
+            'code': 'USAGE_LOCK_UNAVAILABLE',
+        }), 503
+    except UsageAccountingUnavailable as e:
+        current_app.logger.error('Generate stream usage accounting unavailable: %s', e)
+        return api_error(
+            '사용량 기록 서비스에 일시적인 문제가 있습니다. 잠시 후 다시 시도해주세요.',
+            503,
+            'USAGE_ACCOUNTING_UNAVAILABLE',
+        )
     except Exception as e:
         current_app.logger.error(f"Generate stream setup failed: {e}")
         return _handle_error_response(str(e))
+    finally:
+        if usage_lease is not None and not usage_lease_owned_by_response:
+            if not stream_state['settled']:
+                _refund_stream_reservation(quiet=True)
+            _release_usage_lease(usage_lease)
+
 
 @blog_bp.route('/api/video-qa', methods=['POST'])
+@limiter.limit("5/minute")
 @require_auth
+@require_usage
 def video_qa():
     """YouTube 영상 자막 기반 Q&A 챗봇 엔드포인트.
 
@@ -1439,29 +1889,55 @@ def video_qa():
     )
 
     data = request.get_json(silent=True) or {}
-    video_url = data.get('video_url', '').strip()
-    question = data.get('question', '').strip()
-    history = data.get('history', [])
-    model = data.get('model') or None
+    if not isinstance(data, dict):
+        return api_error('JSON 객체가 필요합니다.', 400)
+
+    raw_video_url = data.get('video_url', '')
+    raw_question = data.get('question', '')
+    if not isinstance(raw_video_url, str) or not isinstance(raw_question, str):
+        return api_error('video_url과 question은 문자열이어야 합니다.', 400)
+    video_url = raw_video_url.strip()
+    question = raw_question.strip()
+
+    history, history_error = _validate_video_qa_history(data.get('history', []))
+    if history_error:
+        return api_error(history_error, 400)
+
+    from services.core.ai_service import resolve_public_model
+    from services.media.video_qa_service import DEFAULT_QA_MODEL
+    try:
+        model = resolve_public_model(
+            data.get('model'), DEFAULT_QA_MODEL, allow_auto=False
+        )
+    except ValueError as exc:
+        return api_error(str(exc), 400, 'UNSUPPORTED_MODEL')
 
     # 입력값 검증
     if not video_url:
         return api_error('video_url이 필요합니다.', 400)
+    if len(video_url) > VIDEO_QA_MAX_URL_CHARS:
+        return api_error(f'video_url은 {VIDEO_QA_MAX_URL_CHARS}자 이내여야 합니다.', 400)
     if not content_service.is_youtube_url(video_url):
         return api_error('유효한 YouTube URL을 입력해주세요.', 400)
     if not question:
         return api_error('질문을 입력해주세요.', 400)
-    if len(question) > 500:
-        return api_error('질문은 500자 이내로 입력해주세요.', 400)
+    if len(question) > VIDEO_QA_MAX_QUESTION_CHARS:
+        return api_error(
+            f'질문은 {VIDEO_QA_MAX_QUESTION_CHARS}자 이내로 입력해주세요.', 400
+        )
 
     video_id = content_service.get_video_id(video_url)
     if not video_id:
         return api_error('영상 ID를 추출할 수 없습니다.', 400)
 
     try:
+        on_cost_start = capture_usage_charge_callback()
         # 아직 인덱싱이 안 됐으면 자막을 가져와 인덱싱
         if not is_video_indexed(video_id):
-            transcript_result = content_service.get_transcript(video_id)
+            transcript_result = content_service.get_transcript(
+                video_id,
+                on_cost_start=on_cost_start,
+            )
 
             # get_transcript 반환값은 str 또는 dict
             if isinstance(transcript_result, dict):
@@ -1484,11 +1960,20 @@ def video_qa():
         result = answer_question(
             video_id=video_id,
             question=question,
-            history=history if isinstance(history, list) else [],
+            history=history,
             model=model,
+            on_cost_start=on_cost_start,
         )
 
+        # 관련 청크가 없어 공급자에 진입하지 않은 성공 안내 응답은
+        # 무비용 경로다. 실제 공급자가 시작됐다면 callback이 이미 확정했다.
+        charge_state = getattr(g, 'usage_charge_state', None)
+        if charge_state is not None and not charge_state.committed:
+            g.skip_usage_decrement = True
+
         return jsonify(result)
+    except UsageLockUnavailable:
+        raise
     except Exception as exc:
         current_app.logger.error('Video QA failed: %s', exc, exc_info=True)
         return api_error_from_exception(exc, '[서버 오류] 영상 Q&A 처리 중 문제가 발생했습니다.')
@@ -1497,6 +1982,7 @@ def video_qa():
 @blog_bp.route('/api/tts', methods=['POST'])
 @limiter.limit("20/minute")
 @require_auth
+@require_usage
 def text_to_speech():
     """텍스트를 TTS(Text-to-Speech)로 변환해 MP3 오디오 파일을 반환합니다.
 
@@ -1532,7 +2018,15 @@ def text_to_speech():
         speed = 1.0
 
     try:
-        audio_bytes = TTSService.synthesize(text, voice=voice, speed=speed, preprocess=True)
+        audio_bytes = TTSService.synthesize(
+            text,
+            voice=voice,
+            speed=speed,
+            preprocess=True,
+            on_cost_start=capture_usage_charge_callback(),
+        )
+    except UsageLockUnavailable:
+        raise
     except ValueError as exc:
         return handle_error(str(exc))
     except RuntimeError as exc:
@@ -1554,13 +2048,16 @@ def text_to_speech():
 # =============================================
 
 @blog_bp.route('/api/extract-events', methods=['POST'])
+@limiter.limit("5/minute")
+@require_auth
+@require_usage
 def extract_events_endpoint():
     """YouTube 영상 자막에서 구조화된 이벤트를 추출합니다.
 
     요청 형식:
         {"url": "https://youtube.com/..."} — URL 제공 시 자막 자동 추출
         {"transcript": "자막 텍스트"} — 자막 직접 제공
-        {"model": "chatmock/gpt-5.4-mini"} — 선택적 모델 지정
+        {"model": "chatmock/gpt-5.4-mini"} — 서버 허용 목록 내 선택
 
     응답 형식:
         {"events": [...], "summary": {...}, "categorized": {...}}
@@ -1569,7 +2066,12 @@ def extract_events_endpoint():
 
     url = (data.get('url') or '').strip()
     transcript_text = (data.get('transcript') or '').strip()
-    model = (data.get('model') or '').strip() or None
+    from services.core.ai_service import resolve_public_model
+    try:
+        model = resolve_public_model(data.get('model'), DEFAULT_MODEL)
+    except ValueError as exc:
+        return api_error(str(exc), 400)
+    on_cost_start = capture_usage_charge_callback()
 
     # 자막 획득: transcript 직접 제공 또는 URL에서 추출
     if not transcript_text:
@@ -1584,8 +2086,19 @@ def extract_events_endpoint():
             return api_error('YouTube 비디오 ID를 추출할 수 없습니다.', 400)
 
         try:
-            transcript_data = content_service.get_transcript(video_id)
-            if not transcript_data or not transcript_data.get('transcript'):
+            transcript_data = content_service.get_transcript(
+                video_id,
+                on_cost_start=on_cost_start,
+            )
+            if isinstance(transcript_data, dict):
+                transcript_value = transcript_data.get('text') or transcript_data.get('transcript', '')
+            elif isinstance(transcript_data, str):
+                transcript_value = transcript_data
+                transcript_data = {}
+            else:
+                transcript_value = ''
+
+            if not transcript_value:
                 return api_error('영상 자막을 추출할 수 없습니다. 자막이 없는 영상이거나 접근 불가합니다.', 422)
 
             # 자막 세그먼트 → 타임스탬프 포함 텍스트 변환 (이벤트 추출 품질 향상)
@@ -1594,8 +2107,10 @@ def extract_events_endpoint():
                 from services.core.ai_service import format_transcript_with_timestamps
                 transcript_text = format_transcript_with_timestamps(segments)
             else:
-                transcript_text = transcript_data.get('transcript', '')
+                transcript_text = transcript_value
 
+        except UsageLockUnavailable:
+            raise
         except Exception as exc:
             return api_error_from_exception(exc, '자막 추출에 실패했습니다.')
 
@@ -1604,7 +2119,10 @@ def extract_events_endpoint():
         from services.content.event_extraction_service import (
             extract_events, categorize_events, get_event_summary
         )
-        events = extract_events(transcript_text, model=model)
+        event_kwargs = {'model': model}
+        if callable(on_cost_start):
+            event_kwargs['on_cost_start'] = on_cost_start
+        events = extract_events(transcript_text, **event_kwargs)
         categorized = categorize_events(events)
         summary = get_event_summary(events)
 
@@ -1614,6 +2132,8 @@ def extract_events_endpoint():
             'summary': summary,
         })
 
+    except UsageLockUnavailable:
+        raise
     except ValueError as exc:
         return handle_error(str(exc))
     except RuntimeError as exc:
