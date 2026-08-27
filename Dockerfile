@@ -114,7 +114,7 @@ EXPOSE 8080
 
 # 헬스체크
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD-SHELL curl --fail --silent --show-error "http://127.0.0.1:${PORT:-8080}/ready" >/dev/null || exit 1
+    CMD curl --fail --silent --show-error "http://127.0.0.1:${PORT:-8080}/ready" >/dev/null || exit 1
 
 # Flask + Next.js + nginx를 동일 산출물에서 실행합니다.
 CMD ["tini", "--", "python", "scripts/run_full_stack.py", "full-stack"]
