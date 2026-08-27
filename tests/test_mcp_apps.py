@@ -5,6 +5,7 @@ P4-29E: ContentPreviewApp, InlineEditorApp, API 라우트를 검증합니다.
 """
 import unittest
 from unittest.mock import patch
+from flask import g
 
 
 # ── 단위 테스트: BaseMCPApp / MCPAppRegistry ─────────────────────────
@@ -190,6 +191,83 @@ class TestInlineEditorApp(unittest.TestCase):
         })
         self.assertFalse(result["success"])
 
+    def test_sessions_are_isolated_by_owner(self):
+        rendered = self.app.render({**self.content, "_owner_id": "user-a"})
+        result = self.app.handle_action("get_result", {
+            "session_id": rendered["session_id"],
+            "_owner_id": "user-b",
+        })
+        self.assertFalse(result["success"])
+
+    @patch('services.mcp.apps.inline_editor._MAX_SESSIONS_PER_OWNER', 2)
+    def test_oldest_owner_session_is_evicted_at_limit(self):
+        first = self.app.render({**self.content, "_owner_id": "user-a"})
+        self.app.render({**self.content, "title": "second", "_owner_id": "user-a"})
+        self.app.render({**self.content, "title": "third", "_owner_id": "user-a"})
+
+        result = self.app.handle_action("get_result", {
+            "session_id": first["session_id"],
+            "_owner_id": "user-a",
+        })
+        self.assertFalse(result["success"])
+
+    @patch('services.mcp.apps.inline_editor._MAX_SESSIONS', 2)
+    def test_global_limit_evicts_least_recently_used_session(self):
+        first = self.app.render({**self.content, "_owner_id": "user-a"})
+        second = self.app.render({**self.content, "_owner_id": "user-b"})
+        self.app.handle_action("get_result", {
+            "session_id": first["session_id"],
+            "_owner_id": "user-a",
+        })
+        self.app.render({**self.content, "_owner_id": "user-c"})
+
+        evicted = self.app.handle_action("get_result", {
+            "session_id": second["session_id"],
+            "_owner_id": "user-b",
+        })
+        retained = self.app.handle_action("get_result", {
+            "session_id": first["session_id"],
+            "_owner_id": "user-a",
+        })
+        self.assertFalse(evicted["success"])
+        self.assertTrue(retained["success"])
+
+    @patch('services.mcp.apps.inline_editor.time.monotonic', side_effect=[0, 1800])
+    def test_expired_session_is_evicted(self, _monotonic):
+        rendered = self.app.render({**self.content, "_owner_id": "user-a"})
+        result = self.app.handle_action("get_result", {
+            "session_id": rendered["session_id"],
+            "_owner_id": "user-a",
+        })
+        self.assertFalse(result["success"])
+
+    def test_rejects_oversized_content(self):
+        from services.mcp.apps.inline_editor import _MAX_CONTENT_CHARS
+        with self.assertRaises(ValueError):
+            self.app.render({"content": "x" * (_MAX_CONTENT_CHARS + 1)})
+
+    def test_rejects_non_string_session_id(self):
+        with self.assertRaises(ValueError):
+            self.app.render({**self.content, "session_id": []})
+
+    @patch('services.mcp.apps.inline_editor._MAX_HISTORY_CHARS', 8)
+    def test_undo_history_is_bounded_by_retained_text(self):
+        rendered = self.app.render({"content": "1234"})
+        session_id = rendered["session_id"]
+        for replacement in ("5678", "9012", "abcd"):
+            result = self.app.handle_action("save_edit", {
+                "session_id": session_id,
+                "section": 0,
+                "new_content": replacement,
+            })
+            self.assertTrue(result["success"])
+
+        history = self.app._sessions[session_id]["history"]
+        self.assertLessEqual(
+            sum(len(section) for snapshot in history for section in snapshot),
+            8,
+        )
+
 
 # ── API 라우트 테스트 ──────────────────────────────────────────────
 
@@ -253,9 +331,79 @@ class TestMCPAppsRoutes(unittest.TestCase):
         self.assertEqual(res.status_code, 400)
 
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    def test_action_rejects_non_string_action(self, _mock):
+        res = self.client.post(
+            '/api/mcp-apps/content_preview/action',
+            json={"action": ["switch_platform:wordpress"]},
+        )
+        self.assertEqual(res.status_code, 400)
+
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     def test_action_unknown_app(self, _mock):
         res = self.client.post('/api/mcp-apps/nonexistent/action', json={"action": "noop"})
         self.assertEqual(res.status_code, 404)
+
+    def test_mutating_routes_require_token_in_production(self):
+        from app import create_app
+        app = create_app({'TESTING': False, 'FLASK_ENV': 'production'})
+        client = app.test_client()
+        with patch(
+            'src.contexts.identity.interface.auth_decorators.is_supabase_enabled',
+            return_value=True,
+        ):
+            render = client.post('/api/mcp-apps/inline_editor/render', json={
+                'title': 'T', 'content': 'C',
+            }, headers={'Origin': 'http://localhost:3000'})
+            action = client.post('/api/mcp/apps/inline-editor/action', json={
+                'action': 'get_result', 'session_id': 'missing',
+            }, headers={'Origin': 'http://localhost:3000'})
+        self.assertEqual(render.status_code, 401)
+        self.assertEqual(action.status_code, 401)
+
+    def test_http_owner_overrides_client_fields_and_isolates_session(self):
+        def validate(token):
+            g.user_id = {'token-a': 'user-a', 'token-b': 'user-b'}[token]
+            g.access_token = token
+            return {'valid': True, 'error': None, 'code': None}
+
+        headers_a = {'Authorization': 'Bearer token-a'}
+        headers_b = {'Authorization': 'Bearer token-b'}
+        with (
+            patch(
+                'src.contexts.identity.interface.auth_decorators.is_supabase_enabled',
+                return_value=True,
+            ),
+            patch(
+                'src.contexts.identity.interface.auth_decorators._validate_token',
+                side_effect=validate,
+            ),
+        ):
+            rendered = self.client.post(
+                '/api/mcp-apps/inline_editor/render',
+                json={
+                    'title': 'A', 'content': 'A only',
+                    '_owner_id': 'user-b', 'owner_id': 'user-b',
+                },
+                headers=headers_a,
+            )
+            session_id = rendered.get_json()['session_id']
+            denied = self.client.post(
+                '/api/mcp-apps/inline_editor/action',
+                json={
+                    'action': 'get_result', 'session_id': session_id,
+                    '_owner_id': 'user-a', 'owner_id': 'user-a',
+                },
+                headers=headers_b,
+            )
+            allowed = self.client.post(
+                '/api/mcp-apps/inline_editor/action',
+                json={'action': 'get_result', 'session_id': session_id},
+                headers=headers_a,
+            )
+
+        self.assertEqual(denied.status_code, 400)
+        self.assertEqual(allowed.status_code, 200)
+        self.assertEqual(allowed.get_json()['updated_content']['content'], 'A only')
 
 
 if __name__ == '__main__':

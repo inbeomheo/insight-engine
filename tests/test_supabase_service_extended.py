@@ -3,6 +3,64 @@ import unittest
 from unittest.mock import patch, MagicMock
 
 
+class TestSupabaseClientLifetime(unittest.TestCase):
+    """인증 세션을 바꾸는 요청은 전역 클라이언트를 공유하지 않는다."""
+
+    @patch.dict(
+        'os.environ',
+        {'SUPABASE_URL': 'https://example.supabase.co', 'SUPABASE_ANON_KEY': 'anon'},
+    )
+    @patch('src.shared.infrastructure.supabase_client._lazy_create_client')
+    def test_fresh_client_is_not_cached(self, create_client):
+        import src.shared.infrastructure.supabase_client as mod
+
+        cached = mod._supabase_client
+        mod._supabase_client = None
+        create_client.side_effect = [MagicMock(name='first'), MagicMock(name='second')]
+        try:
+            first = mod.get_supabase(fresh=True)
+            second = mod.get_supabase(fresh=True)
+            self.assertIsNot(first, second)
+            self.assertIsNone(mod._supabase_client)
+            self.assertEqual(create_client.call_count, 2)
+            for call in create_client.call_args_list:
+                options = call.args[2]
+                self.assertFalse(options.auto_refresh_token)
+                self.assertFalse(options.persist_session)
+        finally:
+            mod._supabase_client = cached
+
+    @patch.dict(
+        'os.environ',
+        {'SUPABASE_URL': 'https://example.supabase.co', 'SUPABASE_ANON_KEY': 'anon'},
+    )
+    @patch('src.shared.infrastructure.supabase_client._lazy_create_client')
+    def test_default_client_remains_cached(self, create_client):
+        import src.shared.infrastructure.supabase_client as mod
+
+        cached = mod._supabase_client
+        mod._supabase_client = None
+        create_client.return_value = MagicMock(name='cached')
+        try:
+            self.assertIs(mod.get_supabase(), mod.get_supabase())
+            self.assertEqual(create_client.call_count, 1)
+        finally:
+            mod._supabase_client = cached
+
+    @patch.dict(
+        'os.environ',
+        {'SUPABASE_URL': 'https://example.supabase.co', 'SUPABASE_ANON_KEY': 'anon'},
+    )
+    def test_real_fresh_auth_client_has_no_session_timer(self):
+        import src.shared.infrastructure.supabase_client as mod
+
+        client = mod.get_supabase(fresh=True)
+
+        self.assertFalse(client.auth._auto_refresh_token)
+        self.assertFalse(client.auth._persist_session)
+        self.assertIsNone(client.auth._refresh_token_timer)
+
+
 class TestGetFernet(unittest.TestCase):
     """_get_fernet 테스트
 
@@ -79,13 +137,13 @@ class TestEncryptDecryptRoundTrip(unittest.TestCase):
 class TestGetUsage(unittest.TestCase):
     """get_usage 테스트"""
 
-    @patch('services.data.supabase_service.get_supabase', return_value=None)
+    @patch('services.data.supabase_service.get_user_supabase', return_value=None)
     def test_no_client(self, _):
         from services.data.supabase_service import get_usage
         result = get_usage('user1')
         self.assertFalse(result['can_use'])
 
-    @patch('services.data.supabase_service.get_supabase', return_value=None)
+    @patch('services.data.supabase_service.get_user_supabase', return_value=None)
     def test_no_user_id(self, _):
         from services.data.supabase_service import get_usage
         result = get_usage(None)
@@ -95,12 +153,12 @@ class TestGetUsage(unittest.TestCase):
 class TestDecrementUsage(unittest.TestCase):
     """decrement_usage 테스트"""
 
-    @patch('services.data.supabase_service.get_supabase', return_value=None)
+    @patch('services.data.supabase_service.get_user_supabase', return_value=None)
     def test_no_client(self, _):
         from services.data.supabase_service import decrement_usage
         self.assertFalse(decrement_usage('user1'))
 
-    @patch('services.data.supabase_service.get_supabase', return_value=None)
+    @patch('services.data.supabase_service.get_user_supabase', return_value=None)
     def test_no_user_id(self, _):
         from services.data.supabase_service import decrement_usage
         self.assertFalse(decrement_usage(None))

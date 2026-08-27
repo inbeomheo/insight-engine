@@ -1,9 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const backendCommand =
-  process.platform === 'win32'
-    ? '.venv\\Scripts\\python.exe app.py'
-    : 'python scripts/run_local_python.py app.py';
+const backendCommand = 'node scripts/run_python.cjs app.py';
 const frontendCommand = 'node node_modules/next/dist/bin/next dev';
 const backendUrl = 'http://127.0.0.1:5001';
 const frontendUrl = 'http://127.0.0.1:3000';
@@ -11,17 +8,16 @@ const frontendUrl = 'http://127.0.0.1:3000';
 /**
  * Insight Engine E2E 테스트 설정
  *
- * 병렬 테스트 최적화:
- * - fullyParallel: true → 모든 테스트를 병렬 실행
- * - workers: 'auto' → CPU 코어 수에 맞게 워커 자동 조절
- * - 테스트 격리: 각 테스트가 독립적인 브라우저 컨텍스트 사용
+ * 기본 실행은 공유 Flask/Next.js 서버의 포트·상태 충돌을 피하기 위해
+ * 단일 워커를 사용한다. 병렬 검증이 필요한 경우 CLI의 --workers 옵션으로
+ * 명시적으로 재정의한다.
  */
 export default defineConfig({
   testDir: './',
 
-  /* 병렬 실행 최대화 */
+  /* 테스트 컨텍스트는 격리하되 공유 서버에는 한 번에 하나씩 요청 */
   fullyParallel: true,
-  workers: process.env.CI ? 4 : undefined, // CI에서는 4개, 로컬은 자동 (CPU 코어 수)
+  workers: 1,
 
   /* 실패 시 재시도 */
   retries: process.env.CI ? 2 : 0,
@@ -75,6 +71,7 @@ export default defineConfig({
         '**/core-flow/**/*.spec.ts',
         '**/result-card/**/*.spec.ts',
         '**/auth/login.spec.ts', // 로그인 테스트는 인증 없이 실행
+        '**/seed.spec.ts',
       ],
       use: {
         ...devices['Desktop Chrome'],
@@ -88,6 +85,14 @@ export default defineConfig({
     {
       name: 'batch-generation',
       testMatch: '**/batch-generation/**/*.spec.ts',
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: undefined,
+      },
+    },
+    {
+      name: 'ui-generation',
+      testMatch: '**/content-generation/**/*.spec.ts',
       use: {
         ...devices['Desktop Chrome'],
         storageState: undefined,
@@ -193,8 +198,12 @@ export default defineConfig({
             // 테스트 시 Supabase 인증 비활성화 (로그인 없이 모든 기능 사용)
             env: {
               ...process.env,
+              FLASK_ENV: 'testing',
               SUPABASE_URL: '',
+              SUPABASE_PUBLISHABLE_KEY: '',
+              SUPABASE_SECRET_KEY: '',
               SUPABASE_ANON_KEY: '',
+              SUPABASE_SERVICE_ROLE_KEY: '',
             },
           },
           {

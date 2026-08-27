@@ -176,6 +176,141 @@ class TestCreateContent(unittest.TestCase):
         self.assertIn("테스트", prompt)
 
 
+class TestCompletionChargeBoundary(unittest.TestCase):
+    def setUp(self):
+        from flask import Flask
+
+        self.app = Flask(__name__)
+
+    def test_completion_is_loaded_before_charge_and_called_after_charge(self):
+        from flask import g
+        from services.core.ai_service import _call_completion_with_model_retry
+        from services.usage.usage_decorator import UsageChargeState
+
+        state = UsageChargeState()
+        events = []
+
+        def completion_factory():
+            events.append(('load', state.committed))
+
+            def completion(**kwargs):
+                events.append(('call', state.committed, kwargs))
+                return 'response'
+
+            return completion
+
+        with self.app.test_request_context():
+            g.usage_charge_state = state
+            with patch(
+                'services.core.ai_service._get_completion',
+                side_effect=completion_factory,
+            ):
+                result = _call_completion_with_model_retry(
+                    'chatmock/gpt-5.4-mini',
+                    {'model': 'gpt-5.4-mini'},
+                )
+
+        self.assertEqual(result, 'response')
+        self.assertEqual(events[0], ('load', False))
+        self.assertEqual(
+            events[1],
+            ('call', True, {'model': 'gpt-5.4-mini'}),
+        )
+
+    def test_explicit_callback_runs_at_actual_provider_boundary(self):
+        from services.core.ai_service import _call_completion_with_model_retry
+
+        events = []
+
+        def completion_factory():
+            events.append('load')
+
+            def completion(**_kwargs):
+                events.append('provider')
+                return 'response'
+
+            return completion
+
+        with patch(
+            'services.core.ai_service._get_completion',
+            side_effect=completion_factory,
+        ):
+            result = _call_completion_with_model_retry(
+                'chatmock/gpt-5.4-mini',
+                {'model': 'gpt-5.4-mini'},
+                on_cost_start=lambda: events.append('cost'),
+            )
+
+        self.assertEqual(result, 'response')
+        self.assertEqual(events, ['load', 'cost', 'provider'])
+
+    def test_legacy_call_litellm_uses_shared_cost_boundary(self):
+        from services.core.ai_service import call_litellm
+
+        events = []
+        provider_response = MagicMock()
+
+        def provider(**kwargs):
+            events.append('provider')
+            self.assertEqual(kwargs['messages'][0]['content'], 'translate')
+            return provider_response
+
+        with patch(
+            'services.core.ai_service._get_completion',
+            return_value=provider,
+        ):
+            result = call_litellm(
+                [{'role': 'user', 'content': 'translate'}],
+                model='chatmock/gpt-5.4-mini',
+                on_cost_start=lambda: events.append('cost'),
+            )
+
+        self.assertIs(result, provider_response)
+        self.assertEqual(events, ['cost', 'provider'])
+
+    def test_create_content_rethrows_lock_loss_and_skips_provider(self):
+        from services.core.ai_service import create_content
+        from services.usage.usage_lock import UsageLockUnavailable
+
+        provider = MagicMock()
+
+        def reject_cost():
+            raise UsageLockUnavailable('lease lost')
+
+        with self.app.test_request_context(), patch(
+            'services.core.ai_prompt_context.build_optional_prompt_contexts',
+            return_value=(None, None, [], None, None),
+        ), patch(
+            'services.core.ai_service._get_completion',
+            return_value=provider,
+        ):
+            with self.assertRaises(UsageLockUnavailable):
+                create_content(
+                    'content',
+                    'chatmock/gpt-5.4-mini',
+                    on_cost_start=reject_cost,
+                )
+
+        provider.assert_not_called()
+
+    def test_preflight_failure_does_not_commit_explicit_callback(self):
+        from services.core.ai_service import create_content
+
+        on_cost_start = MagicMock()
+        with self.app.test_request_context(), patch(
+            'services.core.ai_prompt_context.build_optional_prompt_contexts',
+            side_effect=RuntimeError('preflight failed'),
+        ):
+            with self.assertRaises(Exception):
+                create_content(
+                    'content',
+                    'chatmock/gpt-5.4-mini',
+                    on_cost_start=on_cost_start,
+                )
+
+        on_cost_start.assert_not_called()
+
+
 class TestStreamingUsage(unittest.TestCase):
     """스트리밍 final chunk usage 추출 테스트"""
 
@@ -190,6 +325,83 @@ class TestStreamingUsage(unittest.TestCase):
 
         self.assertTrue(kwargs['stream'])
         self.assertEqual(kwargs['stream_options'], {'include_usage': True})
+
+    def test_stream_callback_runs_at_provider_boundary(self):
+        from flask import Flask
+        from services.core.ai_streaming import create_content_stream
+
+        app = Flask(__name__)
+        events = []
+
+        def completion_factory():
+            events.append('load')
+
+            def completion(**_kwargs):
+                events.append('provider')
+                return []
+
+            return completion
+
+        with app.test_request_context(), patch(
+            'services.core.ai_streaming.build_optional_prompt_contexts',
+            return_value=(None, None, [], None, None),
+        ), patch(
+            'services.core.ai_service._get_completion',
+            side_effect=completion_factory,
+        ):
+            self.assertEqual(list(create_content_stream(
+                'content',
+                'chatmock/gpt-5.4-mini',
+                on_cost_start=lambda: events.append('cost'),
+            )), [])
+
+        self.assertEqual(events, ['load', 'cost', 'provider'])
+
+    def test_stream_lock_loss_is_not_wrapped(self):
+        from flask import Flask
+        from services.core.ai_streaming import create_content_stream
+        from services.usage.usage_lock import UsageLockUnavailable
+
+        app = Flask(__name__)
+        provider = MagicMock()
+
+        def reject_cost():
+            raise UsageLockUnavailable('lease lost')
+
+        with app.test_request_context(), patch(
+            'services.core.ai_streaming.build_optional_prompt_contexts',
+            return_value=(None, None, [], None, None),
+        ), patch(
+            'services.core.ai_service._get_completion',
+            return_value=provider,
+        ):
+            with self.assertRaises(UsageLockUnavailable):
+                list(create_content_stream(
+                    'content',
+                    'chatmock/gpt-5.4-mini',
+                    on_cost_start=reject_cost,
+                ))
+
+        provider.assert_not_called()
+
+    def test_stream_preflight_failure_does_not_commit_callback(self):
+        from flask import Flask
+        from services.core.ai_streaming import create_content_stream
+
+        app = Flask(__name__)
+        on_cost_start = MagicMock()
+        with app.test_request_context(), patch(
+            'services.core.ai_streaming.build_optional_prompt_contexts',
+            side_effect=RuntimeError('preflight failed'),
+        ):
+            with self.assertRaises(Exception):
+                list(create_content_stream(
+                    'content',
+                    'chatmock/gpt-5.4-mini',
+                    on_cost_start=on_cost_start,
+                ))
+
+        on_cost_start.assert_not_called()
 
     def test_extract_stream_usage_from_include_usage_chunk(self):
         from services.core.ai_streaming import _extract_stream_usage

@@ -2,6 +2,7 @@ import json
 from unittest.mock import patch
 
 import pytest
+from flask import g
 
 from app import create_app
 from services.content import note_index_service, note_service
@@ -52,6 +53,15 @@ def _note(note_id, created_at):
     }
 
 
+def _validate_test_token(token):
+    user_id = {"token-a": "user-a", "token-b": "user-b"}.get(token)
+    if not user_id:
+        return {"valid": False, "error": "invalid", "code": "TOKEN_INVALID"}
+    g.user_id = user_id
+    g.access_token = token
+    return {"valid": True, "error": None, "code": None}
+
+
 def test_post_notes_generates_saves_and_returns_note(tmp_path, monkeypatch):
     monkeypatch.setattr(note_service, "NOTES_DIR", tmp_path)
     client = _client()
@@ -64,7 +74,7 @@ def test_post_notes_generates_saves_and_returns_note(tmp_path, monkeypatch):
     ):
         resp = client.post(
             "/api/notes",
-            json={"content": "원문 콘텐츠", "source": _source(), "language": "ko", "model": "gemini/test"},
+            json={"content": "원문 콘텐츠", "source": _source(), "language": "ko", "model": "chatmock/gpt-5.4-mini"},
             headers=_H,
         )
 
@@ -75,14 +85,137 @@ def test_post_notes_generates_saves_and_returns_note(tmp_path, monkeypatch):
     assert data["summary"] == "생성된 요약"
     assert data["learning_points"] == ["생성된 요약을 복습한다."]
     assert data["review_questions"][0]["question"] == "무엇을 복습하나?"
-    assert (tmp_path / f"{data['id']}.json").exists()
+    assert (tmp_path / "scopes" / "anonymous" / f"{data['id']}.json").exists()
     assert create_content.call_args.kwargs["style_id"] == "knowledge_note"
     assert create_content.call_args.kwargs["modifiers"]["language"] == "ko"
     assert "length" not in create_content.call_args.kwargs["modifiers"]
     indexed_note = index_note.call_args.args[0]
     assert indexed_note["id"] == data["id"]
     assert indexed_note["summary"] == "생성된 요약"
+    assert index_note.call_args.kwargs["owner_id"] is None
     search_notes.assert_not_called()
+
+
+def test_post_notes_rejects_unlisted_model_before_ai(tmp_path, monkeypatch):
+    monkeypatch.setattr(note_service, "NOTES_DIR", tmp_path)
+    client = _client()
+    with (
+        patch("src.contexts.identity.interface.auth_decorators.is_supabase_enabled", return_value=False),
+        patch("services.core.ai_service.create_content") as create_content,
+    ):
+        resp = client.post(
+            "/api/notes",
+            json={
+                "content": "원문 콘텐츠",
+                "source": _source(),
+                "model": "attacker/model",
+            },
+            headers=_H,
+        )
+
+    assert resp.status_code == 400
+    assert resp.get_json()["code"] == "UNSUPPORTED_MODEL"
+    create_content.assert_not_called()
+
+
+def test_authenticated_note_routes_enforce_owner_for_create_list_search_and_detail(
+    tmp_path,
+    monkeypatch,
+):
+    monkeypatch.setattr(note_service, "NOTES_DIR", tmp_path)
+    note_a = _note("note-a", "2026-07-03T12:00:00Z")
+    note_b = _note("note-b", "2026-07-04T12:00:00Z")
+    note_a["summary"] = "사용자 A 비밀"
+    note_b["summary"] = "사용자 B 노트"
+    note_service.save_note(note_a, owner_id="user-a")
+    note_service.save_note(note_b, owner_id="user-b")
+    client = _client()
+    headers_b = {**_H, "Authorization": "Bearer token-b"}
+    search_result = [{"id": "note-b", "title": "영상 제목", "score": 0.9, "snippet": "B"}]
+
+    with (
+        patch(
+            "src.contexts.identity.interface.auth_decorators.is_supabase_enabled",
+            return_value=True,
+        ),
+        patch(
+            "src.contexts.identity.interface.auth_decorators._validate_token",
+            side_effect=_validate_test_token,
+        ),
+        patch(
+            "services.content.note_index_service.search_notes",
+            return_value=search_result,
+        ) as search_notes,
+        patch(
+            "services.content.note_index_service.get_related_notes",
+            return_value=[],
+        ) as related_notes,
+        patch("services.core.ai_service.create_content", return_value=_ai_response()),
+        patch("services.content.note_index_service.index_note") as index_note,
+    ):
+        list_response = client.get("/api/notes", headers=headers_b)
+        forbidden_detail = client.get("/api/notes/note-a", headers=headers_b)
+        own_detail = client.get("/api/notes/note-b", headers=headers_b)
+        search_response = client.get(
+            "/api/notes/search",
+            query_string={"q": "B"},
+            headers=headers_b,
+        )
+        create_response = client.post(
+            "/api/notes",
+            json={
+                "content": "사용자 B의 새 원문",
+                "source": {"type": "text", "url": "", "title": "새 노트"},
+                "model": "chatmock/gpt-5.4-mini",
+            },
+            headers=headers_b,
+        )
+
+    assert list_response.status_code == 200
+    listed = list_response.get_json()["notes"]
+    assert [item["id"] for item in listed] == ["note-b"]
+    assert all("사용자 A 비밀" not in str(item) for item in listed)
+    assert forbidden_detail.status_code == 404
+    assert own_detail.status_code == 200
+    assert own_detail.get_json()["id"] == "note-b"
+    related_notes.assert_called_once()
+    assert related_notes.call_args.args[0]["id"] == "note-b"
+    assert related_notes.call_args.kwargs == {"owner_id": "user-b", "limit": 3}
+    assert search_response.get_json()["notes"] == search_result
+    search_notes.assert_any_call("B", owner_id="user-b", limit=5)
+    assert create_response.status_code == 200
+    created_id = create_response.get_json()["id"]
+    assert note_service.load_note(created_id, owner_id="user-b") is not None
+    assert note_service.load_note(created_id, owner_id="user-a") is None
+    index_note.assert_called_once()
+    assert index_note.call_args.kwargs["owner_id"] == "user-b"
+
+
+def test_authenticated_user_cannot_read_legacy_unowned_note_via_route(tmp_path, monkeypatch):
+    monkeypatch.setattr(note_service, "NOTES_DIR", tmp_path)
+    legacy = _note("legacy", "2026-07-04T12:00:00Z")
+    (tmp_path / "legacy.json").write_text(
+        json.dumps(legacy, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    client = _client()
+
+    with (
+        patch(
+            "src.contexts.identity.interface.auth_decorators.is_supabase_enabled",
+            return_value=True,
+        ),
+        patch(
+            "src.contexts.identity.interface.auth_decorators._validate_token",
+            side_effect=_validate_test_token,
+        ),
+    ):
+        response = client.get(
+            "/api/notes/legacy",
+            headers={**_H, "Authorization": "Bearer token-a"},
+        )
+
+    assert response.status_code == 404
 
 
 def test_post_notes_generates_from_text_source_without_url(tmp_path, monkeypatch):
@@ -98,7 +231,7 @@ def test_post_notes_generates_from_text_source_without_url(tmp_path, monkeypatch
     ):
         resp = client.post(
             "/api/notes",
-            json={"content": "붙여넣은 원문 콘텐츠", "source": source, "language": "ko", "model": "gemini/test"},
+            json={"content": "붙여넣은 원문 콘텐츠", "source": source, "language": "ko", "model": "chatmock/gpt-5.4-mini"},
             headers=_H,
         )
 
@@ -115,7 +248,7 @@ def test_post_notes_generates_from_text_source_without_url(tmp_path, monkeypatch
 
 def test_post_notes_duplicate_url_returns_warning_without_ai(tmp_path, monkeypatch):
     monkeypatch.setattr(note_service, "NOTES_DIR", tmp_path)
-    note_service.save_note(_note("existing", "2026-07-04T12:00:00Z"))
+    note_service.save_note(_note("existing", "2026-07-04T12:00:00Z"), owner_id=None)
     client = _client()
 
     with (
@@ -134,7 +267,7 @@ def test_post_notes_duplicate_url_returns_warning_without_ai(tmp_path, monkeypat
                     "title": "영상 제목",
                 },
                 "language": "ko",
-                "model": "gemini/test",
+                "model": "chatmock/gpt-5.4-mini",
             },
             headers=_H,
         )
@@ -154,7 +287,7 @@ def test_post_notes_similar_content_returns_warning_without_ai(tmp_path, monkeyp
     monkeypatch.setattr(note_service, "NOTES_DIR", tmp_path)
     existing = _note("similar", "2026-07-04T12:00:00Z")
     existing["source"] = {"type": "article", "url": "https://example.com/old", "title": "기존 글"}
-    note_service.save_note(existing)
+    note_service.save_note(existing, owner_id=None)
     client = _client()
     similar = [{"id": "similar", "title": "기존 글", "score": 0.94, "snippet": "비슷한 요약"}]
 
@@ -170,7 +303,7 @@ def test_post_notes_similar_content_returns_warning_without_ai(tmp_path, monkeyp
                 "content": "유사한 원문 콘텐츠",
                 "source": {"type": "article", "url": "https://example.com/new", "title": "새 글"},
                 "language": "ko",
-                "model": "gemini/test",
+                "model": "chatmock/gpt-5.4-mini",
             },
             headers=_H,
         )
@@ -197,7 +330,7 @@ def test_post_notes_similarity_threshold_boundaries(tmp_path, monkeypatch, score
     monkeypatch.setattr(note_service, "NOTES_DIR", tmp_path)
     existing = _note("similar", "2026-07-04T12:00:00Z")
     existing["source"] = {"type": "article", "url": "https://example.com/old", "title": "기존 글"}
-    note_service.save_note(existing)
+    note_service.save_note(existing, owner_id=None)
     client = _client()
     similar = [{"id": "similar", "title": "기존 글", "score": score, "snippet": "비슷한 요약"}]
 
@@ -213,7 +346,7 @@ def test_post_notes_similarity_threshold_boundaries(tmp_path, monkeypatch, score
                 "content": "유사한 원문 콘텐츠",
                 "source": {"type": "article", "url": f"https://example.com/new-{score}", "title": "새 글"},
                 "language": "ko",
-                "model": "gemini/test",
+                "model": "chatmock/gpt-5.4-mini",
             },
             headers=_H,
         )
@@ -231,7 +364,7 @@ def test_post_notes_similarity_lookup_failure_still_generates(tmp_path, monkeypa
     monkeypatch.setattr(note_service, "NOTES_DIR", tmp_path)
     existing = _note("existing", "2026-07-04T12:00:00Z")
     existing["source"] = {"type": "article", "url": "https://example.com/old", "title": "기존 글"}
-    note_service.save_note(existing)
+    note_service.save_note(existing, owner_id=None)
     client = _client()
 
     with (
@@ -246,7 +379,7 @@ def test_post_notes_similarity_lookup_failure_still_generates(tmp_path, monkeypa
                 "content": "새 원문 콘텐츠",
                 "source": {"type": "article", "url": "https://example.com/new", "title": "새 글"},
                 "language": "ko",
-                "model": "gemini/test",
+                "model": "chatmock/gpt-5.4-mini",
             },
             headers=_H,
         )
@@ -286,8 +419,8 @@ def test_post_notes_invalid_source_keeps_korean_400_without_ai_or_chroma(tmp_pat
 
 def test_get_notes_lists_newest_first_and_detail(tmp_path, monkeypatch):
     monkeypatch.setattr(note_service, "NOTES_DIR", tmp_path)
-    note_service.save_note(_note("old", "2026-07-03T12:00:00Z"))
-    note_service.save_note(_note("new", "2026-07-04T12:00:00Z"))
+    note_service.save_note(_note("old", "2026-07-03T12:00:00Z"), owner_id=None)
+    note_service.save_note(_note("new", "2026-07-04T12:00:00Z"), owner_id=None)
     client = _client()
 
     related = [{"id": "old", "title": "이전 노트", "score": 0.7, "snippet": "요약"}]
@@ -315,7 +448,7 @@ def test_get_notes_lists_newest_first_and_detail(tmp_path, monkeypatch):
 
 def test_get_note_related_lookup_failure_returns_note_with_empty_related(tmp_path, monkeypatch):
     monkeypatch.setattr(note_service, "NOTES_DIR", tmp_path)
-    note_service.save_note(_note("n1", "2026-07-04T12:00:00Z"))
+    note_service.save_note(_note("n1", "2026-07-04T12:00:00Z"), owner_id=None)
     client = _client()
 
     with (
@@ -358,7 +491,7 @@ def test_search_notes_returns_results(tmp_path, monkeypatch):
 
     assert resp.status_code == 200
     assert resp.get_json()["notes"] == expected
-    search_notes.assert_called_once_with("AI", limit=2)
+    search_notes.assert_called_once_with("AI", owner_id=None, limit=2)
 
 
 def test_search_notes_empty_query_returns_korean_400(tmp_path, monkeypatch):
@@ -391,7 +524,11 @@ def test_search_notes_clamps_large_limit(tmp_path, monkeypatch):
         )
 
     assert resp.status_code == 200
-    search_notes.assert_called_once_with("AI", limit=note_index_service.MAX_SEARCH_LIMIT)
+    search_notes.assert_called_once_with(
+        "AI",
+        owner_id=None,
+        limit=note_index_service.MAX_SEARCH_LIMIT,
+    )
 
 
 def test_search_notes_long_query_returns_korean_400(tmp_path, monkeypatch):
@@ -491,7 +628,7 @@ def test_post_notes_index_failure_still_returns_note(tmp_path, monkeypatch):
     assert resp.status_code == 200
     data = resp.get_json()
     assert data["summary"] == "생성된 요약"
-    assert (tmp_path / f"{data['id']}.json").exists()
+    assert (tmp_path / "scopes" / "anonymous" / f"{data['id']}.json").exists()
 
 
 def test_post_notes_provider_prefixed_exception_uses_handle_error(tmp_path, monkeypatch):

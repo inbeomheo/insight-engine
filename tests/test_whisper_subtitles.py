@@ -17,7 +17,7 @@ def _build_yt_dlp_mock():
 
 
 def test_extract_subtitles_ytdlp_reads_vtt_and_returns_clean_text():
-    video_url = "https://youtube.com/watch?v=test"
+    video_url = "https://youtu.be/dQw4w9WgXcQ?feature=share"
     tmp_dir = r"C:\tmp\ytdlp_subs_test"
     sub_file = os.path.join(tmp_dir, "subs.ko.vtt")
     raw_vtt = """WEBVTT
@@ -63,7 +63,9 @@ Third cleaned subtitle line
                         result = extract_subtitles_ytdlp(video_url)
 
     assert result == expected
-    ydl.download.assert_called_once_with([video_url])
+    ydl.download.assert_called_once_with([
+        "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+    ])
     open_mock.assert_called_once_with(
         sub_file,
         "r",

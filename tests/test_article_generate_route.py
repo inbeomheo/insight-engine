@@ -52,6 +52,44 @@ def test_generate_article_url_uses_article_text():
     assert data["source_title"] == "원문 제목"
 
 
+def test_generate_ignores_client_source_type_override_for_network_routing():
+    app, client = _app_client()
+
+    def fake_web_source(
+        _params,
+        _url,
+        source_type,
+        _start_time,
+        *,
+        on_cost_start=None,
+    ):
+        with app.app_context():
+            assert source_type == "webpage"
+            return jsonify({"title": "웹", "content": "본문"})
+
+    with (
+        patch(
+            "src.contexts.identity.interface.auth_decorators.is_supabase_enabled",
+            return_value=False,
+        ),
+        patch("services.usage.usage_decorator.is_supabase_enabled", return_value=False),
+        patch("routes.blog_routes._handle_web_source", side_effect=fake_web_source),
+        patch("services.transcript.whisper_service.download_audio") as download_audio,
+    ):
+        response = client.post(
+            "/generate",
+            json={
+                "url": "https://example.com/article",
+                "source_type": "podcast",
+                "style": "summary",
+            },
+            headers=_H,
+        )
+
+    assert response.status_code == 200
+    download_audio.assert_not_called()
+
+
 def test_generate_youtube_url_still_uses_transcript_path():
     app, client = _app_client()
     url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
@@ -82,7 +120,7 @@ def test_generate_youtube_url_still_uses_transcript_path():
         resp = client.post("/generate", json={"url": url, "style": "summary"}, headers=_H)
 
     assert resp.status_code == 200
-    mock_transcript.assert_called_once_with("dQw4w9WgXcQ", None)
+    mock_transcript.assert_called_once_with("dQw4w9WgXcQ", None, None)
     mock_article.assert_not_called()
 
 
@@ -102,8 +140,12 @@ def test_generate_youtube_citations_add_source_receipts():
             "src.contexts.identity.interface.auth_decorators.is_supabase_enabled",
             return_value=False,
         ),
-        patch("services.usage.usage_decorator.is_supabase_enabled", return_value=False),
-        patch("routes.blog_routes._handle_cache_hit", return_value=None) as mock_cache_hit,
+            patch("services.usage.usage_decorator.is_supabase_enabled", return_value=False),
+            patch(
+                "services.core.cache_service.AICacheService.make_key",
+                return_value="citation-cache-key",
+            ) as mock_make_key,
+            patch("routes.blog_routes._handle_cache_hit", return_value=None) as mock_cache_hit,
         patch("services.core.content_service.get_content_title", return_value="YT"),
         patch(
             "routes.blog_routes._fetch_youtube_content",
@@ -128,7 +170,7 @@ def test_generate_youtube_citations_add_source_receipts():
     ):
         resp = client.post(
             "/generate",
-            json={"url": url, "style": "qna", "model": "gemini/test", "enable_citations": True},
+            json={"url": url, "style": "qna", "model": "chatmock/gpt-5.4-mini", "enable_citations": True},
             headers=_H,
         )
 
@@ -138,12 +180,10 @@ def test_generate_youtube_citations_add_source_receipts():
     assert data["source_receipts"][0]["claim"] == "주장은 근거가 있습니다."
     assert data["source_receipts"][0]["timestamp_url"].endswith("&t=60s")
     assert data["source_receipts"][0]["source"]["video_id"] == "dQw4w9WgXcQ"
-    from services.core.cache_service import AICacheService
-    expected_key = AICacheService.make_key(
-        "dQw4w9WgXcQ", "qna", "gemini/test",
-        enable_citations=True,
-    )
-    assert mock_cache_hit.call_args.args[0] == expected_key
+    assert mock_cache_hit.call_args.args[0] == "citation-cache-key"
+    assert mock_make_key.call_args.kwargs["enable_citations"] is True
+    assert mock_make_key.call_args.kwargs["context_scope"] == "anonymous"
+    assert mock_make_key.call_args.kwargs["style_prompt"]
 
 
 def test_generate_article_value_error_keeps_safe_article_prefix():

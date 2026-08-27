@@ -1,9 +1,8 @@
 """MCP 서버 상태/도구 라우트 테스트."""
 import asyncio
-import sys
-from types import SimpleNamespace
+import os
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from app import create_app
 
@@ -36,34 +35,114 @@ class TestMCPServerRoutes(unittest.TestCase):
         data = resp.get_json()
         self.assertIn('tools', data)
         self.assertIsInstance(data['tools'], list)
-        # MCP_TOOLS에 5개 도구가 정의되어 있음
         self.assertGreaterEqual(len(data['tools']), 1)
         tool = data['tools'][0]
         self.assertIn('name', tool)
         self.assertIn('inputSchema', tool)
 
-    def test_search_knowledge_uses_shared_rag_context_builder(self):
-        """MCP 검색 핸들러가 user_id와 query를 넘겨 RAG 컨텍스트 문자열을 반환."""
-        from services.mcp.mcp_server import handle_search_knowledge
+    def test_default_schema_excludes_unmetered_or_user_scoped_tools(self):
+        """인증·사용량 컨텍스트 없는 stdio에서는 안전한 로컬 분석만 노출."""
+        from services.mcp.mcp_server import get_mcp_tools_schema
 
-        mock_builder = MagicMock()
-        mock_builder.build_context.return_value = "관련 문서 컨텍스트"
-        fake_rag_module = SimpleNamespace(context_builder=mock_builder)
+        with patch.dict(os.environ, {"INSIGHT_ENGINE_API_TOKEN": ""}):
+            names = {tool["name"] for tool in get_mcp_tools_schema()}
 
-        with patch.dict(sys.modules, {"services.rag": fake_rag_module}):
-            result = asyncio.run(handle_search_knowledge({
-                "user_id": "user-1",
-                "query": "테스트 검색",
-                "top_k": 3,
+        self.assertEqual(names, {"analyze_complexity"})
+        self.assertTrue(names.isdisjoint({
+            "search_knowledge",
+            "repurpose_content",
+            "translate_content",
+            "generate_content",
+        }))
+
+    def test_configured_schema_adds_authenticated_generate_only(self):
+        from services.mcp.mcp_server import get_mcp_tools_schema
+
+        with patch.dict(os.environ, {"INSIGHT_ENGINE_API_TOKEN": "server-token"}):
+            tools = get_mcp_tools_schema()
+
+        names = {tool["name"] for tool in tools}
+        self.assertEqual(names, {"analyze_complexity", "generate_content"})
+        serialized = str(tools)
+        self.assertNotIn("user_id", serialized)
+
+    def test_invalid_server_url_keeps_generate_tool_disabled(self):
+        from services.mcp.mcp_server import get_mcp_tools_schema
+
+        with patch.dict(os.environ, {
+            "INSIGHT_ENGINE_API_TOKEN": "server-token",
+            "INSIGHT_ENGINE_URL": "file:///etc/passwd",
+        }):
+            names = {tool["name"] for tool in get_mcp_tools_schema()}
+
+        self.assertEqual(names, {"analyze_complexity"})
+
+    def test_generate_without_server_token_fails_before_network(self):
+        from services.mcp.mcp_server import (
+            MCPToolUnavailable,
+            handle_generate_content,
+        )
+
+        with (
+            patch.dict(os.environ, {"INSIGHT_ENGINE_API_TOKEN": ""}),
+            patch("httpx.AsyncClient") as mock_client,
+            self.assertRaises(MCPToolUnavailable),
+        ):
+            asyncio.run(handle_generate_content({"url": "https://youtu.be/abc"}))
+        mock_client.assert_not_called()
+
+    def test_generate_sends_server_auth_and_idempotency_headers(self):
+        from services.mcp.mcp_server import handle_generate_content
+
+        response = MagicMock(status_code=200)
+        response.json.return_value = {"content": "완성된 콘텐츠"}
+        client = MagicMock()
+        client.__aenter__ = AsyncMock(return_value=client)
+        client.__aexit__ = AsyncMock(return_value=None)
+        client.post = AsyncMock(return_value=response)
+
+        with (
+            patch.dict(os.environ, {
+                "INSIGHT_ENGINE_API_TOKEN": "server-token",
+                "INSIGHT_ENGINE_URL": "https://engine.example/base/",
+            }),
+            patch("httpx.AsyncClient", return_value=client),
+        ):
+            result = asyncio.run(handle_generate_content({
+                "url": "https://youtu.be/abc",
+                "style_id": "summary",
             }))
 
-        self.assertEqual(result, "관련 문서 컨텍스트")
-        self.assertNotIn("검색 실패", result)
-        mock_builder.build_context.assert_called_once_with(
-            "user-1",
-            "테스트 검색",
-            top_k=3,
-        )
+        self.assertEqual(result, "완성된 콘텐츠")
+        call = client.post.await_args
+        self.assertEqual(call.args[0], "https://engine.example/base/generate")
+        self.assertEqual(call.kwargs["headers"]["Authorization"], "Bearer server-token")
+        self.assertRegex(call.kwargs["headers"]["Idempotency-Key"], r"^mcp-[a-f0-9]{32}$")
+        self.assertEqual(call.kwargs["json"], {
+            "url": "https://youtu.be/abc",
+            "style": "summary",
+            "modifiers": {"language": "ko", "length": "medium"},
+        })
+
+    def test_generate_does_not_expose_provider_exception(self):
+        from services.mcp.mcp_server import handle_generate_content
+
+        raw_secret = "Authorization: Bearer top-secret"
+        client = MagicMock()
+        client.__aenter__ = AsyncMock(return_value=client)
+        client.__aexit__ = AsyncMock(return_value=None)
+        client.post = AsyncMock(side_effect=RuntimeError(raw_secret))
+
+        with (
+            patch.dict(os.environ, {"INSIGHT_ENGINE_API_TOKEN": "server-token"}),
+            patch("httpx.AsyncClient", return_value=client),
+        ):
+            result = asyncio.run(handle_generate_content({
+                "url": "https://youtu.be/abc",
+            }))
+
+        self.assertNotIn(raw_secret, result)
+        self.assertEqual(result, "콘텐츠 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.")
 
 
 if __name__ == '__main__':

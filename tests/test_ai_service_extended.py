@@ -337,5 +337,34 @@ class TestConvertErrorMessageExtended(unittest.TestCase):
         self.assertIn('gpt-4o', result)
 
 
+class TestPublicModelAllowlist(unittest.TestCase):
+    def test_default_and_configured_model_are_allowed(self):
+        from services.core.ai_service import resolve_public_model
+
+        self.assertEqual(resolve_public_model(None), 'chatmock/gpt-5.4-mini')
+        self.assertEqual(
+            resolve_public_model(' chatmock/gpt-5.4 '),
+            'chatmock/gpt-5.4',
+        )
+
+    def test_arbitrary_provider_model_is_rejected(self):
+        from services.core.ai_service import resolve_public_model
+
+        with self.assertRaisesRegex(ValueError, '지원하지 않는 AI 모델'):
+            resolve_public_model('attacker/arbitrary-model')
+
+    def test_auto_is_only_preserved_for_supported_fallback_boundary(self):
+        from services.core.ai_service import resolve_public_model
+
+        self.assertEqual(
+            resolve_public_model('auto', allow_auto=True),
+            'auto',
+        )
+        self.assertEqual(
+            resolve_public_model('auto', allow_auto=False),
+            'chatmock/gpt-5.4-mini',
+        )
+
+
 if __name__ == '__main__':
     unittest.main()

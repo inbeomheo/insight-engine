@@ -13,7 +13,7 @@ class TestIsMember(unittest.TestCase):
         self.assertFalse(ws.is_member('ws-1', 'user-1'))
 
     @patch('services.data.workspace_service.is_supabase_enabled', return_value=True)
-    @patch('services.data.workspace_service.get_supabase')
+    @patch('services.data.workspace_service.get_user_supabase')
     def test_is_member_true(self, mock_sb, _):
         from services.data.workspace_service import WorkspaceService
         mock_client = MagicMock()
@@ -25,7 +25,7 @@ class TestIsMember(unittest.TestCase):
         self.assertTrue(ws.is_member('ws-1', 'user-1'))
 
     @patch('services.data.workspace_service.is_supabase_enabled', return_value=True)
-    @patch('services.data.workspace_service.get_supabase')
+    @patch('services.data.workspace_service.get_user_supabase')
     def test_is_member_false(self, mock_sb, _):
         from services.data.workspace_service import WorkspaceService
         mock_client = MagicMock()
@@ -37,7 +37,7 @@ class TestIsMember(unittest.TestCase):
         self.assertFalse(ws.is_member('ws-1', 'user-1'))
 
     @patch('services.data.workspace_service.is_supabase_enabled', return_value=True)
-    @patch('services.data.workspace_service.get_supabase', return_value=None)
+    @patch('services.data.workspace_service.get_user_supabase', return_value=None)
     def test_no_client(self, mock_sb, _):
         from services.data.workspace_service import WorkspaceService
         ws = WorkspaceService()
@@ -54,32 +54,28 @@ class TestFindUserByEmail(unittest.TestCase):
         self.assertIsNone(ws.find_user_by_email('test@test.com'))
 
     @patch('services.data.workspace_service.is_supabase_enabled', return_value=True)
-    @patch('services.data.workspace_service.get_supabase')
-    def test_found_in_usage_table(self, mock_sb, _):
+    @patch('services.data.workspace_service.get_service_supabase')
+    def test_found_with_explicit_service_role(self, mock_sb, _):
         from services.data.workspace_service import WorkspaceService
         mock_client = MagicMock()
         mock_sb.return_value = mock_client
-        mock_client.table.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value = MagicMock(
-            data=[{'user_id': 'user-123'}]
-        )
+        user = MagicMock(email='test@test.com', id='user-123')
+        mock_client.auth.admin.list_users.return_value = [user]
         ws = WorkspaceService()
         self.assertEqual(ws.find_user_by_email('test@test.com'), 'user-123')
 
     @patch('services.data.workspace_service.is_supabase_enabled', return_value=True)
-    @patch('services.data.workspace_service.get_supabase')
+    @patch('services.data.workspace_service.get_service_supabase')
     def test_not_found(self, mock_sb, _):
         from services.data.workspace_service import WorkspaceService
         mock_client = MagicMock()
         mock_sb.return_value = mock_client
-        # ie_usage에서 못 찾음
-        mock_client.table.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value = MagicMock(data=[])
-        # admin 폴백도 실패 (_get_admin_client는 supabase_service 모듈에서 import됨)
-        with patch('services.data.supabase_service._get_admin_client', return_value=None):
-            ws = WorkspaceService()
-            self.assertIsNone(ws.find_user_by_email('nobody@test.com'))
+        mock_client.auth.admin.list_users.return_value = []
+        ws = WorkspaceService()
+        self.assertIsNone(ws.find_user_by_email('nobody@test.com'))
 
     @patch('services.data.workspace_service.is_supabase_enabled', return_value=True)
-    @patch('services.data.workspace_service.get_supabase', return_value=None)
+    @patch('services.data.workspace_service.get_service_supabase', return_value=None)
     def test_no_client(self, mock_sb, _):
         from services.data.workspace_service import WorkspaceService
         ws = WorkspaceService()
@@ -90,7 +86,7 @@ class TestWorkspaceServiceInviteSuccess(unittest.TestCase):
     """invite_member 성공 케이스"""
 
     @patch('services.data.workspace_service.is_supabase_enabled', return_value=True)
-    @patch('services.data.workspace_service.get_supabase')
+    @patch('services.data.workspace_service.get_user_supabase')
     def test_invite_new_member(self, mock_sb, _):
         from services.data.workspace_service import WorkspaceService
         mock_client = MagicMock()
@@ -116,7 +112,7 @@ class TestWorkspaceServiceRemoveSuccess(unittest.TestCase):
     """remove_member 성공 케이스"""
 
     @patch('services.data.workspace_service.is_supabase_enabled', return_value=True)
-    @patch('services.data.workspace_service.get_supabase')
+    @patch('services.data.workspace_service.get_user_supabase')
     def test_remove_non_owner(self, mock_sb, _):
         from services.data.workspace_service import WorkspaceService
         mock_client = MagicMock()
@@ -141,7 +137,7 @@ class TestWorkspaceServiceUpdateRoleSuccess(unittest.TestCase):
     """update_role 성공 케이스"""
 
     @patch('services.data.workspace_service.is_supabase_enabled', return_value=True)
-    @patch('services.data.workspace_service.get_supabase')
+    @patch('services.data.workspace_service.get_user_supabase')
     def test_update_to_viewer(self, mock_sb, _):
         from services.data.workspace_service import WorkspaceService
         mock_client = MagicMock()
@@ -166,7 +162,7 @@ class TestWorkspaceServiceDeleteSuccess(unittest.TestCase):
     """delete_workspace 성공 케이스"""
 
     @patch('services.data.workspace_service.is_supabase_enabled', return_value=True)
-    @patch('services.data.workspace_service.get_supabase')
+    @patch('services.data.workspace_service.get_user_supabase')
     def test_owner_deletes(self, mock_sb, _):
         from services.data.workspace_service import WorkspaceService
         mock_client = MagicMock()
@@ -243,19 +239,50 @@ class TestContentApprovalServiceTransition(unittest.TestCase):
             self.assertIn('권한', result['error'])
 
     @patch('services.data.workspace_service.is_supabase_enabled', return_value=True)
-    @patch('services.data.workspace_service.get_supabase')
+    @patch('services.data.workspace_service.get_user_supabase')
     def test_valid_transition(self, mock_sb, _):
         from services.data.workspace_service import ContentApprovalService
         cas = ContentApprovalService()
         mock_client = MagicMock()
         mock_sb.return_value = mock_client
-        mock_client.table.return_value.update.return_value.eq.return_value.execute.return_value = MagicMock(
-            data=[{'status': 'review'}]
+        transition_query = (
+            mock_client.table.return_value.update.return_value
+            .eq.return_value.eq.return_value
+        )
+        transition_query.execute.return_value = MagicMock(
+            data=[{'status': 'review'}],
         )
         with patch.object(cas, '_get_content', return_value={'status': 'draft', 'workspace_id': 'ws-1'}), \
              patch.object(cas, '_get_member_role', return_value='editor'):
             result = cas._transition('c-1', 'user-1', 'review', ['owner', 'editor'])
             self.assertEqual(result['status'], 'review')
+        first_eq = mock_client.table.return_value.update.return_value.eq
+        first_eq.assert_called_once_with('id', 'c-1')
+        first_eq.return_value.eq.assert_called_once_with('status', 'draft')
+
+    @patch('services.data.workspace_service.is_supabase_enabled', return_value=True)
+    @patch('services.data.workspace_service.get_user_supabase')
+    def test_stale_transition_is_rejected(self, mock_sb, _):
+        from services.data.workspace_service import ContentApprovalService
+
+        cas = ContentApprovalService()
+        mock_client = MagicMock()
+        mock_sb.return_value = mock_client
+        (
+            mock_client.table.return_value.update.return_value
+            .eq.return_value.eq.return_value.execute.return_value
+        ) = MagicMock(data=[])
+
+        with patch.object(
+            cas,
+            '_get_content',
+            return_value={'status': 'draft', 'workspace_id': 'ws-1'},
+        ), patch.object(cas, '_get_member_role', return_value='editor'):
+            result = cas._transition(
+                'c-1', 'user-1', 'review', ['owner', 'editor'],
+            )
+
+        self.assertIn('이미 변경', result['error'])
 
 
 class TestContentApprovalServiceActions(unittest.TestCase):
@@ -306,7 +333,7 @@ class TestContentApprovalAddContent(unittest.TestCase):
     """ContentApprovalService.add_content 테스트"""
 
     @patch('services.data.workspace_service.is_supabase_enabled', return_value=True)
-    @patch('services.data.workspace_service.get_supabase')
+    @patch('services.data.workspace_service.get_user_supabase')
     def test_success(self, mock_sb, _):
         from services.data.workspace_service import ContentApprovalService
         cas = ContentApprovalService()
@@ -332,7 +359,7 @@ class TestGetWorkspaceContents(unittest.TestCase):
     """ContentApprovalService.get_workspace_contents 테스트"""
 
     @patch('services.data.workspace_service.is_supabase_enabled', return_value=True)
-    @patch('services.data.workspace_service.get_supabase')
+    @patch('services.data.workspace_service.get_user_supabase')
     def test_all_contents(self, mock_sb, _):
         from services.data.workspace_service import ContentApprovalService
         cas = ContentApprovalService()
@@ -345,7 +372,7 @@ class TestGetWorkspaceContents(unittest.TestCase):
         self.assertEqual(len(result), 1)
 
     @patch('services.data.workspace_service.is_supabase_enabled', return_value=True)
-    @patch('services.data.workspace_service.get_supabase')
+    @patch('services.data.workspace_service.get_user_supabase')
     def test_filter_by_status(self, mock_sb, _):
         from services.data.workspace_service import ContentApprovalService
         cas = ContentApprovalService()
@@ -377,7 +404,7 @@ class TestWorkspaceServiceGetWorkspace(unittest.TestCase):
     """WorkspaceService.get_workspace 성공 케이스"""
 
     @patch('services.data.workspace_service.is_supabase_enabled', return_value=True)
-    @patch('services.data.workspace_service.get_supabase')
+    @patch('services.data.workspace_service.get_user_supabase')
     def test_found(self, mock_sb, _):
         from services.data.workspace_service import WorkspaceService
         mock_client = MagicMock()
@@ -390,7 +417,7 @@ class TestWorkspaceServiceGetWorkspace(unittest.TestCase):
         self.assertEqual(result['name'], '팀A')
 
     @patch('services.data.workspace_service.is_supabase_enabled', return_value=True)
-    @patch('services.data.workspace_service.get_supabase')
+    @patch('services.data.workspace_service.get_user_supabase')
     def test_not_found(self, mock_sb, _):
         from services.data.workspace_service import WorkspaceService
         mock_client = MagicMock()
@@ -404,7 +431,7 @@ class TestWorkspaceServiceGetMembers(unittest.TestCase):
     """WorkspaceService.get_members 성공 케이스"""
 
     @patch('services.data.workspace_service.is_supabase_enabled', return_value=True)
-    @patch('services.data.workspace_service.get_supabase')
+    @patch('services.data.workspace_service.get_user_supabase')
     def test_members_found(self, mock_sb, _):
         from services.data.workspace_service import WorkspaceService
         mock_client = MagicMock()

@@ -1,10 +1,12 @@
 """nlp_analysis_service 단위 테스트 (내부 함수 위주)"""
 import json
 import unittest
+from unittest.mock import patch
 
 from services.analysis.nlp_analysis_service import (
     _parse_analysis_json, _validate_analysis,
-    _parse_sentiment_flow, _EMPTY_ANALYSIS,
+    _parse_sentiment_flow, _EMPTY_ANALYSIS, analyze_content,
+    analyze_sentiment_flow,
 )
 
 
@@ -50,6 +52,102 @@ class TestParseAnalysisJson(unittest.TestCase):
         """None 입력 → 빈 분석 결과"""
         result = _parse_analysis_json(None)
         self.assertEqual(result, dict(_EMPTY_ANALYSIS))
+
+
+class TestLLMChargeBoundary(unittest.TestCase):
+
+    def test_analysis_explicit_callback_runs_at_provider_boundary(self):
+        events = []
+        response = unittest.mock.MagicMock()
+        response.choices[0].message.content = (
+            '{"keywords": [], "sentiment": {"overall": "neutral", '
+            '"score": 0, "aspects": []}, "topics": []}'
+        )
+
+        with patch(
+            'services.usage.usage_decorator.mark_usage_charge_committed'
+        ) as mock_mark, patch(
+            'litellm.completion',
+            side_effect=lambda **_kwargs: events.append('provider') or response,
+        ):
+            result = analyze_content(
+                '분석할 문장',
+                on_cost_start=lambda: events.append('cost'),
+            )
+
+        self.assertEqual(result['sentiment']['overall'], 'neutral')
+        self.assertEqual(events, ['cost', 'provider'])
+        mock_mark.assert_not_called()
+
+    def test_analysis_provider_failure_keeps_charge_committed(self):
+        with patch(
+            'services.usage.usage_decorator.mark_usage_charge_committed'
+        ) as mock_mark, patch('litellm.completion') as mock_completion:
+            def fail_after_provider_start(**_kwargs):
+                self.assertTrue(mock_mark.called)
+                raise Exception('공급자 실패')
+
+            mock_completion.side_effect = fail_after_provider_start
+            result = analyze_content('분석할 문장')
+
+        self.assertEqual(result, dict(_EMPTY_ANALYSIS))
+        mock_mark.assert_called_once_with()
+
+    def test_sentiment_provider_failure_keeps_charge_committed(self):
+        with patch(
+            'services.usage.usage_decorator.mark_usage_charge_committed'
+        ) as mock_mark, patch('litellm.completion') as mock_completion:
+            def fail_after_provider_start(**_kwargs):
+                self.assertTrue(mock_mark.called)
+                raise Exception('공급자 실패')
+
+            mock_completion.side_effect = fail_after_provider_start
+            result = analyze_sentiment_flow('분석할 문장')
+
+        self.assertEqual(result['flow'], [])
+        mock_mark.assert_called_once_with()
+
+    def test_analysis_usage_lock_loss_propagates_before_provider_call(self):
+        from services.usage.usage_lock import UsageLockUnavailable
+
+        with patch(
+            'services.usage.usage_decorator.mark_usage_charge_committed',
+            side_effect=UsageLockUnavailable('lease lost'),
+        ), patch('litellm.completion') as mock_completion, self.assertRaises(
+            UsageLockUnavailable
+        ):
+            analyze_content('분석할 문장')
+
+        mock_completion.assert_not_called()
+
+    def test_sentiment_usage_lock_loss_propagates_before_provider_call(self):
+        from services.usage.usage_lock import UsageLockUnavailable
+
+        with patch(
+            'services.usage.usage_decorator.mark_usage_charge_committed',
+            side_effect=UsageLockUnavailable('lease lost'),
+        ), patch('litellm.completion') as mock_completion, self.assertRaises(
+            UsageLockUnavailable
+        ):
+            analyze_sentiment_flow('분석할 문장')
+
+        mock_completion.assert_not_called()
+
+    def test_explicit_lock_loss_is_not_swallowed(self):
+        from services.usage.usage_lock import UsageLockUnavailable
+
+        def reject_cost():
+            raise UsageLockUnavailable('lease lost')
+
+        with patch('litellm.completion') as mock_completion, self.assertRaises(
+            UsageLockUnavailable
+        ):
+            analyze_sentiment_flow(
+                '분석할 문장',
+                on_cost_start=reject_cost,
+            )
+
+        mock_completion.assert_not_called()
 
 
 class TestValidateAnalysis(unittest.TestCase):
@@ -158,6 +256,14 @@ class TestValidateAnalysis(unittest.TestCase):
 
 
 class TestParseSentimentFlow(unittest.TestCase):
+
+    def test_arbitrary_litellm_model_is_rejected_before_call(self):
+        with patch(
+            'services.usage.usage_decorator.mark_usage_charge_committed'
+        ) as mock_mark:
+            with self.assertRaisesRegex(ValueError, '지원하지 않는 AI 모델'):
+                analyze_sentiment_flow('분석할 문장', model='attacker/arbitrary-model')
+        mock_mark.assert_not_called()
 
     def test_valid_flow(self):
         """유효한 감정 흐름 파싱"""

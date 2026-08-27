@@ -1,4 +1,14 @@
 {
   "cookies": [],
-  "origins": []
+  "origins": [
+    {
+      "origin": "http://127.0.0.1:3000",
+      "localStorage": [
+        {
+          "name": "insight-engine-selected-model",
+          "value": "\"chatmock/gpt-5.4-mini\""
+        }
+      ]
+    }
+  ]
 }

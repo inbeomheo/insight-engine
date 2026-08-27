@@ -5,6 +5,7 @@ import unittest
 from unittest.mock import patch, MagicMock
 
 from services.agents.base_agent import BaseAgent
+from services.usage.usage_lock import UsageLockUnavailable
 
 
 class ConcreteAgent(BaseAgent):
@@ -103,12 +104,51 @@ class TestBaseAgent(unittest.TestCase):
 
     # --- _call_ai: 오류 ---
 
-    @patch('litellm.completion', side_effect=Exception('timeout'))
-    def test_call_ai_failure_raises(self, mock_llm):
+    @patch('services.usage.usage_decorator.mark_usage_charge_committed')
+    @patch('litellm.completion')
+    def test_call_ai_failure_raises_after_charge_commit(self, mock_llm, mock_mark):
+        def fail_after_provider_start(**_kwargs):
+            self.assertTrue(mock_mark.called)
+            raise Exception('timeout')
+
+        mock_llm.side_effect = fail_after_provider_start
         agent = ConcreteAgent(model='chatmock/gpt-5.4-mini')
         with self.assertRaises(Exception) as ctx:
             agent._call_ai('prompt')
         self.assertIn('timeout', str(ctx.exception))
+        mock_mark.assert_called_once_with()
+
+    @patch('litellm.completion')
+    def test_call_ai_uses_trusted_callback_at_provider_boundary(self, mock_llm):
+        callback = MagicMock()
+        mock_resp = MagicMock()
+        mock_resp.choices[0].message.content = '응답'
+
+        def complete_after_callback(**_kwargs):
+            callback.assert_called_once_with()
+            return mock_resp
+
+        mock_llm.side_effect = complete_after_callback
+        agent = ConcreteAgent(
+            model='chatmock/gpt-5.4-mini',
+            on_cost_start=callback,
+        )
+
+        self.assertEqual(agent._call_ai('prompt'), '응답')
+
+    @patch('litellm.completion')
+    def test_call_ai_lock_loss_stops_provider_and_preserves_exception(self, mock_llm):
+        callback = MagicMock(side_effect=UsageLockUnavailable('lease lost'))
+        agent = ConcreteAgent(
+            model='chatmock/gpt-5.4-mini',
+            on_cost_start=callback,
+        )
+
+        with self.assertRaises(UsageLockUnavailable):
+            agent._call_ai('prompt')
+
+        callback.assert_called_once_with()
+        mock_llm.assert_not_called()
 
 
 if __name__ == '__main__':

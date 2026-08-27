@@ -7,7 +7,10 @@ import json
 import unittest
 from unittest.mock import patch
 
+from flask import g
+
 from app import create_app
+from src.contexts.identity.domain.exceptions import QuotaExceeded
 
 _H = {'Origin': 'http://localhost:3000'}
 
@@ -119,6 +122,104 @@ class TestHealthAndHome(_BaseTestCase):
         self.assertIn('request_count', data)
         self.assertIn('error_rate', data)
 
+    def test_ready_skips_external_probes_outside_production(self):
+        with patch.dict('os.environ', {'FLASK_ENV': 'testing'}, clear=False), \
+                patch('routes.utility.operations._check_chatmock_ready') as chatmock, \
+                patch('routes.utility.operations._check_full_stack_frontend_ready') as frontend, \
+                patch('routes.utility.operations._check_redis_ready') as redis, \
+                patch(
+                    'routes.utility.operations.is_supabase_enabled',
+                    return_value=False,
+                ), \
+                patch('routes.utility.operations.get_supabase') as get_supabase:
+            resp = self.client.get('/ready')
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.get_json()['status'], 'ready')
+        self.assertEqual(
+            resp.get_json()['dependencies']['supabase_schema']['reason'],
+            'skipped_outside_production',
+        )
+        chatmock.assert_not_called()
+        frontend.assert_not_called()
+        redis.assert_not_called()
+        get_supabase.assert_not_called()
+
+    def test_ready_fails_closed_when_production_dependency_is_down(self):
+        schema_status = {'ready': True, 'current_version': 9}
+        with patch.dict('os.environ', {'FLASK_ENV': 'production'}, clear=False), \
+                patch('routes.utility.operations._check_chatmock_ready', return_value=True), \
+                patch(
+                    'routes.utility.operations._check_full_stack_frontend_ready',
+                    return_value=None,
+                ), \
+                patch('routes.utility.operations._check_redis_ready', return_value=False), \
+                patch(
+                    'routes.utility.operations._supabase_schema_status',
+                    return_value=schema_status,
+                ):
+            resp = self.client.get('/ready')
+
+        self.assertEqual(resp.status_code, 503)
+        self.assertEqual(resp.get_json(), {
+            'status': 'not_ready',
+            'dependencies': {
+                'chatmock': True,
+                'frontend': 'not_required',
+                'redis': False,
+                'supabase_schema': schema_status,
+            },
+        })
+
+    def test_ready_accepts_traffic_when_production_dependencies_are_live(self):
+        schema_status = {'ready': True, 'current_version': 9}
+        with patch.dict('os.environ', {'FLASK_ENV': 'production'}, clear=False), \
+                patch('routes.utility.operations._check_chatmock_ready', return_value=True), \
+                patch(
+                    'routes.utility.operations._check_full_stack_frontend_ready',
+                    return_value=True,
+                ), \
+                patch('routes.utility.operations._check_redis_ready', return_value=True), \
+                patch(
+                    'routes.utility.operations._supabase_schema_status',
+                    return_value=schema_status,
+                ):
+            resp = self.client.get('/ready')
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.get_json()['status'], 'ready')
+
+    def test_ready_fails_closed_when_full_stack_frontend_is_down(self):
+        schema_status = {'ready': True, 'current_version': 9}
+        with patch.dict('os.environ', {'FLASK_ENV': 'production'}, clear=False), \
+                patch('routes.utility.operations._check_chatmock_ready', return_value=True), \
+                patch(
+                    'routes.utility.operations._check_full_stack_frontend_ready',
+                    return_value=False,
+                ), \
+                patch('routes.utility.operations._check_redis_ready', return_value=True), \
+                patch(
+                    'routes.utility.operations._supabase_schema_status',
+                    return_value=schema_status,
+                ):
+            resp = self.client.get('/ready')
+
+        self.assertEqual(resp.status_code, 503)
+        self.assertEqual(resp.get_json()['dependencies']['frontend'], False)
+
+    def test_full_stack_frontend_probe_rejects_non_loopback_configuration(self):
+        from routes.utility.operations import _check_full_stack_frontend_ready
+
+        with patch.dict(
+            'os.environ',
+            {'FULL_STACK_FRONTEND_READINESS_URL': 'https://example.com/'},
+            clear=False,
+        ), patch('routes.utility.operations.requests.get') as get:
+            result = _check_full_stack_frontend_ready()
+
+        self.assertFalse(result)
+        get.assert_not_called()
+
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     def test_home_returns_ok(self, _):
         resp = self.client.get('/')
@@ -140,6 +241,27 @@ class TestHealthAndHome(_BaseTestCase):
         resp = self.client.post('/api/heartbeat', json={}, headers=_H)
         self.assertEqual(resp.status_code, 400)
 
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    def test_heartbeat_rejects_oversized_client_id(self, _):
+        resp = self.client.post(
+            '/api/heartbeat',
+            json={'clientId': 'x' * 129},
+            headers=_H,
+        )
+        self.assertEqual(resp.status_code, 400)
+
+    def test_heartbeat_tracker_is_bounded(self):
+        from routes.utility import _state
+
+        _state._CLIENT_TRACKER.clear()
+        with patch.object(_state, '_CLIENT_TRACKER_MAX_ITEMS', 2):
+            _state.record_client_heartbeat('client-1', now=1)
+            _state.record_client_heartbeat('client-2', now=2)
+            _state.record_client_heartbeat('client-3', now=3)
+
+        self.assertEqual(list(_state._CLIENT_TRACKER), ['client-2', 'client-3'])
+        _state._CLIENT_TRACKER.clear()
+
 
 # ── 프로바이더 관련 ──────────────────────────────────────
 
@@ -160,17 +282,126 @@ class TestProviderRoutes(_BaseTestCase):
 
 class TestCacheRoutes(_BaseTestCase):
 
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    @patch(
+        'src.contexts.identity.interface.auth_decorators.is_supabase_enabled',
+        return_value=True,
+    )
+    @patch('routes.utility_routes.clear_cache')
+    def test_clear_cache_requires_auth_in_production(self, mock_clear, _mock_enabled):
+        resp = self.client.delete('/api/cache', json={}, headers=_H)
+
+        self.assertEqual(resp.status_code, 401)
+        self.assertEqual(resp.get_json()['code'], 'AUTH_REQUIRED')
+        mock_clear.assert_not_called()
+
+    @patch('routes.utility_routes.is_supabase_enabled', return_value=False)
     @patch('routes.utility_routes.clear_cache', return_value=3)
-    def test_clear_cache_all(self, mock_clear, _):
+    def test_clear_cache_all_in_local_mode_requires_explicit_scope(self, mock_clear, _):
         resp = self.client.delete('/api/cache',
-                                  data='{}',
+                                  data='{"scope": "all"}',
                                   content_type='application/json',
-                                  headers=_H)
+                                  headers=_H,
+                                  environ_overrides={'REMOTE_ADDR': '198.51.100.51'})
         self.assertEqual(resp.status_code, 200)
         data = resp.get_json()
         self.assertTrue(data['success'])
         self.assertEqual(data['deleted'], 3)
+        mock_clear.assert_called_once_with(None)
+
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    @patch('routes.utility_routes.clear_cache')
+    def test_clear_cache_invalid_url_never_clears_all(self, mock_clear, _):
+        resp = self.client.delete(
+            '/api/cache',
+            json={'url': 'https://example.com/no-video'},
+            headers=_H,
+            environ_overrides={'REMOTE_ADDR': '198.51.100.52'},
+        )
+
+        self.assertEqual(resp.status_code, 400)
+        mock_clear.assert_not_called()
+
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    @patch('routes.utility_routes.clear_cache')
+    def test_clear_cache_non_youtube_url_with_video_like_id_is_rejected(self, mock_clear, _):
+        resp = self.client.delete(
+            '/api/cache',
+            json={'url': 'https://example.com/watch?v=abcdefghijk'},
+            headers=_H,
+            environ_overrides={'REMOTE_ADDR': '198.51.100.56'},
+        )
+
+        self.assertEqual(resp.status_code, 400)
+        mock_clear.assert_not_called()
+
+    @patch('routes.utility_routes.is_supabase_enabled', return_value=True)
+    @patch('routes.utility_routes.UsageService.is_admin_user', return_value=False)
+    @patch('routes.utility_routes.clear_cache')
+    def test_clear_cache_all_forbidden_for_regular_user(self, mock_clear, mock_admin, _):
+        def authenticate(_token):
+            g.user_id = 'regular-user'
+            return {'valid': True, 'error': None, 'code': None}
+
+        with patch(
+            'src.contexts.identity.interface.auth_decorators.is_supabase_enabled',
+            return_value=True,
+        ), patch(
+            'src.contexts.identity.interface.auth_decorators._validate_token',
+            side_effect=authenticate,
+        ):
+            resp = self.client.delete(
+                '/api/cache',
+                json={'scope': 'all'},
+                headers={**_H, 'Authorization': 'Bearer valid-token'},
+                environ_overrides={'REMOTE_ADDR': '198.51.100.53'},
+            )
+
+        self.assertEqual(resp.status_code, 403)
+        mock_admin.assert_called_once_with('regular-user')
+        mock_clear.assert_not_called()
+
+    @patch('routes.utility_routes.is_supabase_enabled', return_value=True)
+    @patch('routes.utility_routes.UsageService.is_admin_user', return_value=True)
+    @patch('routes.utility_routes.clear_cache', return_value=4)
+    def test_clear_cache_all_allowed_for_admin(self, mock_clear, mock_admin, _):
+        def authenticate(_token):
+            g.user_id = 'admin-user'
+            return {'valid': True, 'error': None, 'code': None}
+
+        with patch(
+            'src.contexts.identity.interface.auth_decorators.is_supabase_enabled',
+            return_value=True,
+        ), patch(
+            'src.contexts.identity.interface.auth_decorators._validate_token',
+            side_effect=authenticate,
+        ):
+            resp = self.client.delete(
+                '/api/cache',
+                json={'scope': 'all'},
+                headers={**_H, 'Authorization': 'Bearer valid-token'},
+                environ_overrides={'REMOTE_ADDR': '198.51.100.54'},
+            )
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.get_json()['deleted'], 4)
+        mock_admin.assert_called_once_with('admin-user')
+        mock_clear.assert_called_once_with(None)
+
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    @patch('routes.utility_routes.clear_cache', return_value=1)
+    def test_clear_cache_is_rate_limited(self, _mock_clear, _):
+        responses = [
+            self.client.delete(
+                '/api/cache',
+                json={'videoId': 'abcdefghijk'},
+                headers=_H,
+                environ_overrides={'REMOTE_ADDR': '198.51.100.57'},
+            )
+            for _index in range(6)
+        ]
+
+        self.assertTrue(all(response.status_code == 200 for response in responses[:5]))
+        self.assertEqual(responses[5].status_code, 429)
 
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     @patch('routes.utility_routes.clear_cache', return_value=1)
@@ -300,6 +531,123 @@ class TestAnalysisEndpoints(_BaseTestCase):
     ]
     # 'text' 필드를 사용하는 엔드포인트
     _TEXT_ENDPOINTS = ['/api/readability']
+
+    @patch(
+        'src.contexts.identity.interface.auth_decorators.is_supabase_enabled',
+        return_value=True,
+    )
+    def test_fact_check_requires_auth_when_supabase_enabled(self, _):
+        resp = self.client.post(
+            '/api/fact-check',
+            json={'content': '테스트 콘텐츠'},
+            headers=_H,
+            environ_overrides={'REMOTE_ADDR': '198.51.100.41'},
+        )
+
+        self.assertEqual(resp.status_code, 401)
+        self.assertEqual(resp.get_json()['code'], 'AUTH_REQUIRED')
+
+    @patch(
+        'src.contexts.identity.interface.auth_decorators.is_supabase_enabled',
+        return_value=True,
+    )
+    def test_sentiment_flow_requires_auth_when_supabase_enabled(self, _):
+        resp = self.client.post(
+            '/api/sentiment-flow',
+            json={'content': '테스트 콘텐츠'},
+            headers=_H,
+            environ_overrides={'REMOTE_ADDR': '198.51.100.51'},
+        )
+
+        self.assertEqual(resp.status_code, 401)
+        self.assertEqual(resp.get_json()['code'], 'AUTH_REQUIRED')
+
+    @patch(
+        'services.usage.usage_decorator.UsageService.reserve_for_request',
+        side_effect=QuotaExceeded,
+    )
+    @patch(
+        'services.usage.usage_decorator.is_supabase_enabled',
+        return_value=True,
+    )
+    @patch(
+        'src.contexts.identity.interface.auth_decorators.is_supabase_enabled',
+        return_value=True,
+    )
+    def test_fact_check_rejects_exhausted_usage(self, _, __, mock_reserve):
+        def authenticate(_token):
+            g.user_id = 'user-fact-check'
+            return {'valid': True, 'error': None, 'code': None}
+
+        with patch(
+            'src.contexts.identity.interface.auth_decorators._validate_token',
+            side_effect=authenticate,
+        ), patch('services.agents.fact_check_agent.fact_check') as mock_fact_check:
+            resp = self.client.post(
+                '/api/fact-check',
+                json={'content': '테스트 콘텐츠'},
+                headers={
+                    **_H,
+                    'Authorization': 'Bearer valid-token',
+                },
+                environ_overrides={'REMOTE_ADDR': '198.51.100.42'},
+            )
+
+        self.assertEqual(resp.status_code, 429)
+        self.assertEqual(resp.get_json()['code'], 'USAGE_LIMIT_EXCEEDED')
+        mock_reserve.assert_called_once_with('user-fact-check')
+        mock_fact_check.assert_not_called()
+
+    @patch(
+        'services.usage.usage_decorator.UsageService.reserve_for_request',
+        side_effect=QuotaExceeded,
+    )
+    @patch(
+        'services.usage.usage_decorator.is_supabase_enabled',
+        return_value=True,
+    )
+    @patch(
+        'src.contexts.identity.interface.auth_decorators.is_supabase_enabled',
+        return_value=True,
+    )
+    def test_sentiment_flow_rejects_exhausted_usage(self, _, __, mock_reserve):
+        def authenticate(_token):
+            g.user_id = 'user-sentiment'
+            return {'valid': True, 'error': None, 'code': None}
+
+        with patch(
+            'src.contexts.identity.interface.auth_decorators._validate_token',
+            side_effect=authenticate,
+        ), patch(
+            'services.analysis.nlp_analysis_service.analyze_sentiment_flow'
+        ) as mock_analyze:
+            resp = self.client.post(
+                '/api/sentiment-flow',
+                json={'content': '테스트 콘텐츠'},
+                headers={**_H, 'Authorization': 'Bearer valid-token'},
+                environ_overrides={'REMOTE_ADDR': '198.51.100.52'},
+            )
+
+        self.assertEqual(resp.status_code, 429)
+        self.assertEqual(resp.get_json()['code'], 'USAGE_LIMIT_EXCEEDED')
+        mock_reserve.assert_called_once_with('user-sentiment')
+        mock_analyze.assert_not_called()
+
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    @patch('services.analysis.nlp_analysis_service.analyze_sentiment_flow')
+    def test_sentiment_flow_rejects_unlisted_model(self, mock_analyze, _):
+        resp = self.client.post(
+            '/api/sentiment-flow',
+            json={
+                'content': '테스트 콘텐츠',
+                'model': 'attacker/arbitrary-model',
+            },
+            headers=_H,
+            environ_overrides={'REMOTE_ADDR': '198.51.100.53'},
+        )
+
+        self.assertEqual(resp.status_code, 400)
+        mock_analyze.assert_not_called()
 
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     def test_empty_content_returns_400(self, _):

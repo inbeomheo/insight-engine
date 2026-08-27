@@ -9,6 +9,27 @@ from unittest.mock import patch, MagicMock, PropertyMock
 import requests
 
 
+class TestCacheDirectoryResolution(unittest.TestCase):
+    """CONTENT_CACHE_DIR 설정과 로컬 호환 기본값을 검증한다."""
+
+    def test_explicit_cache_directory_is_normalized(self):
+        from services.core.content_service import _resolve_cache_dir
+
+        with tempfile.TemporaryDirectory() as cache_dir, patch.dict(
+            os.environ,
+            {'CONTENT_CACHE_DIR': cache_dir},
+        ):
+            self.assertEqual(_resolve_cache_dir(), os.path.abspath(cache_dir))
+
+    def test_empty_setting_preserves_legacy_services_cache(self):
+        from services.core.content_service import _resolve_cache_dir
+
+        with patch.dict(os.environ, {'CONTENT_CACHE_DIR': ''}):
+            self.assertTrue(
+                _resolve_cache_dir().endswith(os.path.join('services', 'cache'))
+            )
+
+
 class TestEnsureCacheDir(unittest.TestCase):
     """_ensure_cache_dir 테스트"""
 

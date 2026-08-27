@@ -120,6 +120,10 @@ class TestSearchRelevantChunks(unittest.TestCase):
 
 class TestAnswerQuestion(unittest.TestCase):
 
+    def test_unlisted_model_is_rejected_before_provider_call(self):
+        with self.assertRaisesRegex(ValueError, '지원하지 않는 AI 모델'):
+            answer_question('vid1', '질문', model='attacker/model')
+
     @patch('services.media.video_qa_service._LITELLM_AVAILABLE', False)
     def test_no_litellm(self):
         """LiteLLM 미설치 → 안내 메시지"""
@@ -131,25 +135,35 @@ class TestAnswerQuestion(unittest.TestCase):
     @patch('services.media.video_qa_service._LITELLM_AVAILABLE', True)
     def test_no_chunks(self, mock_search):
         """인덱싱 안 됨 → 안내 메시지"""
-        result = answer_question('vid1', '질문')
+        on_cost_start = MagicMock()
+        result = answer_question('vid1', '질문', on_cost_start=on_cost_start)
         self.assertIn('자막 데이터를 찾을 수 없습니다', result['answer'])
+        on_cost_start.assert_not_called()
 
     @patch('services.media.video_qa_service.litellm_completion')
     @patch('services.media.video_qa_service.search_relevant_chunks')
     @patch('services.media.video_qa_service._LITELLM_AVAILABLE', True)
     def test_success(self, mock_search, mock_completion):
         """정상 답변 생성"""
+        events = []
         mock_search.return_value = [
             {'text': '자막 내용입니다', 'chunk_index': 0, 'distance': 0.2},
         ]
         mock_choice = MagicMock()
         mock_choice.message.content = '답변입니다.'
-        mock_completion.return_value = MagicMock(choices=[mock_choice])
+        mock_completion.side_effect = lambda **_kwargs: (
+            events.append('completion') or MagicMock(choices=[mock_choice])
+        )
 
-        result = answer_question('vid1', '이 영상은 뭐에 대한 거야?')
+        result = answer_question(
+            'vid1',
+            '이 영상은 뭐에 대한 거야?',
+            on_cost_start=lambda: events.append('cost'),
+        )
         self.assertEqual(result['answer'], '답변입니다.')
         self.assertEqual(len(result['sources']), 1)
         self.assertAlmostEqual(result['sources'][0]['relevance'], 0.8, places=1)
+        self.assertEqual(events, ['cost', 'completion'])
 
     @patch('services.media.video_qa_service.litellm_completion', side_effect=Exception('API error'))
     @patch('services.media.video_qa_service.search_relevant_chunks')

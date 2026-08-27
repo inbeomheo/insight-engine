@@ -47,6 +47,19 @@ class TestGraphRAGEngine(unittest.TestCase):
         self.engine.ingest("user1", "text")
         mock_extract.assert_called_once_with("text", model="test-model")
 
+    @patch('services.rag.graph_rag_engine.extract_graph')
+    def test_ingest_forwards_cost_callback(self, mock_extract):
+        mock_extract.return_value = {"entities": [], "relations": []}
+        callback = unittest.mock.MagicMock()
+
+        self.engine.ingest("user1", "text", on_cost_start=callback)
+
+        mock_extract.assert_called_once_with(
+            "text",
+            model="test-model",
+            on_cost_start=callback,
+        )
+
     def test_local_search(self):
         self.store.add_entities("user1", [
             {"name": "A", "type": "concept", "description": ""},

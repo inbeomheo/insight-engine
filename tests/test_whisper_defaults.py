@@ -20,7 +20,10 @@ def test_transcribe_audio_uses_base_model_size_by_default():
     mock_whisper = MagicMock()
     mock_whisper.WhisperModel.return_value = mock_model
 
-    with patch.dict("sys.modules", {"faster_whisper": mock_whisper}):
+    with patch.dict("sys.modules", {"faster_whisper": mock_whisper}), patch(
+        "services.transcript.whisper_service._is_audio_duration_allowed",
+        return_value=True,
+    ):
         result = transcribe_audio("/tmp/audio.wav")
 
     assert result == "hello"

@@ -75,6 +75,18 @@ class TestFactCheckAgent(unittest.TestCase):
         result = fact_check("테스트")
         self.assertEqual(result['claims'], [])
 
+    def test_usage_lock_loss_is_not_swallowed(self):
+        from services.agents.fact_check_agent import FactCheckAgent
+        from services.usage.usage_lock import UsageLockUnavailable
+
+        agent = FactCheckAgent(model='chatmock/gpt-5.4-mini')
+        with patch.object(
+            agent,
+            '_call_ai',
+            side_effect=UsageLockUnavailable('lease lost'),
+        ), self.assertRaises(UsageLockUnavailable):
+            agent.execute({'content': '검증할 내용'})
+
 
 class TestParseClaims(unittest.TestCase):
     """_parse_claims 상세 테스트"""

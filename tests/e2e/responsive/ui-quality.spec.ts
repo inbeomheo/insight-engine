@@ -29,6 +29,28 @@ test.describe('반응형 레이아웃', () => {
     await expect(main).toBeVisible();
   });
 
+  for (const route of ['/dashboard', '/notes', '/profile']) {
+    test(`데스크톱에서 ${route}의 긴 콘텐츠 끝까지 문서 스크롤된다`, async ({ page }) => {
+      await page.setViewportSize({ width: 1440, height: 500 });
+      await page.goto(route);
+      await page.waitForLoadState('networkidle');
+
+      const metrics = await page.evaluate(async () => {
+        const root = document.documentElement;
+        window.scrollTo(0, root.scrollHeight);
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+        return {
+          clientHeight: root.clientHeight,
+          scrollHeight: root.scrollHeight,
+          scrollY: window.scrollY,
+        };
+      });
+
+      expect(metrics.scrollHeight).toBeGreaterThan(metrics.clientHeight);
+      expect(metrics.scrollY).toBeGreaterThan(0);
+    });
+  }
+
   test('모바일(375px) — 모바일 셸과 URL 입력이 표시된다', async ({ page, mainPage }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     await mainPage.goto();

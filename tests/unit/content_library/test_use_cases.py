@@ -10,7 +10,7 @@ class FakeRepo(IHistoryRepository):
     def __init__(self):
         self.saved: list[HistoryEntry] = []
 
-    def save(self, entry):
+    def save(self, entry, *, validated_access_token=None):
         self.saved.append(entry)
         return {"saved": True, "report_id": str(entry.report_id)}
 
@@ -47,4 +47,3 @@ class TestSave:
         result = uc.execute("user-1", {"title": "T"})
         assert result is None
         assert not repo.saved
-

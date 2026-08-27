@@ -8,6 +8,7 @@ import time
 import unittest
 
 from services.core.cache_service import AICacheService
+from services.core.ai_prompt_context import get_prompt_context_cache_scope
 
 
 class TestAICacheService(unittest.TestCase):
@@ -36,29 +37,66 @@ class TestAICacheService(unittest.TestCase):
         key2 = AICacheService.make_key('abc', 'summary', 'gemini/flash', 'medium', 'conversational')
         self.assertEqual(key1, key2)
 
+    def test_prompt_context_scope_is_opaque_and_account_specific(self):
+        account_a = get_prompt_context_cache_scope('user-a')
+        account_b = get_prompt_context_cache_scope('user-b')
+
+        self.assertEqual(len(account_a), 64)
+        self.assertNotIn('user-a', account_a)
+        self.assertNotEqual(account_a, account_b)
+        self.assertEqual(get_prompt_context_cache_scope(None), 'anonymous')
+
     def test_make_key_differs(self):
         """다른 입력이면 다른 키 반환"""
         key1 = AICacheService.make_key('abc', 'summary', 'gemini/flash')
         key2 = AICacheService.make_key('abc', 'blog_seo', 'gemini/flash')
         self.assertNotEqual(key1, key2)
 
-    def test_make_key_without_language_matches_legacy_format(self):
-        """transcript_language 없으면 기존 원문 키 형식을 유지."""
-        expected = hashlib.sha256(
+    def test_make_key_version_invalidates_legacy_format(self):
+        """계정 격리 정보가 없던 구버전 키는 더 이상 히트하지 않음."""
+        legacy_key = hashlib.sha256(
             b'abc|summary|gemini/flash|medium|conversational'
         ).hexdigest()
-
-        self.assertEqual(
-            AICacheService.make_key('abc', 'summary', 'gemini/flash', 'medium', 'conversational'),
-            expected,
+        current_key = AICacheService.make_key(
+            'abc', 'summary', 'gemini/flash', 'medium', 'conversational'
         )
+        self.assertNotEqual(current_key, legacy_key)
         self.assertEqual(
             AICacheService.make_key(
                 'abc', 'summary', 'gemini/flash', 'medium', 'conversational',
                 transcript_language=None,
             ),
-            expected,
+            current_key,
         )
+
+    def test_make_key_isolates_account_prompt_and_output_options(self):
+        """같은 영상이어도 계정·프롬프트·출력 입력이 다르면 별도 키."""
+        base_kwargs = {
+            'context_scope': 'account-a',
+            'style_prompt': '개인 스타일 A',
+            'modifiers': {'language': 'ko', 'length': 'medium'},
+            'detail_level': 'standard',
+            'output_format': 'html',
+        }
+        base = AICacheService.make_key('abc', 'summary', 'model', **base_kwargs)
+
+        variants = [
+            {**base_kwargs, 'context_scope': 'account-b'},
+            {**base_kwargs, 'style_prompt': '개인 스타일 B'},
+            {**base_kwargs, 'modifiers': {'language': 'ja', 'length': 'medium'}},
+            {**base_kwargs, 'detail_level': 'deep'},
+            {**base_kwargs, 'web_search': True},
+            {**base_kwargs, 'agent_mode': True},
+            {**base_kwargs, 'analyze': True},
+            {**base_kwargs, 'output_format': 'plain'},
+            {**base_kwargs, 'max_chars': 500},
+        ]
+        for variant in variants:
+            with self.subTest(variant=variant):
+                self.assertNotEqual(
+                    base,
+                    AICacheService.make_key('abc', 'summary', 'model', **variant),
+                )
 
     def test_make_key_differs_by_transcript_language(self):
         """동일 입력도 자막 언어가 다르면 다른 키를 사용."""
@@ -98,6 +136,22 @@ class TestAICacheService(unittest.TestCase):
         cached = self.cache.get(key)
         self.assertIsNotNone(cached)
         self.assertEqual(cached['title'], '테스트')
+
+    def test_prompt_fields_are_never_persisted_or_returned(self):
+        """내부 프롬프트는 SQLite와 캐시 응답에서 제거."""
+        key = AICacheService.make_key('v1', 'summary', 'model1')
+        self.cache.put(
+            key, 'v1', 'summary', 'model1', 'medium', 'conversational',
+            {'title': '테스트', 'prompt': 'private-rag-secret', 'prompt_length': 18},
+        )
+
+        cached = self.cache.get(key)
+        self.assertNotIn('prompt', cached)
+        self.assertNotIn('prompt_length', cached)
+        row = self.cache._get_conn().execute(
+            'SELECT result_json FROM ai_cache WHERE cache_key = ?', (key,)
+        ).fetchone()
+        self.assertNotIn('private-rag-secret', row['result_json'])
 
     def test_get_miss(self):
         """없는 키 조회 시 None"""

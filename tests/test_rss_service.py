@@ -44,9 +44,15 @@ class TestParsePublishedDt(unittest.TestCase):
 class TestParseFeed(unittest.TestCase):
     """parse_feed 테스트"""
 
+    @patch('services.platform.rss_service.fetch_public_url')
     @patch('services.platform.rss_service.feedparser.parse')
-    def test_success(self, mock_parse):
+    def test_success(self, mock_parse, mock_fetch):
         """정상 파싱"""
+        mock_fetch.return_value = MagicMock(
+            content=b'<rss/>',
+            headers={'Content-Type': 'application/rss+xml'},
+            url='https://example.com/final-feed',
+        )
         entry = MagicMock()
         entry.content = [{'value': '<p>본문</p>'}]
         entry.summary = 'summary'
@@ -59,16 +65,28 @@ class TestParseFeed(unittest.TestCase):
         self.assertEqual(result[0]['title'], '제목')
         self.assertEqual(result[0]['source_type'], 'rss')
 
+        mock_parse.assert_called_once_with(
+            b'<rss/>',
+            response_headers={
+                'Content-Type': 'application/rss+xml',
+                'Content-Location': 'https://example.com/final-feed',
+            },
+        )
+
+    @patch('services.platform.rss_service.fetch_public_url')
     @patch('services.platform.rss_service.feedparser.parse')
-    def test_bozo_no_entries_raises(self, mock_parse):
+    def test_bozo_no_entries_raises(self, mock_parse, mock_fetch):
         """bozo + 엔트리 없으면 ValueError"""
+        mock_fetch.return_value = MagicMock(content=b'<bad>')
         mock_parse.return_value = MagicMock(bozo=True, entries=[], bozo_exception='bad')
         with self.assertRaises(ValueError):
             parse_feed('https://bad.com/feed')
 
+    @patch('services.platform.rss_service.fetch_public_url')
     @patch('services.platform.rss_service.feedparser.parse')
-    def test_max_items(self, mock_parse):
+    def test_max_items(self, mock_parse, mock_fetch):
         """max_items 제한"""
+        mock_fetch.return_value = MagicMock(content=b'<rss/>')
         entries = [MagicMock(content=[], summary='s', published='', get=lambda k, d='': d) for _ in range(20)]
         for e in entries:
             e.content = []

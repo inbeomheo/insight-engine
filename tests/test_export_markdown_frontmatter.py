@@ -69,38 +69,46 @@ class TestExportMarkdownFrontmatter(unittest.TestCase):
 class TestExportMarkdownRoute(unittest.TestCase):
     """라우트 레벨 frontmatter 전달 테스트"""
 
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    def setUp(self):
+        from app import create_app
+
+        self.app = create_app({'TESTING': True})
+        self.client = self.app.test_client()
+
+    @patch(
+        'src.contexts.identity.interface.auth_decorators.is_supabase_enabled',
+        return_value=False,
+    )
     def test_route_passes_frontmatter(self, mock_sb):
         """POST /api/export/markdown에 frontmatter 전달 시 YAML 헤더 포함"""
-        from app import app
-        with app.test_client() as client:
-            resp = client.post('/api/export/markdown', json={
+        resp = self.client.post('/api/export/markdown', json={
+            'title': '테스트',
+            'content': '본문 내용입니다.',
+            'frontmatter': {
                 'title': '테스트',
-                'content': '본문 내용입니다.',
-                'frontmatter': {
-                    'title': '테스트',
-                    'date': '2026-03-17',
-                    'tags': ['AI', 'test'],
-                },
-            }, headers={'Origin': 'http://localhost:3000'})
-            self.assertEqual(resp.status_code, 200)
-            text = resp.data.decode('utf-8')
-            self.assertIn('---', text)
-            self.assertIn('title: 테스트', text)
-            self.assertIn('  - AI', text)
+                'date': '2026-03-17',
+                'tags': ['AI', 'test'],
+            },
+        }, headers={'Origin': 'http://localhost:3000'})
+        self.assertEqual(resp.status_code, 200)
+        text = resp.data.decode('utf-8')
+        self.assertIn('---', text)
+        self.assertIn('title: 테스트', text)
+        self.assertIn('  - AI', text)
 
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    @patch(
+        'src.contexts.identity.interface.auth_decorators.is_supabase_enabled',
+        return_value=False,
+    )
     def test_route_without_frontmatter(self, mock_sb):
         """frontmatter 미전달 시 기존 동작"""
-        from app import app
-        with app.test_client() as client:
-            resp = client.post('/api/export/markdown', json={
-                'title': '테스트',
-                'content': '본문 내용입니다.',
-            }, headers={'Origin': 'http://localhost:3000'})
-            self.assertEqual(resp.status_code, 200)
-            text = resp.data.decode('utf-8')
-            self.assertNotIn('---', text)
+        resp = self.client.post('/api/export/markdown', json={
+            'title': '테스트',
+            'content': '본문 내용입니다.',
+        }, headers={'Origin': 'http://localhost:3000'})
+        self.assertEqual(resp.status_code, 200)
+        text = resp.data.decode('utf-8')
+        self.assertNotIn('---', text)
 
 
 if __name__ == '__main__':

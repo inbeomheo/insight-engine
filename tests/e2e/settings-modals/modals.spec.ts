@@ -40,6 +40,23 @@ test.describe('온보딩 모달 @parallel @no-auth', () => {
   });
 
   test('TC-1.2: 온보딩 완료', async ({ page }) => {
+    // Start 동작 자체를 검증하므로 사용 가능한 모델 응답을 결정적으로 제공한다.
+    await page.route('**/api/providers', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          providers: {
+            chatmock: {
+              name: 'ChatMock',
+              api_base: '/v1',
+              models: [{ id: 'chatmock/test-model', name: 'Test model' }],
+            },
+          },
+          style_options: [],
+        }),
+      });
+    });
     // Setup: 온보딩 모달 표시
     await page.goto('/');
     await page.evaluate((key) => {
@@ -61,6 +78,44 @@ test.describe('온보딩 모달 @parallel @no-auth', () => {
     const completed = await page.evaluate((key) => localStorage.getItem(key), ONBOARDING_KEY);
     expect(completed).toBe('true');
   });
+
+  for (const closePath of ['X', 'Escape', 'overlay'] as const) {
+    test(`TC-1.2-${closePath}: 모델이 없어도 ${closePath} 닫기는 완료를 저장한다`, async ({ page }) => {
+      await page.route('**/api/providers', async (route) => {
+        await route.fulfill({
+          status: 503,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'model service unavailable' }),
+        });
+      });
+      await page.goto('/');
+      await page.evaluate((key) => localStorage.removeItem(key), ONBOARDING_KEY);
+      await page.reload();
+      await page.waitForLoadState('networkidle');
+
+      const modal = page.getByRole('dialog', { name: '환영합니다!' });
+      await expect(modal).toBeVisible({ timeout: 10000 });
+      await expect(modal.getByRole('button', { name: '시작하기' })).toBeDisabled();
+
+      if (closePath === 'X') {
+        await modal.getByRole('button', { name: 'Close' }).click();
+      } else if (closePath === 'Escape') {
+        await page.keyboard.press('Escape');
+      } else {
+        await page.locator('[data-slot="dialog-overlay"]').click({
+          position: { x: 5, y: 5 },
+        });
+      }
+
+      await expect(modal).toBeHidden({ timeout: 3000 });
+      expect(await page.evaluate((key) => localStorage.getItem(key), ONBOARDING_KEY))
+        .toBe('true');
+
+      await page.reload();
+      await page.waitForLoadState('networkidle');
+      await expect(modal).toBeHidden();
+    });
+  }
 
   test('TC-1.3: 재방문 시 모달 미표시', async ({ page }) => {
     // 1. 온보딩 완료 후 페이지 새로고침

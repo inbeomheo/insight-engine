@@ -96,6 +96,27 @@ class TestKnowledgeRoutes(_Base):
         self.assertEqual(resp.status_code, 400)
 
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    @patch('services.rag.vector_store.VectorStore.add_document')
+    @patch(
+        'services.rag.chunker.extract_text_from_file',
+        side_effect=ValueError('PDF 처리 시간이 허용 한도를 초과합니다.'),
+    )
+    @patch('config.RAG_ENABLED', True)
+    def test_knowledge_upload_parser_limit_never_writes_vector_store(
+        self, _extract, add_document, _supabase,
+    ):
+        data = {'file': (io.BytesIO(b'%PDF-malformed'), 'doc.pdf')}
+        resp = self.client.post(
+            '/api/knowledge/upload',
+            data=data,
+            content_type='multipart/form-data',
+            headers=_H,
+        )
+
+        self.assertGreaterEqual(resp.status_code, 400)
+        add_document.assert_not_called()
+
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     @patch('config.RAG_ENABLED', False)
     def test_knowledge_list_rag_disabled(self, _):
         resp = self.client.get('/api/knowledge/list')

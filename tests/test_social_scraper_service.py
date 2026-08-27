@@ -100,7 +100,7 @@ class TestScrapeTwitterThread(unittest.TestCase):
 
 class TestScrapeRedditPost(unittest.TestCase):
 
-    @patch('services.platform.social_scraper_service.requests.get')
+    @patch('services.platform.social_scraper_service.fetch_public_url')
     def test_success(self, mock_get):
         """Reddit 포스트 성공"""
         mock_resp = MagicMock()
@@ -117,14 +117,14 @@ class TestScrapeRedditPost(unittest.TestCase):
         self.assertEqual(result['source_type'], 'reddit')
         self.assertIn('본문 내용', result['content'])
 
-    @patch('services.platform.social_scraper_service.requests.get')
+    @patch('services.platform.social_scraper_service.fetch_public_url')
     def test_request_error(self, mock_get):
         """네트워크 오류 → ValueError"""
         mock_get.side_effect = requests.RequestException('network')
         with self.assertRaises(ValueError):
             scrape_reddit_post('https://reddit.com/r/test/comments/abc/t')
 
-    @patch('services.platform.social_scraper_service.requests.get')
+    @patch('services.platform.social_scraper_service.fetch_public_url')
     def test_empty_content(self, mock_get):
         """빈 본문 + 빈 댓글 → ValueError"""
         mock_resp = MagicMock()
@@ -145,7 +145,7 @@ class TestScrapeHackernews(unittest.TestCase):
             scrape_hackernews('https://example.com')
         self.assertIn('유효하지 않은', str(ctx.exception))
 
-    @patch('services.platform.social_scraper_service.requests.get')
+    @patch('services.platform.social_scraper_service.fetch_public_url')
     def test_success(self, mock_get):
         """HN 아이템 성공"""
         mock_resp_item = MagicMock()
@@ -161,7 +161,7 @@ class TestScrapeHackernews(unittest.TestCase):
         self.assertEqual(result['title'], 'Show HN: 프로젝트')
         self.assertEqual(result['source_type'], 'hackernews')
 
-    @patch('services.platform.social_scraper_service.requests.get')
+    @patch('services.platform.social_scraper_service.fetch_public_url')
     def test_item_none(self, mock_get):
         """아이템 없음 → ValueError"""
         mock_resp = MagicMock()
@@ -178,7 +178,7 @@ class TestScrapeStackoverflow(unittest.TestCase):
         with self.assertRaises(ValueError):
             scrape_stackoverflow('https://example.com')
 
-    @patch('services.platform.social_scraper_service.requests.get')
+    @patch('services.platform.social_scraper_service.fetch_public_url')
     def test_success(self, mock_get):
         """SO 질문 성공"""
         mock_resp_q = MagicMock()

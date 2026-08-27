@@ -20,6 +20,10 @@ test.describe('기본 콘텐츠 생성', () => {
     urlInput,
     contentGenerator,
   }) => {
+    test.skip(
+      process.env.E2E_LIVE_GENERATION !== '1',
+      '실제 ChatMock/YouTube 연동은 E2E_LIVE_GENERATION=1에서만 실행',
+    );
     // 1. URL 추가
     await urlInput.addUrl(TEST_DATA.SHORT_VIDEO);
     await expect(page.locator('[aria-label$="제거"]')).toHaveCount(1);
@@ -58,6 +62,10 @@ test.describe('기본 콘텐츠 생성', () => {
     urlInput,
     contentGenerator,
   }) => {
+    test.skip(
+      process.env.E2E_LIVE_GENERATION !== '1',
+      '실제 ChatMock/YouTube 연동은 E2E_LIVE_GENERATION=1에서만 실행',
+    );
     await urlInput.addUrl(TEST_DATA.SHORT_VIDEO);
 
     const generateBtn = page.getByRole('button', { name: /1개 URL 분석 시작/ });

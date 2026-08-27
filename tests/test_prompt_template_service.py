@@ -1,6 +1,6 @@
 """prompt_template_service 단위 테스트"""
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from services.data.prompt_template_service import (
     _format_template,
@@ -150,6 +150,22 @@ class TestSupabaseDisabled(unittest.TestCase):
     def test_increment_usage(self, mock_sb):
         """Supabase 비활성 → False"""
         self.assertFalse(increment_usage('tpl1'))
+
+
+class TestTemplateUsageAccounting(unittest.TestCase):
+
+    @patch('services.data.prompt_template_service.is_supabase_enabled', return_value=True)
+    @patch('services.data.prompt_template_service.get_service_supabase')
+    def test_increment_usage_uses_server_only_client(self, service_client, _enabled):
+        client = MagicMock()
+        service_client.return_value = client
+
+        self.assertTrue(increment_usage('tpl1'))
+
+        client.rpc.assert_called_once_with(
+            'increment_template_usage',
+            {'p_template_id': 'tpl1'},
+        )
 
 
 if __name__ == '__main__':

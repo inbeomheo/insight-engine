@@ -76,6 +76,56 @@ class TestExtractGoogleDoc(unittest.TestCase):
         self.assertEqual(result['source_type'], 'gdocs')
 
     @patch('services.export.gdocs_service.requests.get')
+    def test_api_fallback_checks_cost_immediately_before_request(self, mock_get):
+        events = []
+        export_resp = MagicMock(status_code=403, text='')
+        api_resp = MagicMock(status_code=200)
+        api_resp.json.return_value = {
+            'title': 'API 문서',
+            'body': {
+                'content': [{
+                    'paragraph': {
+                        'elements': [{
+                            'textRun': {'content': '본문'},
+                        }],
+                    },
+                }],
+            },
+        }
+
+        def provider(*_args, **_kwargs):
+            events.append('provider')
+            return export_resp if events.count('provider') == 1 else api_resp
+
+        mock_get.side_effect = provider
+        result = extract_google_doc(
+            'https://docs.google.com/document/d/test123/edit',
+            api_key='trusted-key',
+            on_cost_start=lambda: events.append('cost'),
+        )
+
+        self.assertEqual(result['title'], 'API 문서')
+        self.assertEqual(events, ['provider', 'cost', 'provider'])
+
+    @patch('services.export.gdocs_service.requests.get')
+    def test_api_fallback_lock_loss_prevents_paid_request(self, mock_get):
+        from services.usage.usage_lock import UsageLockUnavailable
+
+        mock_get.return_value = MagicMock(status_code=403, text='')
+
+        def reject_cost():
+            raise UsageLockUnavailable('lease lost')
+
+        with self.assertRaises(UsageLockUnavailable):
+            extract_google_doc(
+                'https://docs.google.com/document/d/test123/edit',
+                api_key='trusted-key',
+                on_cost_start=reject_cost,
+            )
+
+        self.assertEqual(mock_get.call_count, 1)
+
+    @patch('services.export.gdocs_service.requests.get')
     def test_no_access_no_key(self, mock_get):
         resp = MagicMock()
         resp.status_code = 403

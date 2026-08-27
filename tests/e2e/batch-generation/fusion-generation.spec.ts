@@ -19,6 +19,10 @@ test.describe('퓨전 분석 (Fusion)', () => {
     urlInput,
     contentGenerator,
   }) => {
+    test.skip(
+      process.env.E2E_LIVE_GENERATION !== '1',
+      '실제 ChatMock/YouTube 연동은 E2E_LIVE_GENERATION=1에서만 실행',
+    );
     // 설정: 저비용 프리셋 (ChatMock Mini · 요약 · 짧게)
     await contentGenerator.applyCheapPreset();
 
