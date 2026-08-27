@@ -7,7 +7,7 @@ import secrets
 import subprocess
 import sys
 import time
-from urllib.error import HTTPError, URLError
+from urllib.error import HTTPError
 from urllib.request import urlopen
 
 
@@ -93,7 +93,7 @@ def _wait_for_json(
                 if not isinstance(payload, dict):
                     raise ValueError("response is not a JSON object")
                 return payload
-        except (json.JSONDecodeError, UnicodeDecodeError, URLError, ValueError) as exc:
+        except (json.JSONDecodeError, UnicodeDecodeError, OSError, ValueError) as exc:
             last_error = str(exc)
         time.sleep(2)
 
@@ -118,7 +118,7 @@ def _wait_for_frontend(
             last_status, _body = _fetch("/", host_port=host_port)
             if last_status == 200:
                 return
-        except URLError:
+        except OSError:
             pass
         time.sleep(2)
     raise RuntimeError(

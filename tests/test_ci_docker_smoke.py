@@ -34,6 +34,55 @@ def _ready_payload() -> dict[str, object]:
     }
 
 
+def test_wait_for_json_retries_connection_reset(monkeypatch):
+    module = _load_module()
+    attempts = iter([
+        ConnectionResetError("connection reset during nginx startup"),
+        (200, b'{"status":"healthy"}'),
+    ])
+
+    def fake_fetch(*_args, **_kwargs):
+        result = next(attempts)
+        if isinstance(result, BaseException):
+            raise result
+        return result
+
+    monkeypatch.setattr(module, "_is_running", lambda _name: True)
+    monkeypatch.setattr(module, "_fetch", fake_fetch)
+    monkeypatch.setattr(module.time, "sleep", lambda _seconds: None)
+
+    assert module._wait_for_json(
+        "/health",
+        host_port=18080,
+        container_name="smoke-container",
+        timeout_seconds=10,
+    ) == {"status": "healthy"}
+
+
+def test_wait_for_frontend_retries_connection_reset(monkeypatch):
+    module = _load_module()
+    attempts = iter([
+        ConnectionResetError("connection reset during nginx startup"),
+        (200, b"ready"),
+    ])
+
+    def fake_fetch(*_args, **_kwargs):
+        result = next(attempts)
+        if isinstance(result, BaseException):
+            raise result
+        return result
+
+    monkeypatch.setattr(module, "_is_running", lambda _name: True)
+    monkeypatch.setattr(module, "_fetch", fake_fetch)
+    monkeypatch.setattr(module.time, "sleep", lambda _seconds: None)
+
+    module._wait_for_frontend(
+        host_port=18080,
+        container_name="smoke-container",
+        timeout_seconds=10,
+    )
+
+
 def test_main_loads_and_runs_full_stack_image_with_auth_disabled(monkeypatch):
     module = _load_module()
     commands: list[list[str]] = []
