@@ -2,9 +2,9 @@
 # 트리거: main/master/develop 브랜치 푸시, PR
 #   - 이 레포의 기본 브랜치는 master이며 모든 PR이 master를 대상으로 한다.
 #     master가 빠져 있어 PR CI가 한 번도 실행되지 않던 문제를 수정.
-#   - docker-build/deploy/커버리지 잡의 refs/heads/main 게이트는 의도적으로 유지:
-#     master로 바꾸면 푸시마다 Docker Hub 푸시 + Railway 프로덕션 배포가 켜지므로
-#     자동 배포는 명시적 운영 결정 전까지 비활성 상태로 둔다 (2026-07-05 결정).
+#   - Docker 이미지는 모든 대상 브랜치/PR에서 빌드 검증한다.
+#   - 기본 브랜치 master의 push만 immutable SHA/production 이미지를 게시하고
+#     Railway는 테스트를 통과한 정확한 SHA 이미지를 배포한다.
 
 name: CI/CD
 
@@ -16,7 +16,17 @@ on:
 
 env:
   PYTHON_VERSION: "3.11"
-  NODE_VERSION: "20"
+  NODE_VERSION: "22.19.0"
+
+concurrency:
+  group: insight-engine-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    # GitHub's bash runner enables `-e -o pipefail`, so a failed Railway CLI
+    # producer cannot be hidden by a successful JSON validator downstream.
+    shell: bash
 
 jobs:
   # ── 백엔드 테스트 ─────────────────────────────────────────────────────────────
@@ -49,20 +59,34 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
 
       - name: 의존성 설치
-        run: pip install -r requirements.txt
+        # pglast를 포함한 검증 도구도 설치해 SQL 구문 검사가 skip되지 않게 한다.
+        run: pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Python 의존성 취약점 감사
+        run: |
+          pip install pip-audit
+          # chromadb 1.5.9의 embedded-only 예외 근거는 SECURITY.md에 기록했다.
+          # 안전한 패치 릴리스가 나오면 아래 네 예외를 즉시 제거한다.
+          pip-audit -r requirements.txt \
+            --ignore-vuln PYSEC-2026-311 \
+            --ignore-vuln CVE-2026-45830 \
+            --ignore-vuln CVE-2026-45831 \
+            --ignore-vuln CVE-2026-45833
 
       - name: 린트 (flake8, 권고)
         # 레포 전역 flake8 부채(약 760건)가 정리되기 전까지는 권고(비차단)로 운영한다.
         # TODO: 위반을 점진적으로 0으로 줄인 뒤 continue-on-error 제거.
         continue-on-error: true
         run: |
-          pip install flake8
           flake8 . --max-line-length=120 --exclude=__pycache__,migrations,node_modules --count --statistics
 
       - name: 단위 테스트 실행
-        # pytest는 런타임 의존성이 아니라 requirements.txt에 없으므로 여기서 설치.
+        # pytest는 requirements-dev.txt에서 설치한다.
         # (-x 제거: 첫 실패에서 멈추지 않고 전체 실패 목록을 피드백으로 받는다.
         #  기존 `| head -500` 파이프는 pipefail 부재로 실패를 삼키던 결함이라 제거.)
         #
@@ -71,7 +95,6 @@ jobs:
         # (duckduckgo_search가 requirements.txt에 선언됨(PR #26) → 기존
         #  test_web_research_* / test_fusion_service / TestGenerateFusion 격리는 해제)
         run: |
-          pip install pytest pytest-timeout
           python -m pytest tests/ \
             --ignore=tests/e2e \
             --ignore=tests/web_feature_test.py \
@@ -81,11 +104,16 @@ jobs:
             -q
 
       - name: 커버리지 업로드
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
         run: |
-          pip install coverage pytest-cov
-          python -m pytest tests/ --ignore=tests/e2e --cov=. --cov-report=xml -q
-        continue-on-error: true
+          python -m pytest tests/ \
+            --ignore=tests/e2e \
+            --ignore=tests/web_feature_test.py \
+            --timeout=120 \
+            -p no:warnings \
+            --cov=. \
+            --cov-report=xml \
+            -q
 
   # ── 프론트엔드 테스트 ─────────────────────────────────────────────────────────
   frontend-test:
@@ -112,6 +140,9 @@ jobs:
       - name: 타입 체크
         run: npx tsc --noEmit
 
+      - name: 린트
+        run: npm run lint
+
       - name: 단위 테스트 (vitest)
         # PR #70에서 vitest 도입 — CI 연동 (package.json "test": "vitest run")
         run: npm test -- --reporter=dot
@@ -121,13 +152,80 @@ jobs:
         env:
           NEXT_PUBLIC_API_URL: http://localhost:5001
 
+  # ── Chromium 브라우저 E2E ───────────────────────────────────────────────────
+  e2e-no-auth:
+    name: E2E (All Local Projects, Chromium)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      FLASK_ENV: testing
+      RATE_LIMIT_ENABLED: "false"
+      SCHEDULER_ENABLED: "false"
+      SUPABASE_URL: ""
+      SUPABASE_PUBLISHABLE_KEY: ""
+      SUPABASE_SECRET_KEY: ""
+      SUPABASE_ANON_KEY: ""
+      SUPABASE_SERVICE_ROLE_KEY: ""
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Python 설정
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Node.js 설정
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            frontend/package-lock.json
+            tests/e2e/package-lock.json
+
+      - name: 백엔드 런타임 의존성 설치
+        run: pip install -r requirements.txt
+
+      - name: 프론트엔드 의존성 설치
+        working-directory: frontend
+        run: npm ci
+
+      - name: E2E 의존성 설치
+        working-directory: tests/e2e
+        run: npm ci
+
+      - name: Chromium 설치
+        working-directory: tests/e2e
+        run: npx --no-install playwright install --with-deps chromium
+
+      - name: 전체 로컬 Playwright 프로젝트 실행
+        working-directory: tests/e2e
+        run: >-
+          npx --no-install playwright test
+          --workers=1
+          --retries=2
+
+      - name: Playwright 실패 산출물 업로드
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-chromium-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            tests/test-results/
+            tests/e2e/test-results/
+            tests/e2e/playwright-report/
+          if-no-files-found: warn
+          retention-days: 14
+
   # ── Docker 빌드 ───────────────────────────────────────────────────────────────
   docker-build:
     name: Docker Build
     runs-on: ubuntu-latest
-    needs: [backend-test, frontend-test]
-    if: github.ref == 'refs/heads/main'
-    timeout-minutes: 20
+    needs: [backend-test, frontend-test, e2e-no-auth]
+    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v4
@@ -136,37 +234,138 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Docker Hub 로그인
-        if: github.event_name != 'pull_request'
+        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Docker 이미지 빌드 및 푸시
+      - name: Docker 이미지 빌드 및 로컬 로드
         uses: docker/build-push-action@v5
         with:
           context: .
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: |
-            ${{ secrets.DOCKER_USERNAME }}/insight-engine:latest
-            ${{ secrets.DOCKER_USERNAME }}/insight-engine:${{ github.sha }}
+          push: false
+          load: true
+          tags: insight-engine:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Docker full-stack 런타임 스모크
+        env:
+          DOCKER_SMOKE_IMAGE: insight-engine:ci
+          DOCKER_SMOKE_TIMEOUT_SECONDS: "180"
+        run: python scripts/ci_docker_smoke.py
+
+      - name: 검증된 프로덕션 이미지 게시
+        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+        env:
+          DOCKER_REPOSITORY: ${{ secrets.DOCKER_USERNAME }}/insight-engine
+          IMAGE_SHA: ${{ github.sha }}
+        run: |
+          docker tag insight-engine:ci "$DOCKER_REPOSITORY:$IMAGE_SHA"
+          docker push "$DOCKER_REPOSITORY:$IMAGE_SHA"
+          docker tag insight-engine:ci "$DOCKER_REPOSITORY:production"
+          docker push "$DOCKER_REPOSITORY:production"
+
+      - name: ChatMock 1.40 이미지 빌드 검증
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          target: chatmock
+          push: false
+          tags: insight-engine-chatmock:ci
+          cache-from: type=gha
 
   # ── 프로덕션 배포 ─────────────────────────────────────────────────────────────
   deploy:
     name: Deploy (Railway)
     runs-on: ubuntu-latest
     needs: docker-build
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
     environment: production
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Railway 배포
-        uses: bervProject/railway-deploy@v1
+      - name: Node.js 설정
+        uses: actions/setup-node@v4
         with:
-          railway_token: ${{ secrets.RAILWAY_TOKEN }}
-          service: insight-engine
-        continue-on-error: true
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Railway 배포
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_SERVICE: insight-engine
+          RELEASE_IMAGE: ${{ secrets.DOCKER_USERNAME }}/insight-engine:${{ github.sha }}
+        run: |
+          set -Eeuo pipefail
+          npm install --global @railway/cli@5.45.2
+          service_id="$(
+            railway status --json |
+              node scripts/validate_railway_contract.cjs select-service "$RAILWAY_SERVICE"
+          )"
+          railway environment config --json |
+            node scripts/validate_railway_contract.cjs validate-settings "$service_id"
+          public_origin="$(
+            railway variable list --service "$RAILWAY_SERVICE" --json |
+              node scripts/validate_railway_contract.cjs select-public-origin
+          )"
+          before_json="$(railway deployment list --service "$RAILWAY_SERVICE" --limit 20 --json)"
+          before_ids="$(printf '%s' "$before_json" | node -e 'let data="";process.stdin.on("data",c=>data+=c).on("end",()=>{const rows=JSON.parse(data);if(!Array.isArray(rows))throw new TypeError("expected deployment array");console.log(rows.map(row=>row?.id).filter(id=>typeof id==="string"&&id).join(","))})')"
+          railway service source connect --image "$RELEASE_IMAGE" --service "$RAILWAY_SERVICE" --json
+
+          contract_verified=false
+          contract_deadline=$((SECONDS + 120))
+          while (( SECONDS < contract_deadline )); do
+            if railway environment config --json |
+              node scripts/validate_railway_contract.cjs \
+                validate-environment "$service_id" "$RELEASE_IMAGE"
+            then
+              contract_verified=true
+              break
+            fi
+            sleep 5
+          done
+          if [[ "$contract_verified" != "true" ]]; then
+            echo "Railway live service contract did not converge" >&2
+            exit 1
+          fi
+
+          deadline=$((SECONDS + 1800))
+          while (( SECONDS < deadline )); do
+            latest_json="$(railway deployment list --service "$RAILWAY_SERVICE" --limit 20 --json)"
+            read -r deployment_id deployment_status < <(
+              printf '%s' "$latest_json" | node scripts/select_railway_deployment.cjs "$before_ids" "$RELEASE_IMAGE"
+            )
+            if [[ -n "$deployment_id" ]]; then
+              case "$deployment_status" in
+                SUCCESS)
+                  railway environment config --json |
+                    node scripts/validate_railway_contract.cjs \
+                      validate-environment "$service_id" "$RELEASE_IMAGE"
+                  ready_deadline=$((SECONDS + 120))
+                  while (( SECONDS < ready_deadline )); do
+                    ready_status="$(
+                      curl --silent --show-error --max-time 15 --connect-timeout 5 \
+                        --proto '=https' --tlsv1.2 --output /dev/null \
+                        --write-out '%{http_code}' "$public_origin/ready" || true
+                    )"
+                    if [[ "$ready_status" == "200" ]]; then
+                      echo "Railway deployment and public readiness succeeded: $deployment_id ($RELEASE_IMAGE)"
+                      exit 0
+                    fi
+                    sleep 5
+                  done
+                  echo "Railway deployment succeeded but $public_origin/ready did not return 200" >&2
+                  exit 1
+                  ;;
+                FAILED|CRASHED|REMOVED)
+                  echo "Railway deployment failed: $deployment_id ($deployment_status)" >&2
+                  exit 1
+                  ;;
+              esac
+            fi
+            sleep 10
+          done
+          echo "Timed out waiting for Railway to deploy exact image $RELEASE_IMAGE" >&2
+          exit 1

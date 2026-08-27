@@ -78,7 +78,7 @@ JSON 응답 {title, content, html, usage}
 |-------|------|-----|
 | 라우트 | `routes/blog_routes.py` | 콘텐츠 생성, 파이프라인(SSE), MCP 발행, 지식 업로드, Ollama 헬스체크 |
 | 라우트 | `routes/auth_routes.py` | 인증, API 키, 사용량, 관리자, 워크스페이스, 승인 플로우 API |
-| 라우트 | `routes/advanced_routes.py` | 멀티스타일, 퓨전, 마인드맵, 인라인 편집, QA |
+| 라우트 | `routes/advanced_routes.py` | 퓨전, 마인드맵 (실제 구현은 `routes/advanced/` 서브패키지) |
 | 라우트 | `routes/export_routes.py` | DOCX/MD/TXT/ZIP 내보내기 |
 | 라우트 | `routes/utility_routes.py` | 헬스체크, 프로바이더 조회, 캐시, 스타일 추천 |
 | 서비스 | `services/core/ai_service.py` | LiteLLM 래퍼, 다국어 모디파이어, Ollama api_base, RAG 컨텍스트 주입 |
@@ -218,7 +218,7 @@ UI에 표시되는 15개 스타일: `blog_seo`, `summary`, `tutorial`, `qna`, `a
 
 **챕터 자동 분할**: `/generate` 응답의 `chapters[]` 필드 — AI가 자막을 주제별 챕터로 분할 (`chapter_service.py`)
 
-**인라인 AI 편집**: `POST /api/inline-edit` — 텍스트 선택 영역만 부분 재생성 (축약/확장/톤변경/번역)
+**문서 직접 편집**: 결과 카드의 편집(연필) 버튼 → 제목/본문(마크다운)을 직접 수정 후 저장. 저장은 `resultStore.updateReport` → localStorage 경로를 사용하고, `report.html`은 `frontend/lib/markdown-to-html.ts`로 다시 렌더링해 내보내기/공유와 동기화한다. (AI 부분 재생성 `POST /api/inline-edit`는 dead-code 정리로 제거됨)
 
 **QA 게이트**: `POST /api/qa-check` — 발행 전 품질 검증 (금칙어, 섹션 구조, 중복, 링크 검증)
 

@@ -4,6 +4,9 @@
     handle /health {
         reverse_proxy backend:5001
     }
+    handle /ready {
+        reverse_proxy backend:5001
+    }
 
     @publicShare {
         method GET
@@ -14,9 +17,12 @@
     }
 
     handle {
-        basicauth {
-            inbeom $2a$14$3/yyohmMHJwLiyM8j7CLDevjysvIJ150X96SGUralxmFXJ9rtFy4K
+        basic_auth {
+            {$CADDY_BASIC_AUTH_USER} {$CADDY_BASIC_AUTH_HASH}
         }
+
+        @nextOg path /api/og /api/og/*
+        reverse_proxy @nextOg frontend:3000
 
         @backend path /api/* /generate /generate-stream /generate-batch /feed.xml /version /metrics /openapi.json /oauth/*
         reverse_proxy @backend backend:5001

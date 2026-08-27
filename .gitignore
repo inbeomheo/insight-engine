@@ -17,6 +17,7 @@ env/
 
 # Cache
 cache/
+/services/cache/
 *.cache
 
 # Firebase
@@ -48,6 +49,7 @@ CODE_REVIEW.html
 
 # Runtime data (사용자 데이터, DB, 로그) — 루트 data/만 무시 (services/data/ 소스 제외)
 /data/
+/data_volume_backups/
 *.sqlite3
 *.jsonl
 

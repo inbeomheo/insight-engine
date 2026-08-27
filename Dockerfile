@@ -2,7 +2,7 @@
 # 멀티스테이지 빌드: Next.js 프론트엔드 + Flask 백엔드
 
 # ── 스테이지 1: Next.js 빌드 ──────────────────────────────────────────────────
-FROM node:20-alpine AS frontend-builder
+FROM node:22-bookworm-slim AS frontend-builder
 
 WORKDIR /app/frontend
 
@@ -29,24 +29,60 @@ COPY requirements.txt ./
 RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt
 
+# ── ChatMock 런타임 (운영 Compose 전용) ──────────────────────────────────────
+FROM python:3.11-slim AS chatmock
+
+RUN pip install --no-cache-dir "chatmock==1.40" \
+    && useradd --create-home --uid 10001 --shell /usr/sbin/nologin chatmock \
+    && mkdir -p /data/codex \
+    && chown -R chatmock:chatmock /data
+ENV CODEX_HOME=/data/codex CHATGPT_LOCAL_HOME=/data/codex HOME=/data
+USER chatmock
+WORKDIR /data
+EXPOSE 8000
+CMD ["chatmock", "serve", "--host", "0.0.0.0", "--port", "8000", "--reasoning-effort", "minimal", "--fast-mode"]
+
 # ── 스테이지 3: 최종 이미지 ───────────────────────────────────────────────────
 FROM python:3.11-slim AS final
 
 WORKDIR /app
+ENV HOME=/app/persist/data/home \
+    XDG_CACHE_HOME=/app/persist/cache \
+    FLASK_ENV=production \
+    NODE_ENV=production \
+    PYTHONDONTWRITEBYTECODE=1 \
+    APP_PERSIST_ROOT=/app/persist \
+    APP_DATA_DIR=/app/persist/data \
+    APP_DATA_BACKUP_DIR=/app/persist/backups \
+    CONTENT_CACHE_DIR=/app/persist/cache/content \
+    CHROMA_DB_PATH=/app/persist/data/chroma_db \
+    GRAPH_STORE_PATH=/app/persist/data/graph_store \
+    KNOWLEDGE_NOTES_DIR=/app/persist/data/notes \
+    SHARE_PAGE_DIR=/app/persist/data/shared_pages \
+    FEEDBACK_DATA_DIR=/app/persist/data/feedback \
+    FEEDBACK_STORE_DIR=/app/persist/data/feedback \
+    AUTO_BACKUP_ENABLED=false \
+    PLATFORM_VOLUME_BACKUPS_ENABLED=false \
+    BACKUP_INITIAL_DELAY_SECONDS=300 \
+    BACKUP_SHUTDOWN_TIMEOUT_SECONDS=10 \
+    BACKEND_GRACEFUL_TIMEOUT_SECONDS=600 \
+    NGINX_DRAIN_TIMEOUT_SECONDS=605 \
+    PROCESS_SHUTDOWN_TIMEOUT_SECONDS=605
 
 # 런타임 의존성
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl ffmpeg \
+    curl ffmpeg libatomic1 libstdc++6 nginx tini \
     && rm -rf /var/lib/apt/lists/*
 
 # Python 패키지 복사
 COPY --from=python-deps /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=python-deps /usr/local/bin /usr/local/bin
 
-# Node.js 설치 (Next.js 서버 실행용)
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs \
-    && rm -rf /var/lib/apt/lists/*
+# 빌더와 동일한 Debian/glibc Node 런타임을 그대로 복사합니다.
+COPY --from=frontend-builder /usr/local/bin/node /usr/local/bin/node
+COPY --from=frontend-builder /usr/local/lib/node_modules /usr/local/lib/node_modules
+RUN ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
+    && ln -s /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx
 
 # 애플리케이션 소스 복사
 COPY . .
@@ -55,20 +91,30 @@ COPY . .
 COPY --from=frontend-builder /app/frontend/.next ./frontend/.next
 COPY --from=frontend-builder /app/frontend/node_modules ./frontend/node_modules
 
-# 데이터 디렉토리
-RUN mkdir -p /app/data/chroma_db /app/cache /app/logs
+# Railway는 서비스당 하나의 볼륨만 지원합니다. 기존 상대경로 소비자는 모두
+# 단일 mount 아래의 하위 디렉토리로 연결합니다.
+RUN groupadd --gid 10001 appuser \
+    && useradd --uid 10001 --gid appuser --home-dir /app/persist/data/home --no-create-home \
+        --shell /usr/sbin/nologin appuser \
+    && rm -rf /app/data /app/cache /app/logs /app-backups \
+    && mkdir -p /app/persist/data/chroma_db /app/persist/data/home /app/persist/backups \
+        /app/persist/cache /app/persist/logs /app/frontend/.next/cache \
+    && ln -s /app/persist/data /app/data \
+    && ln -s /app/persist/cache /app/cache \
+    && ln -s /app/persist/logs /app/logs \
+    && ln -s /app/persist/backups /app-backups \
+    && chown -R appuser:appuser /app/persist /app/frontend/.next/cache
 
-# 비루트 사용자
-RUN useradd -r -s /bin/false appuser \
-    && chown -R appuser:appuser /app
-USER appuser
+# Railway의 root-owned mount를 초기화하기 위해 supervisor만 root로 시작합니다.
+# scripts/run_full_stack.py가 저장소 권한을 고친 직후 setuid/setgid로 영구 강등하며,
+# Flask/Next.js/nginx/선택적 백업 데몬은 절대 root로 시작하지 않습니다.
 
 # 포트 노출
-EXPOSE 5001 3000
+EXPOSE 8080
 
 # 헬스체크
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD curl -f http://localhost:5001/health || exit 1
+    CMD-SHELL curl --fail --silent --show-error "http://127.0.0.1:${PORT:-8080}/ready" >/dev/null || exit 1
 
-# 기본 시작 명령 (docker-compose에서 오버라이드)
-CMD ["python", "app.py"]
+# Flask + Next.js + nginx를 동일 산출물에서 실행합니다.
+CMD ["tini", "--", "python", "scripts/run_full_stack.py", "full-stack"]

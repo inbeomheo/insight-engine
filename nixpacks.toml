@@ -1,4 +1,5 @@
-# Nixpacks 빌드 설정 - Python 프로젝트 명시
+# 레거시 수동 Nixpacks 배포용 설정입니다.
+# 정식 Railway 서비스와 CI는 railway.json의 Dockerfile 산출물을 사용합니다.
 providers = ["python"]
 
 [phases.setup]
