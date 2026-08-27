@@ -1,13 +1,11 @@
-"""Knowledge notes API routes.
-
-First slice: notes are stored in one shared local directory without per-user
-separation. User-scoped storage is a follow-up slice.
-"""
-from flask import Blueprint, current_app, jsonify, request
+"""User-scoped knowledge notes API routes."""
+from flask import Blueprint, current_app, g, jsonify, request
 
 from extensions import limiter
 from routes.blog_routes import DEFAULT_MODEL
 from services.content import note_index_service, note_service
+from services.usage import require_usage
+from services.usage.usage_lock import UsageLockUnavailable
 from src.contexts.identity.interface.auth_decorators import require_auth
 from utils.responses import api_error, clamp_query_int, handle_error, validate_content_length
 
@@ -21,12 +19,20 @@ DUPLICATE_QUERY_MAX_CHARS = 2000
 @notes_bp.route("", methods=["POST"])
 @limiter.limit("15/minute")
 @require_auth
+@require_usage
 def create_note():
+    owner_id = g.get("user_id")
     data = request.get_json(silent=True) or {}
     content = data.get("content", "")
     source = data.get("source") or {}
     language = data.get("language") or "ko"
-    model = data.get("model") or DEFAULT_MODEL
+    from services.core.ai_service import resolve_public_model
+    try:
+        model = resolve_public_model(
+            data.get("model"), DEFAULT_MODEL, allow_auto=False
+        )
+    except ValueError as exc:
+        return api_error(f"[노트 생성 실패] {exc}", 400, 'UNSUPPORTED_MODEL')
 
     if not isinstance(content, str) or not content.strip():
         return api_error("[노트 생성 실패] 콘텐츠가 필요합니다.", 400)
@@ -35,8 +41,14 @@ def create_note():
         return api_error(f"[노트 생성 실패] {length_error}", 400)
 
     try:
-        duplicate_reason, duplicate_notes = _find_duplicate_notes(content, source)
+        duplicate_reason, duplicate_notes = _find_duplicate_notes(
+            content,
+            source,
+            owner_id=owner_id,
+        )
         if duplicate_notes:
+            # 중복 판정은 AI를 호출하지 않으므로 선예약을 즉시 환불한다.
+            g.skip_usage_decrement = True
             return _duplicate_warning_response(duplicate_reason, duplicate_notes)
 
         style_prompt = current_app.config.get("STYLE_PROMPTS", {}).get(
@@ -48,15 +60,18 @@ def create_note():
             language=language,
             model=model,
             style_prompt=style_prompt,
+            owner_id=owner_id,
         )
         try:
-            note_index_service.index_note(note)
+            note_index_service.index_note(note, owner_id=owner_id)
         except Exception as index_exc:
             current_app.logger.warning(
                 "Knowledge note indexing failed (ignored): %s",
                 index_exc,
             )
         return jsonify(note)
+    except UsageLockUnavailable:
+        raise
     except ValueError as exc:
         message = str(exc)
         if not message.startswith("[노트 생성 실패]"):
@@ -70,7 +85,7 @@ def create_note():
 @notes_bp.route("", methods=["GET"])
 @require_auth
 def list_notes():
-    return jsonify({"notes": note_service.list_notes()})
+    return jsonify({"notes": note_service.list_notes(owner_id=g.get("user_id"))})
 
 
 @notes_bp.route("/search", methods=["GET"])
@@ -93,7 +108,13 @@ def search_notes():
         max_val=note_index_service.MAX_SEARCH_LIMIT,
     )
     try:
-        return jsonify({"notes": note_index_service.search_notes(query, limit=limit)})
+        return jsonify({
+            "notes": note_index_service.search_notes(
+                query,
+                owner_id=g.get("user_id"),
+                limit=limit,
+            )
+        })
     except Exception as exc:
         current_app.logger.error("Knowledge note search failed: %s", exc, exc_info=True)
         return api_error("[검색 실패] 노트 검색 중 오류가 발생했습니다.", 500)
@@ -102,11 +123,16 @@ def search_notes():
 @notes_bp.route("/<note_id>", methods=["GET"])
 @require_auth
 def get_note(note_id):
-    note = note_service.load_note(note_id)
+    owner_id = g.get("user_id")
+    note = note_service.load_note(note_id, owner_id=owner_id)
     if note is None:
         return api_error("[노트 조회 실패] 노트를 찾을 수 없습니다.", 404)
     try:
-        note["related_notes"] = note_index_service.get_related_notes(note, limit=3)
+        note["related_notes"] = note_index_service.get_related_notes(
+            note,
+            owner_id=owner_id,
+            limit=3,
+        )
     except Exception as exc:
         current_app.logger.warning(
             "Related note lookup failed (ignored): %s",
@@ -117,10 +143,19 @@ def get_note(note_id):
     return jsonify(note)
 
 
-def _find_duplicate_notes(content: str, source: dict) -> tuple[str, list[dict]]:
+def _find_duplicate_notes(
+    content: str,
+    source: dict,
+    *,
+    owner_id: str | None,
+) -> tuple[str, list[dict]]:
     normalized_source = note_service.normalize_source(source)
-    existing_notes = note_service.list_notes()
-    same_url_notes = note_service.find_notes_by_source_url(normalized_source, notes=existing_notes)
+    existing_notes = note_service.list_notes(owner_id=owner_id)
+    same_url_notes = note_service.find_notes_by_source_url(
+        normalized_source,
+        owner_id=owner_id,
+        notes=existing_notes,
+    )
     if same_url_notes:
         return "same_url", same_url_notes
 
@@ -134,7 +169,11 @@ def _find_duplicate_notes(content: str, source: dict) -> tuple[str, list[dict]]:
     try:
         similar_notes = [
             note
-            for note in note_index_service.search_notes(query, limit=DUPLICATE_SIMILARITY_LIMIT)
+            for note in note_index_service.search_notes(
+                query,
+                owner_id=owner_id,
+                limit=DUPLICATE_SIMILARITY_LIMIT,
+            )
             if float(note.get("score") or 0) > DUPLICATE_SIMILARITY_THRESHOLD
         ]
     except Exception as exc:

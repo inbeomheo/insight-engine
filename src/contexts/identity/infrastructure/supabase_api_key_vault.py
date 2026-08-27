@@ -23,11 +23,13 @@ class SupabaseApiKeyVault(IApiKeyVault):
 
     def _get_client(self):
         from src.shared.infrastructure.supabase_client import (
-            get_supabase, is_supabase_enabled,
+            get_user_supabase, is_supabase_enabled,
         )
         if not is_supabase_enabled():
             return None
-        return get_supabase()
+        # API 키 행은 사용자별 RLS로 보호된다. 검증된 요청 JWT가 연결된
+        # fresh client만 사용해 다른 요청의 인증 상태와 섞이지 않게 한다.
+        return get_user_supabase()
 
     def _encrypt(self, plaintext: str) -> str:
         from src.shared.infrastructure.supabase_client import encrypt_api_key
@@ -128,7 +130,23 @@ class SupabaseApiKeyVault(IApiKeyVault):
             if not rows or not rows[0].get('is_active'):
                 raise InvalidApiKey(f"활성 키 없음: provider={provider}, label={label}")
             decrypted = self._decrypt(rows[0]['encrypted_key'])
-            # TODO: last_used_at 갱신 (Phase 2 다음 PR)
+            try:
+                client.table('ie_user_api_keys').update({
+                    'last_used_at': datetime.now(timezone.utc).isoformat(),
+                }).eq(
+                    'user_id', str(account_id)
+                ).eq('provider', provider).eq('label', label).execute()
+            except Exception as audit_exc:
+                # 감사 메타데이터 장애가 이미 검증·복호화된 키 사용을 막지는
+                # 않되, 운영자가 누락을 추적할 수 있도록 경고를 남긴다.
+                logger.warning(
+                    "API 키 last_used_at 갱신 실패 "
+                    "(account=%s, provider=%s, label=%s, error=%s)",
+                    account_id,
+                    provider,
+                    label,
+                    audit_exc,
+                )
             return decrypted
         except InvalidApiKey:
             raise

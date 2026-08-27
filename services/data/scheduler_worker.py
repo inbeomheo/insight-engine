@@ -10,6 +10,8 @@ apscheduler import는 entry-points 전체 스캔으로 ~0.7초가 걸려 앱 스
 """
 
 import os
+import stat
+import tempfile
 from pathlib import Path
 
 try:
@@ -25,6 +27,12 @@ _scheduler = None
 _scheduler_lock_file = None
 
 
+def _default_scheduler_lock_path() -> Path:
+    """Return a per-user private runtime path instead of a shared /tmp file."""
+    user_id = os.geteuid() if hasattr(os, 'geteuid') else os.getpid()
+    return Path(tempfile.gettempdir()) / f'insight-engine-{user_id}' / 'scheduler.lock'
+
+
 def _acquire_scheduler_leader_lock() -> bool:
     """gunicorn 다중 worker 환경에서 스케줄러를 단일 프로세스만 실행하게 한다."""
     global _scheduler_lock_file
@@ -36,11 +44,23 @@ def _acquire_scheduler_leader_lock() -> bool:
         _scheduler_lock_file = True
         return True
 
-    lock_path = Path(
-        os.getenv("SCHEDULER_LOCK_FILE", "/tmp/insight-engine-scheduler.lock")
-    )
-    lock_path.parent.mkdir(parents=True, exist_ok=True)
-    lock_file = lock_path.open("w")
+    configured_path = (os.getenv('SCHEDULER_LOCK_FILE') or '').strip()
+    lock_path = Path(configured_path) if configured_path else _default_scheduler_lock_path()
+    lock_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+
+    flags = os.O_RDWR | os.O_CREAT
+    flags |= getattr(os, 'O_CLOEXEC', 0)
+    flags |= getattr(os, 'O_NOFOLLOW', 0)
+    descriptor = os.open(lock_path, flags, 0o600)
+    try:
+        metadata = os.fstat(descriptor)
+        if not stat.S_ISREG(metadata.st_mode):
+            raise RuntimeError('scheduler lock path must be a regular file')
+        os.fchmod(descriptor, 0o600)
+    except Exception:
+        os.close(descriptor)
+        raise
+    lock_file = os.fdopen(descriptor, 'w')
     try:
         fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
     except BlockingIOError:
@@ -88,14 +108,23 @@ def __getattr__(name):
 
 def _check_channel_monitors():
     """30분 간격: 채널 모니터링 → 신규 영상 감지 시 로깅"""
-    from services.data.supabase_service import get_supabase, is_supabase_enabled
+    from services.data.supabase_service import (
+        get_service_supabase,
+        is_supabase_enabled,
+    )
     from services.platform.channel_monitor_service import check_monitors
 
     if not is_supabase_enabled():
         return
 
     try:
-        client = get_supabase()
+        # 스케줄러는 사용자 요청/JWT 밖에서 모든 활성 모니터를 조회한다.
+        # anon 폴백은 RLS 때문에 조용히 빈 결과를 만들 수 있으므로 서버 전용
+        # service-role 클라이언트를 명시하고, 설정 누락 시 실패 폐쇄한다.
+        client = get_service_supabase()
+        if client is None:
+            logger.error("채널 모니터링 실패: service-role client unavailable")
+            return
         new_videos = check_monitors(client)
         if new_videos:
             logger.info(f"채널 모니터링: 신규 영상 {len(new_videos)}건 감지")

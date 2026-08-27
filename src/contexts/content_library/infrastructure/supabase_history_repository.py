@@ -8,7 +8,10 @@ from __future__ import annotations
 
 import logging
 
-from src.shared.infrastructure.supabase_client import get_supabase
+from src.shared.infrastructure.supabase_client import (
+    get_service_supabase,
+    get_user_supabase,
+)
 
 from ..application.ports import IHistoryRepository
 from ..domain.history_entry import HistoryEntry
@@ -34,10 +37,16 @@ class SupabaseHistoryRepository(IHistoryRepository):
         "style": 50,
         "content": 100_000,
         "html": 200_000,
-        "transcript": 10_000,
+        "transcript_preview": 500,
+        "mindmap_markdown": 100_000,
     }
 
-    def save(self, entry: HistoryEntry) -> dict | None:
+    def save(
+        self,
+        entry: HistoryEntry,
+        *,
+        validated_access_token: str | None = None,
+    ) -> dict | None:
         from services.data.supabase_service import save_history as _save
         # 기존 함수는 frontend dict 형식 입력을 받는다.
         # `_save`는 user_id를 별도 인자로 받고 자신이 row 조립. 기존 호환을 위해
@@ -56,7 +65,11 @@ class SupabaseHistoryRepository(IHistoryRepository):
             "usage": entry.usage,
             "elapsed_time": entry.elapsed_time,
         }
-        return _save(str(entry.owner_id), legacy_data)
+        return _save(
+            str(entry.owner_id),
+            legacy_data,
+            validated_access_token=validated_access_token,
+        )
 
     def save_many(self, entries: list[HistoryEntry]) -> int:
         """단일 트랜잭션 INSERT — sanitize 후 batch 저장.
@@ -66,7 +79,7 @@ class SupabaseHistoryRepository(IHistoryRepository):
         """
         if not entries:
             return 0
-        client = get_supabase()
+        client = get_user_supabase()
         if client is None:
             return 0
 
@@ -83,9 +96,14 @@ class SupabaseHistoryRepository(IHistoryRepository):
                     e.content, self._BATCH_LIMITS["content"]
                 ),
                 "html": _sanitize_text(e.html, self._BATCH_LIMITS["html"]),
-                "transcript": _sanitize_text(
-                    e.transcript, self._BATCH_LIMITS["transcript"]
+                "transcript_preview": _sanitize_text(
+                    e.transcript, self._BATCH_LIMITS["transcript_preview"]
                 ),
+                "mindmap_markdown": _sanitize_text(
+                    e.mindmap_markdown,
+                    self._BATCH_LIMITS["mindmap_markdown"],
+                ),
+                "keywords": e.keywords,
                 "usage": e.usage,
                 "elapsed_time": e.elapsed_time,
             }
@@ -105,7 +123,7 @@ class SupabaseHistoryRepository(IHistoryRepository):
         """
         from datetime import datetime, timedelta, timezone
 
-        client = get_supabase()
+        client = get_service_supabase()
         if client is None:
             return []
         try:
@@ -114,7 +132,7 @@ class SupabaseHistoryRepository(IHistoryRepository):
             ).isoformat()
             result = (
                 client.table(self._TABLE)
-                .select("created_at,style,elapsed_time,success,content")
+                .select("created_at,style,elapsed_time,content")
                 .gte("created_at", since)
                 .execute()
             )

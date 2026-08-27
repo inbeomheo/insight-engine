@@ -15,6 +15,7 @@ from src.contexts.identity.domain.exceptions import (
     IdentityException,
     InsufficientCredits,
     InvalidApiKey,
+    QuotaBackendUnavailable,
     QuotaExceeded,
 )
 from src.contexts.identity.domain.user_account import (
@@ -42,5 +43,6 @@ __all__ = [
     "IdentityException",
     "InsufficientCredits",
     "InvalidApiKey",
+    "QuotaBackendUnavailable",
     "QuotaExceeded",
 ]

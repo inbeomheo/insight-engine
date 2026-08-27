@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 
-from src.shared.infrastructure.supabase_client import get_supabase
+from src.shared.infrastructure.supabase_client import get_user_supabase
 
 from ..application.ports import IChannelMonitorRepository
 from ..domain.channel_subscription import ChannelSubscription
@@ -22,7 +22,7 @@ class SupabaseChannelMonitorRepository(IChannelMonitorRepository):
     _TABLE = "ie_channel_monitors"
 
     def register(self, subscription: ChannelSubscription) -> dict | None:
-        client = get_supabase()
+        client = get_user_supabase()
         if client is None:
             return None
         try:
@@ -35,7 +35,7 @@ class SupabaseChannelMonitorRepository(IChannelMonitorRepository):
             raise
 
     def list_for_owner(self, user_id: str) -> list[dict]:
-        client = get_supabase()
+        client = get_user_supabase()
         if client is None:
             return []
         try:
@@ -52,7 +52,7 @@ class SupabaseChannelMonitorRepository(IChannelMonitorRepository):
             raise
 
     def delete(self, user_id: str, monitor_id: str) -> bool:
-        client = get_supabase()
+        client = get_user_supabase()
         if client is None:
             return False
         try:

@@ -1,10 +1,7 @@
-"""Knowledge note generation and file storage.
-
-First slice: notes are stored in one shared local directory without per-user
-separation. User-scoped storage is a follow-up slice.
-"""
+"""Knowledge note generation and user-scoped file storage."""
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -20,6 +17,9 @@ from services.core import ai_service, content_service
 from services.core.logging_config import get_logger
 
 NOTES_DIR = Path(os.getenv("KNOWLEDGE_NOTES_DIR", "data/notes"))
+SCOPES_DIR_NAME = "scopes"
+ANONYMOUS_OWNER_SCOPE = "anonymous"
+OWNER_SCOPE_FIELD = "_owner_scope"
 NOTE_STYLE_ID = "knowledge_note"
 SOURCE_TYPES = {"youtube", "article", "text"}
 URL_REQUIRED_SOURCE_TYPES = {"youtube", "article"}
@@ -134,20 +134,31 @@ def parse_note_response(raw: Any) -> dict[str, Any]:
     raise ValueError("AI 응답에서 노트 JSON을 찾을 수 없습니다.")
 
 
-def save_note(note: dict[str, Any]) -> dict[str, Any]:
+def owner_scope_for(owner_id: str | None) -> str:
+    """Return a path-safe, non-identifying storage/index scope for one owner."""
+    if owner_id is None:
+        return ANONYMOUS_OWNER_SCOPE
+    if not isinstance(owner_id, str) or not owner_id.strip():
+        raise ValueError("[노트 저장 실패] 유효한 사용자 ID가 필요합니다.")
+    digest = hashlib.sha256(owner_id.strip().encode("utf-8")).hexdigest()
+    return f"user-{digest}"
+
+
+def save_note(note: dict[str, Any], *, owner_id: str | None) -> dict[str, Any]:
     valid, errors = validate_note(note)
     if not valid:
         raise ValueError("[노트 생성 실패] " + "; ".join(errors))
 
-    notes_dir = Path(NOTES_DIR)
-    notes_dir.mkdir(parents=True, exist_ok=True)
-    path = _note_path(note["id"])
+    _owner_notes_dir(owner_id, create=True)
+    path = _note_path(note["id"], owner_id=owner_id)
     if path is None:
         raise ValueError("[노트 생성 실패] 유효하지 않은 노트 ID입니다.")
 
+    stored_note = dict(note)
+    stored_note[OWNER_SCOPE_FIELD] = owner_scope_for(owner_id)
     tmp = path.with_name(f".{path.stem}.{uuid.uuid4().hex}.tmp")
     try:
-        tmp.write_text(json.dumps(note, ensure_ascii=False, indent=2), encoding="utf-8")
+        tmp.write_text(json.dumps(stored_note, ensure_ascii=False, indent=2), encoding="utf-8")
         tmp.replace(path)
     finally:
         if tmp.exists():
@@ -155,27 +166,36 @@ def save_note(note: dict[str, Any]) -> dict[str, Any]:
     return note
 
 
-def load_note(note_id: str) -> dict[str, Any] | None:
-    path = _note_path(note_id)
-    if path is None or not path.exists():
-        return None
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        logger.warning("Knowledge note load failed: %s", exc)
-        return None
+def load_note(note_id: str, *, owner_id: str | None) -> dict[str, Any] | None:
+    scope = owner_scope_for(owner_id)
+    path = _note_path(note_id, owner_id=owner_id)
+    note = _load_scoped_note(path, expected_scope=scope)
+    if note is not None:
+        return note
+
+    # Pre-isolation notes have no owner metadata and live directly in NOTES_DIR.
+    # They remain available only in local anonymous mode; authenticated users
+    # fail closed instead of inheriting or discovering legacy data.
+    if owner_id is None:
+        return _load_legacy_note(note_id)
+    return None
 
 
-def list_notes() -> list[dict[str, Any]]:
+def list_notes(*, owner_id: str | None) -> list[dict[str, Any]]:
     items: list[dict[str, Any]] = []
-    notes_dir = Path(NOTES_DIR)
-    if not notes_dir.exists():
-        return items
+    seen_ids: set[str] = set()
+    paths = _scoped_note_paths(owner_id)
+    if owner_id is None:
+        paths.extend(_legacy_note_paths())
 
-    for path in notes_dir.glob("*.json"):
-        note = load_note(path.stem)
+    for path in paths:
+        note = load_note(path.stem, owner_id=owner_id)
         if not isinstance(note, dict):
             continue
+        note_id = str(note.get("id") or "")
+        if not note_id or note_id in seen_ids:
+            continue
+        seen_ids.add(note_id)
         source = note.get("source") or {}
         items.append({
             "id": note.get("id"),
@@ -194,6 +214,8 @@ def list_notes() -> list[dict[str, Any]]:
 
 def find_notes_by_source_url(
     source: dict[str, Any],
+    *,
+    owner_id: str | None,
     notes: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     """Find existing notes with the same canonical source URL."""
@@ -202,7 +224,7 @@ def find_notes_by_source_url(
     if not target_url:
         return []
     duplicates: list[dict[str, Any]] = []
-    source_notes = list_notes() if notes is None else notes
+    source_notes = list_notes(owner_id=owner_id) if notes is None else notes
 
     for item in source_notes:
         item_source = item.get("source") if isinstance(item.get("source"), dict) else {}
@@ -221,6 +243,8 @@ def generate_knowledge_note(
     content: str,
     source: dict[str, Any],
     model: str,
+    *,
+    owner_id: str | None,
     language: str = "ko",
     style_prompt: str | None = None,
 ) -> dict[str, Any]:
@@ -256,13 +280,82 @@ def generate_knowledge_note(
     valid, errors = validate_note(note)
     if not valid:
         raise ValueError("[노트 생성 실패] " + "; ".join(errors))
-    return save_note(note)
+    return save_note(note, owner_id=owner_id)
 
 
-def _note_path(note_id: str) -> Path | None:
+def _owner_notes_dir(owner_id: str | None, *, create: bool = False) -> Path:
+    base_dir = Path(NOTES_DIR).resolve()
+    scopes_dir = base_dir / SCOPES_DIR_NAME
+    if create:
+        base_dir.mkdir(parents=True, exist_ok=True)
+        if scopes_dir.is_symlink():
+            raise ValueError("[노트 저장 실패] 안전하지 않은 저장 경로입니다.")
+        scopes_dir.mkdir(exist_ok=True)
+    notes_dir = scopes_dir / owner_scope_for(owner_id)
+    if notes_dir.is_symlink():
+        raise ValueError("[노트 저장 실패] 안전하지 않은 저장 경로입니다.")
+    if create:
+        notes_dir.mkdir(parents=True, exist_ok=True)
+    resolved = notes_dir.resolve()
+    if not resolved.is_relative_to(base_dir):
+        raise ValueError("[노트 저장 실패] 안전하지 않은 저장 경로입니다.")
+    return resolved
+
+
+def _note_path(note_id: str, *, owner_id: str | None) -> Path | None:
     if not isinstance(note_id, str) or not _ID_RE.fullmatch(note_id):
         return None
-    return Path(NOTES_DIR) / f"{note_id}.json"
+    notes_dir = _owner_notes_dir(owner_id)
+    path = notes_dir / f"{note_id}.json"
+    if path.parent.resolve() != notes_dir or path.is_symlink():
+        return None
+    return path
+
+
+def _load_scoped_note(path: Path | None, *, expected_scope: str) -> dict[str, Any] | None:
+    if path is None or not path.is_file() or path.is_symlink():
+        return None
+    try:
+        note = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning("Knowledge note load failed: %s", exc)
+        return None
+    if not isinstance(note, dict) or note.get(OWNER_SCOPE_FIELD) != expected_scope:
+        logger.warning("Knowledge note owner scope mismatch: %s", path.name)
+        return None
+    note.pop(OWNER_SCOPE_FIELD, None)
+    return note
+
+
+def _load_legacy_note(note_id: str) -> dict[str, Any] | None:
+    if not isinstance(note_id, str) or not _ID_RE.fullmatch(note_id):
+        return None
+    base_dir = Path(NOTES_DIR).resolve()
+    path = base_dir / f"{note_id}.json"
+    if path.parent.resolve() != base_dir or not path.is_file() or path.is_symlink():
+        return None
+    try:
+        note = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning("Legacy knowledge note load failed: %s", exc)
+        return None
+    if not isinstance(note, dict) or OWNER_SCOPE_FIELD in note:
+        return None
+    return note
+
+
+def _scoped_note_paths(owner_id: str | None) -> list[Path]:
+    notes_dir = _owner_notes_dir(owner_id)
+    if not notes_dir.is_dir() or notes_dir.is_symlink():
+        return []
+    return sorted(path for path in notes_dir.glob("*.json") if not path.is_symlink())
+
+
+def _legacy_note_paths() -> list[Path]:
+    notes_dir = Path(NOTES_DIR).resolve()
+    if not notes_dir.is_dir() or notes_dir.is_symlink():
+        return []
+    return sorted(path for path in notes_dir.glob("*.json") if not path.is_symlink())
 
 
 def _normalize_source(source: dict[str, Any]) -> dict[str, str]:

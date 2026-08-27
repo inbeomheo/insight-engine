@@ -1,16 +1,12 @@
-"""
-크레딧 기반 과금 서비스
-잔액 조회, 충전, 차감, 잔액 확인
+"""로컬 개발용 레거시 크레딧 시뮬레이터.
+
+실제 결제/과금 원장이 아니며 Supabase 테이블을 만들거나 호출하지 않는다. 운영 과금은
+Billing BC와 서버 전용 원자적 원장이 구현되기 전까지 이 모듈에 의존하면 안 된다.
 """
 import json
 import os
 import threading
 from datetime import datetime, timezone
-
-from src.shared.infrastructure.supabase_client import is_supabase_enabled, get_supabase
-from services.core.logging_config import ServiceLogger
-
-logger = ServiceLogger('CreditService')
 
 # 잔액 조회/차감 원자성 보장용 Lock
 _credit_lock = threading.Lock()
@@ -44,30 +40,15 @@ def _save_local_credits(data: dict):
 
 
 def _persist_credit_change(
-    user_id: str, new_balance: int, plan: str,
-    log_amount: int, log_type: str, reason: str, action_label: str,
+    user_id: str,
+    new_balance: int,
+    plan: str,
 ) -> dict:
-    """Supabase 또는 로컬에 크레딧 변경을 저장합니다."""
-    if is_supabase_enabled():
-        try:
-            client = get_supabase()
-            now = datetime.now(timezone.utc).isoformat()
-            client.table('ie_credits').upsert({
-                'user_id': user_id, 'balance': new_balance,
-                'plan': plan, 'updated_at': now,
-            }).execute()
-            client.table('ie_credit_logs').insert({
-                'user_id': user_id, 'amount': log_amount,
-                'type': log_type, 'reason': reason, 'created_at': now,
-            }).execute()
-            return {'success': True, 'balance': new_balance}
-        except Exception as e:
-            logger.error(f"크레딧 {action_label} 실패: {e}")
-            return {'success': False, 'error': str(e)}
-
+    """로컬 시뮬레이션 파일에 크레딧 변경을 저장합니다."""
     data = _load_local_credits()
     user_data = data.get(user_id, {'balance': 10, 'plan': 'free'})
     user_data['balance'] = new_balance
+    user_data['plan'] = plan
     user_data['updated_at'] = datetime.now(timezone.utc).isoformat()
     data[user_id] = user_data
     _save_local_credits(data)
@@ -85,21 +66,6 @@ class CreditService:
         Returns:
             {'balance': int, 'plan': str, 'updated_at': str}
         """
-        if is_supabase_enabled():
-            try:
-                client = get_supabase()
-                result = client.table('ie_credits').select('*') \
-                    .eq('user_id', user_id).maybe_single().execute()
-                if result.data:
-                    return {
-                        'balance': result.data.get('balance', 0),
-                        'plan': result.data.get('plan', 'free'),
-                        'updated_at': result.data.get('updated_at', ''),
-                    }
-            except Exception as e:
-                logger.error(f"크레딧 조회 실패: {e}")
-
-        # 로컬 폴백
         data = _load_local_credits()
         user_data = data.get(user_id, {})
         return {
@@ -127,7 +93,7 @@ class CreditService:
         with _credit_lock:
             current = CreditService.get_balance(user_id)
             new_balance = current['balance'] + amount
-            return _persist_credit_change(user_id, new_balance, current['plan'], amount, 'add', reason, '충전')
+            return _persist_credit_change(user_id, new_balance, current['plan'])
 
     @staticmethod
     def deduct_credits(user_id: str, amount: int = 1, reason: str = '') -> dict:
@@ -146,7 +112,7 @@ class CreditService:
                 return {'success': False, 'error': '크레딧이 부족합니다.', 'balance': current['balance']}
 
             new_balance = current['balance'] - amount
-            return _persist_credit_change(user_id, new_balance, current['plan'], -amount, 'deduct', reason, '차감')
+            return _persist_credit_change(user_id, new_balance, current['plan'])
 
     @staticmethod
     def check_sufficient(user_id: str, amount: int = 1) -> bool:
