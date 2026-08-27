@@ -665,6 +665,16 @@ class TestAgentRoutes(unittest.TestCase):
         return_value=False,
     )
     def test_chat_is_rate_limited(self, _, __):
+        from extensions import limiter
+
+        previous_enabled = limiter.enabled
+        self.app.config['RATELIMIT_ENABLED'] = True
+        limiter.enabled = True
+        limiter.init_app(self.app)
+        limiter.reset()
+        self.addCleanup(setattr, limiter, 'enabled', previous_enabled)
+        self.addCleanup(limiter.reset)
+
         fake_agent = SimpleNamespace(run=lambda **_kwargs: self._response())
         with patch('agent.AIAgent', return_value=fake_agent):
             responses = [

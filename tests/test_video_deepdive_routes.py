@@ -196,24 +196,35 @@ def test_extract_rejects_parallel_request_for_same_user(tmp_path):
 
 
 def test_extract_is_rate_limited_before_repeating_expensive_work(tmp_path):
+    from extensions import limiter
+
     client = _app(tmp_path)
+    previous_enabled = limiter.enabled
+    client.application.config['RATELIMIT_ENABLED'] = True
+    limiter.enabled = True
+    limiter.init_app(client.application)
+    limiter.reset()
     result = {
         "meta": {"id": "dQw4w9WgXcQ", "slide_count": 0, "slides": []},
         "slides": [],
     }
-    with patch(
-        "routes.video_deepdive_routes.build_visual_deepdive_from_video",
-        return_value=result,
-    ) as build:
-        responses = [
-            client.post(
-                "/api/video-deepdives/extract",
-                json={"video_id": "dQw4w9WgXcQ"},
-                headers={"Origin": "http://localhost:3000"},
-                environ_overrides={"REMOTE_ADDR": "198.51.100.202"},
-            )
-            for _ in range(3)
-        ]
+    try:
+        with patch(
+            "routes.video_deepdive_routes.build_visual_deepdive_from_video",
+            return_value=result,
+        ) as build:
+            responses = [
+                client.post(
+                    "/api/video-deepdives/extract",
+                    json={"video_id": "dQw4w9WgXcQ"},
+                    headers={"Origin": "http://localhost:3000"},
+                    environ_overrides={"REMOTE_ADDR": "198.51.100.202"},
+                )
+                for _ in range(3)
+            ]
+    finally:
+        limiter.reset()
+        limiter.enabled = previous_enabled
 
     assert [response.status_code for response in responses] == [201, 201, 429]
     assert build.call_count == 2

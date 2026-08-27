@@ -19,6 +19,8 @@ from collections import OrderedDict
 from contextlib import contextmanager
 from typing import Optional
 
+from services.usage.usage_lock import UsageLockUnavailable
+
 
 # ============================================================
 # 클라이언트 트래커 (heartbeat 기반)
@@ -287,6 +289,8 @@ def get_or_load_playlist_cache(cache_key: str, loader) -> tuple[dict, bool]:
     except PlaylistCacheUnavailable:
         raise
     except PlaylistLoadError:
+        raise
+    except UsageLockUnavailable:
         raise
     except Exception as exc:
         # A configured Redis dependency failing must not fan out into multiple

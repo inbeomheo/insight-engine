@@ -68,20 +68,25 @@ class TestPlaylistCache(unittest.TestCase):
 
         url = 'https://youtube.com/playlist?list=PLexpired'
 
-        # 첫 번째 요청
-        self.client.post('/api/playlist-videos',
-                         json={'url': url},
-                         headers={'Origin': 'http://localhost:3000'})
+        # 이 테스트는 프로세스 로컬 TTL만 검증하므로 CI의 Redis 캐시와 격리한다.
+        with patch(
+            'routes.utility._state._redis_playlist_client',
+            return_value=None,
+        ):
+            # 첫 번째 요청
+            self.client.post('/api/playlist-videos',
+                             json={'url': url},
+                             headers={'Origin': 'http://localhost:3000'})
 
-        # 캐시 타임스탬프를 강제로 과거로 설정
-        import routes.utility_routes as ut
-        cache_key = "playlist:PLexpired:10"
-        ut._PLAYLIST_CACHE[cache_key]['ts'] = time.time() - 400  # 5분 초과
+            # 캐시 타임스탬프를 강제로 과거로 설정
+            import routes.utility_routes as ut
+            cache_key = "playlist:PLexpired:10"
+            ut._PLAYLIST_CACHE[cache_key]['ts'] = time.time() - 400  # 5분 초과
 
-        # 두 번째 요청 — 캐시 만료, 재호출
-        self.client.post('/api/playlist-videos',
-                         json={'url': url},
-                         headers={'Origin': 'http://localhost:3000'})
+            # 두 번째 요청 — 캐시 만료, 재호출
+            self.client.post('/api/playlist-videos',
+                             json={'url': url},
+                             headers={'Origin': 'http://localhost:3000'})
         self.assertEqual(mock_get.call_count, 2)
 
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
@@ -183,6 +188,31 @@ class TestPlaylistCache(unittest.TestCase):
         redis_lock.acquire.assert_called_once_with(blocking=True)
         redis_lock.release.assert_called_once_with()
         redis_client.setex.assert_called_once()
+
+    def test_redis_path_preserves_usage_lock_loss(self):
+        from routes.utility import _state
+        from services.usage.usage_lock import UsageLockUnavailable
+
+        _state._PLAYLIST_CACHE.clear()
+        redis_client = MagicMock()
+        redis_client.get.side_effect = [None, None]
+        redis_lock = MagicMock()
+        redis_lock.acquire.return_value = True
+        redis_client.lock.return_value = redis_lock
+        loader = MagicMock(side_effect=UsageLockUnavailable('lease lost'))
+
+        with patch.object(
+            _state,
+            '_redis_playlist_client',
+            return_value=redis_client,
+        ), self.assertRaises(UsageLockUnavailable):
+            _state.get_or_load_playlist_cache(
+                'playlist:PLredislockloss:10',
+                loader,
+            )
+
+        redis_lock.release.assert_called_once_with()
+        redis_client.setex.assert_not_called()
 
 
 if __name__ == '__main__':

@@ -390,6 +390,16 @@ class TestCacheRoutes(_BaseTestCase):
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     @patch('routes.utility_routes.clear_cache', return_value=1)
     def test_clear_cache_is_rate_limited(self, _mock_clear, _):
+        from extensions import limiter
+
+        previous_enabled = limiter.enabled
+        self.app.config['RATELIMIT_ENABLED'] = True
+        limiter.enabled = True
+        limiter.init_app(self.app)
+        limiter.reset()
+        self.addCleanup(setattr, limiter, 'enabled', previous_enabled)
+        self.addCleanup(limiter.reset)
+
         responses = [
             self.client.delete(
                 '/api/cache',

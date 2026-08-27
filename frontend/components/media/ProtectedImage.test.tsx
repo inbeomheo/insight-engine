@@ -42,7 +42,11 @@ describe('ProtectedImage', () => {
   });
 
   it('상대 미디어 URL은 인증 fetch로 Blob을 받은 뒤 렌더링한다', async () => {
-    authFetchMock.mockResolvedValue(new Response(new Blob(['image']), { status: 200 }));
+    authFetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      blob: vi.fn().mockResolvedValue(new Blob(['image'])),
+    } as unknown as Response);
 
     await act(async () => {
       root.render(<ProtectedImage src="/api/video-deepdives/abc/media/shot.jpg" alt="shot" />);
