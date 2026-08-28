@@ -718,6 +718,15 @@ def test_edge_auth_uses_required_secret_and_routes_special_paths_correctly():
     assert 'proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for' not in railway_nginx
 
 
+def test_railway_nginx_logging_is_safe_after_privilege_drop():
+    railway_nginx = _read('nginx.railway.conf')
+
+    assert 'access_log off;' in railway_nginx
+    assert 'error_log stderr warn;' in railway_nginx
+    assert '/dev/stdout' not in railway_nginx
+    assert '/dev/stderr' not in railway_nginx
+
+
 def test_standard_nginx_routes_og_and_public_shares_before_generic_api():
     nginx = _read('nginx.conf')
 
