@@ -397,8 +397,11 @@ def _backend_command() -> list[str]:
         minimum=10,
         maximum=600,
     )
+    # Embedded Chroma keeps process-local WAL/HNSW state and is not safe when
+    # multiple processes open the same persistence directory. Keep concurrency
+    # inside one Gunicorn worker via threads.
     return [
-        'gunicorn', '--workers=2', '--threads=4', '--timeout=600',
+        'gunicorn', '--workers=1', '--threads=4', '--timeout=600',
         f'--graceful-timeout={graceful_timeout}',
         f'--bind={bind_host}:5001', 'app:app',
     ]

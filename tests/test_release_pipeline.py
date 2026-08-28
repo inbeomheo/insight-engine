@@ -900,6 +900,8 @@ def test_supervisor_backend_entrypoint_and_graceful_timeout(monkeypatch):
     monkeypatch.setenv('BACKEND_GRACEFUL_TIMEOUT_SECONDS', '240')
     command = module._backend_command()
 
+    assert '--workers=1' in command
+    assert '--preload' not in command
     assert '--graceful-timeout=240' in command
     assert command[-1] == 'app:app'
     assert 'app:create_app()' not in command
