@@ -75,6 +75,7 @@ export default defineConfig({
         '**/core-flow/**/*.spec.ts',
         '**/result-card/**/*.spec.ts',
         '**/dialog-close-regression/**/*.spec.ts',
+        '**/doc-scroll-pages/**/*.spec.ts',
         '**/auth/login.spec.ts', // 로그인 테스트는 인증 없이 실행
       ],
       use: {

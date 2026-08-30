@@ -49,7 +49,7 @@ export default function RootLayout({
           />
         </noscript>
       </head>
-      <body className="overflow-hidden h-screen">
+      <body>
         <Providers>{children}</Providers>
         {/* PWA Service Worker 등록 */}
         <script

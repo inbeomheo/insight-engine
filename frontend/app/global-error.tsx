@@ -10,7 +10,7 @@ export default function GlobalError({
 }) {
   return (
     <html lang="ko">
-      <body className="overflow-hidden h-screen">
+      <body>
         <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', fontFamily: 'sans-serif' }}>
           <div style={{ textAlign: 'center', maxWidth: '400px', padding: '0 24px' }}>
             <h2 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '12px' }}>
