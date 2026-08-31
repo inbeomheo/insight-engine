@@ -46,32 +46,32 @@ class TestBuildCompletionKwargs(unittest.TestCase):
     def test_basic_model(self):
         from services.core.ai_service import _build_completion_kwargs
         kwargs = _build_completion_kwargs('custom/local-model', 'test prompt')
-        self.assertEqual(kwargs['model'], 'openai/gpt-5.3-codex-spark')
+        self.assertEqual(kwargs['model'], 'openai/gpt-5.6-sol')
         self.assertIn('messages', kwargs)
         self.assertNotIn('temperature', kwargs)
         self.assertIn('max_tokens', kwargs)
 
-    def test_chatmock_model(self):
+    def test_cliproxy_model(self):
         from services.core.ai_service import _build_completion_kwargs
-        kwargs = _build_completion_kwargs('chatmock/gpt-5.3-codex-spark', 'test')
-        self.assertNotIn('chatmock/', kwargs['model'])
-        self.assertEqual(kwargs['model'], 'openai/gpt-5.3-codex-spark')
-        self.assertEqual(kwargs['api_key'], 'dummy')
-        self.assertEqual(kwargs['api_base'], 'http://127.0.0.1:8000/v1')
+        kwargs = _build_completion_kwargs('cliproxy/gpt-5.6-sol', 'test')
+        self.assertNotIn('cliproxy/', kwargs['model'])
+        self.assertEqual(kwargs['model'], 'openai/gpt-5.6-sol')
+        self.assertEqual(kwargs['api_key'], 'test-cliproxy-key')
+        self.assertEqual(kwargs['api_base'], 'http://cli-proxy-api:8317/v1')
         self.assertEqual(kwargs['reasoning_effort'], 'medium')
         self.assertTrue(kwargs.get('drop_params'))
         self.assertNotIn('temperature', kwargs)
 
-    def test_raw_gpt_model_uses_chatmock_base(self):
+    def test_raw_gpt_model_uses_cliproxy_base(self):
         from services.core.ai_service import _build_completion_kwargs
         kwargs = _build_completion_kwargs('gpt-5.4-mini', 'test')
-        self.assertEqual(kwargs['model'], 'openai/gpt-5.3-codex-spark')
-        self.assertEqual(kwargs['api_base'], 'http://127.0.0.1:8000/v1')
-        self.assertEqual(kwargs['api_key'], 'dummy')
+        self.assertEqual(kwargs['model'], 'openai/gpt-5.4-mini')
+        self.assertEqual(kwargs['api_base'], 'http://cli-proxy-api:8317/v1')
+        self.assertEqual(kwargs['api_key'], 'test-cliproxy-key')
 
     def test_stream_flag(self):
         from services.core.ai_service import _build_completion_kwargs
-        kwargs = _build_completion_kwargs('chatmock/gpt-5.4-mini', 'test', stream=True)
+        kwargs = _build_completion_kwargs('cliproxy/gpt-5.4-mini', 'test', stream=True)
         self.assertTrue(kwargs.get('stream'))
 
     def test_detail_level_applies(self):
@@ -300,11 +300,11 @@ class TestConvertErrorMessageExtended(unittest.TestCase):
         result = _convert_error_message('Connection refused')
         self.assertIn('연결', result)
 
-    def test_chatmock_connection_error_has_setup_hint(self):
+    def test_cliproxy_connection_error_has_setup_hint(self):
         from services.core.ai_service import _convert_error_message
-        result = _convert_error_message('Connection refused', model='chatmock/gpt-5.4-mini')
-        self.assertIn('chatmock login', result)
-        self.assertIn('chatmock serve', result)
+        result = _convert_error_message('Connection refused', model='cliproxy/gpt-5.6-sol')
+        self.assertIn('CLIProxyAPI 연결 실패', result)
+        self.assertIn('CLIPROXY_BASE_URL', result)
 
     def test_service_unavailable(self):
         from services.core.ai_service import _convert_error_message

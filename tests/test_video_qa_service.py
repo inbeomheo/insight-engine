@@ -41,7 +41,7 @@ class TestConstants(unittest.TestCase):
 
     def test_qa_model(self):
         """기본 QA 모델"""
-        self.assertIn('chatmock', DEFAULT_QA_MODEL)
+        self.assertIn('cliproxy', DEFAULT_QA_MODEL)
 
 
 class TestGetVideoCollection(unittest.TestCase):

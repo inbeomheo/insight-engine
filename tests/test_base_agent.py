@@ -28,8 +28,8 @@ class TestBaseAgent(unittest.TestCase):
     # --- 초기화 ---
 
     def test_init_with_model(self):
-        agent = ConcreteAgent(model='chatmock/gpt-5.4-mini')
-        self.assertEqual(agent.model, 'chatmock/gpt-5.4-mini')
+        agent = ConcreteAgent(model='cliproxy/gpt-5.6-sol')
+        self.assertEqual(agent.model, 'cliproxy/gpt-5.6-sol')
 
     def test_init_without_model(self):
         agent = ConcreteAgent()
@@ -43,10 +43,10 @@ class TestBaseAgent(unittest.TestCase):
     # --- _get_default_model ---
 
     @patch('services.agents.base_agent.BaseAgent._get_default_model')
-    def test_get_default_model_chatmock(self, mock_default):
-        mock_default.return_value = 'chatmock/gpt-5.4-mini'
+    def test_get_default_model_cliproxy(self, mock_default):
+        mock_default.return_value = 'cliproxy/gpt-5.6-sol'
         agent = ConcreteAgent()
-        self.assertEqual(agent._get_default_model(), 'chatmock/gpt-5.4-mini')
+        self.assertEqual(agent._get_default_model(), 'cliproxy/gpt-5.6-sol')
 
     def test_get_default_model_no_config(self):
         """config import 실패 시 기본 모델 반환"""
@@ -64,31 +64,31 @@ class TestBaseAgent(unittest.TestCase):
         mock_resp.choices[0].message.content = '응답 텍스트'
         mock_llm.return_value = mock_resp
 
-        agent = ConcreteAgent(model='chatmock/gpt-5.4-mini')
+        agent = ConcreteAgent(model='cliproxy/gpt-5.6-sol')
         result = agent._call_ai('테스트 프롬프트')
         self.assertEqual(result, '응답 텍스트')
 
-    # --- _call_ai: ChatMock ---
+    # --- _call_ai: CLIProxyAPI ---
 
     @patch('litellm.completion')
-    def test_call_ai_chatmock_sets_api_base(self, mock_llm):
+    def test_call_ai_cliproxy_sets_api_base(self, mock_llm):
         mock_resp = MagicMock()
         mock_resp.choices[0].message.content = '응답'
         mock_llm.return_value = mock_resp
 
-        agent = ConcreteAgent(model='chatmock/gpt-5.4-mini')
+        agent = ConcreteAgent(model='cliproxy/gpt-5.6-sol')
         agent._call_ai('prompt')
 
         kwargs = mock_llm.call_args[1]
-        self.assertEqual(kwargs['model'], 'openai/gpt-5.3-codex-spark')
-        self.assertEqual(kwargs['api_key'], 'dummy')
+        self.assertEqual(kwargs['model'], 'openai/gpt-5.6-sol')
+        self.assertEqual(kwargs['api_key'], 'test-cliproxy-key')
         self.assertIn('api_base', kwargs)
         self.assertEqual(kwargs['reasoning_effort'], 'medium')
         self.assertTrue(kwargs['drop_params'])
         self.assertNotIn('temperature', kwargs)
 
     @patch('litellm.completion')
-    def test_call_ai_raw_gpt_uses_chatmock(self, mock_llm):
+    def test_call_ai_raw_gpt_uses_cliproxy(self, mock_llm):
         mock_resp = MagicMock()
         mock_resp.choices[0].message.content = '응답'
         mock_llm.return_value = mock_resp
@@ -97,15 +97,15 @@ class TestBaseAgent(unittest.TestCase):
         agent._call_ai('prompt')
 
         kwargs = mock_llm.call_args[1]
-        self.assertEqual(kwargs['model'], 'openai/gpt-5.3-codex-spark')
-        self.assertEqual(kwargs['api_key'], 'dummy')
+        self.assertEqual(kwargs['model'], 'openai/gpt-5.4')
+        self.assertEqual(kwargs['api_key'], 'test-cliproxy-key')
         self.assertIn('api_base', kwargs)
 
     # --- _call_ai: 오류 ---
 
     @patch('litellm.completion', side_effect=Exception('timeout'))
     def test_call_ai_failure_raises(self, mock_llm):
-        agent = ConcreteAgent(model='chatmock/gpt-5.4-mini')
+        agent = ConcreteAgent(model='cliproxy/gpt-5.6-sol')
         with self.assertRaises(Exception) as ctx:
             agent._call_ai('prompt')
         self.assertIn('timeout', str(ctx.exception))

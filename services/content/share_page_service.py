@@ -117,8 +117,11 @@ class SharePageStore:
             raise FileNotFoundError(share_id)
         data = json.loads(path.read_text(encoding="utf-8"))
         data["html"] = sanitize_html(str(data.get("html") or html_from_content(str(data.get("content") or ""))))
-        data["share_url"] = data.get("share_url") or (
-            f"{self.origin}/share/{data['id']}" if self.origin else f"/share/{data['id']}"
+        # 저장 당시의 내부/Tailscale origin을 영구 보존하지 않는다. 현재 배포의
+        # PUBLIC_ORIGIN을 단일 진실 소스로 사용해 기존 공유 링크도 자동 교정한다.
+        data["share_url"] = (
+            f"{self.origin}/share/{data['id']}" if self.origin
+            else data.get("share_url") or f"/share/{data['id']}"
         )
         return data
 
@@ -129,6 +132,12 @@ def render_share_html(item: Mapping[str, Any]) -> str:
     source_url = escape(str(item.get("url") or ""), quote=True)
     created_at = escape(str(item.get("created_at") or ""))
     description = escape(_preview_text(str(item.get("content") or body)), quote=True)
+    share_url = escape(str(item.get("share_url") or ""), quote=True)
+    canonical_meta = (
+        f'  <link rel="canonical" href="{share_url}">\n'
+        f'  <meta property="og:url" content="{share_url}">\n'
+        if share_url else ""
+    )
     source_link = (
         f'<a class="source" href="{source_url}" target="_blank" rel="noopener noreferrer">원본 열기</a>'
         if source_url else ""
@@ -138,11 +147,13 @@ def render_share_html(item: Mapping[str, Any]) -> str:
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{title}</title>
+  <title>{title} · Insight Engine</title>
   <meta name="description" content="{description}">
   <meta property="og:title" content="{title}">
   <meta property="og:description" content="{description}">
   <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Insight Engine">
+{canonical_meta.rstrip()}
   <style>
     :root {{ color-scheme: light dark; --bg:#0f1115; --card:#171a21; --text:#f4f4f5; --muted:#a1a1aa; --accent:#8b5cf6; }}
     @media (prefers-color-scheme: light) {{ :root {{ --bg:#f8fafc; --card:#fff; --text:#111827; --muted:#6b7280; }} }}

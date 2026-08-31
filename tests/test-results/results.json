@@ -1,7 +1,7 @@
 {
   "config": {
-    "configFile": "E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\playwright.config.ts",
-    "rootDir": "E:/자동화 프로젝트/250705_스마트 콘텐츠 생성기(완성)/tests/e2e",
+    "configFile": "/home/heo/workspace/insight-engine/tests/e2e/playwright.config.ts",
+    "rootDir": "/home/heo/workspace/insight-engine/tests/e2e",
     "forbidOnly": false,
     "fullyParallel": true,
     "globalSetup": null,
@@ -12,132 +12,6 @@
     "maxFailures": 0,
     "metadata": {},
     "preserveOutput": "always",
-    "projects": [
-      {
-        "outputDir": "E:/자동화 프로젝트/250705_스마트 콘텐츠 생성기(완성)/tests/e2e/test-results",
-        "repeatEach": 1,
-        "retries": 0,
-        "metadata": {},
-        "id": "no-auth-chromium",
-        "name": "no-auth-chromium",
-        "testDir": "E:/자동화 프로젝트/250705_스마트 콘텐츠 생성기(완성)/tests/e2e",
-        "testIgnore": [],
-        "testMatch": [
-          "**/main-page/**/*.spec.ts",
-          "**/url-input/**/*.spec.ts",
-          "**/url-management/**/*.spec.ts",
-          "**/accessibility/**/*.spec.ts",
-          "**/responsive/**/*.spec.ts",
-          "**/settings-modals/**/*.spec.ts",
-          "**/history-usage/**/*.spec.ts",
-          "**/core-flow/**/*.spec.ts",
-          "**/result-card/**/*.spec.ts",
-          "**/auth/login.spec.ts"
-        ],
-        "timeout": 60000
-      },
-      {
-        "outputDir": "E:/자동화 프로젝트/250705_스마트 콘텐츠 생성기(완성)/tests/e2e/test-results",
-        "repeatEach": 1,
-        "retries": 0,
-        "metadata": {},
-        "id": "content-generation",
-        "name": "content-generation",
-        "testDir": "E:/자동화 프로젝트/250705_스마트 콘텐츠 생성기(완성)/tests/e2e",
-        "testIgnore": [],
-        "testMatch": [
-          "**/content-generation/**/*.spec.ts"
-        ],
-        "timeout": 60000
-      },
-      {
-        "outputDir": "E:/자동화 프로젝트/250705_스마트 콘텐츠 생성기(완성)/tests/e2e/test-results",
-        "repeatEach": 1,
-        "retries": 0,
-        "metadata": {},
-        "id": "batch-generation",
-        "name": "batch-generation",
-        "testDir": "E:/자동화 프로젝트/250705_스마트 콘텐츠 생성기(완성)/tests/e2e",
-        "testIgnore": [],
-        "testMatch": [
-          "**/batch-generation/**/*.spec.ts"
-        ],
-        "timeout": 60000
-      },
-      {
-        "outputDir": "E:/자동화 프로젝트/250705_스마트 콘텐츠 생성기(완성)/tests/e2e/test-results",
-        "repeatEach": 1,
-        "retries": 0,
-        "metadata": {},
-        "id": "auth-setup",
-        "name": "auth-setup",
-        "testDir": "E:/자동화 프로젝트/250705_스마트 콘텐츠 생성기(완성)/tests/e2e",
-        "testIgnore": [],
-        "testMatch": [
-          "**/auth/setup.spec.ts"
-        ],
-        "timeout": 60000
-      },
-      {
-        "outputDir": "E:/자동화 프로젝트/250705_스마트 콘텐츠 생성기(완성)/tests/e2e/test-results",
-        "repeatEach": 1,
-        "retries": 0,
-        "metadata": {},
-        "id": "authenticated-tests",
-        "name": "authenticated-tests",
-        "testDir": "E:/자동화 프로젝트/250705_스마트 콘텐츠 생성기(완성)/tests/e2e",
-        "testIgnore": [],
-        "testMatch": [
-          "**/settings/**/*.spec.ts",
-          "**/history/**/*.spec.ts",
-          "**/usage/**/*.spec.ts"
-        ],
-        "timeout": 60000
-      },
-      {
-        "outputDir": "E:/자동화 프로젝트/250705_스마트 콘텐츠 생성기(완성)/tests/e2e/test-results",
-        "repeatEach": 1,
-        "retries": 0,
-        "metadata": {},
-        "id": "error-handling",
-        "name": "error-handling",
-        "testDir": "E:/자동화 프로젝트/250705_스마트 콘텐츠 생성기(완성)/tests/e2e",
-        "testIgnore": [],
-        "testMatch": [
-          "**/error-handling/**/*.spec.ts"
-        ],
-        "timeout": 60000
-      },
-      {
-        "outputDir": "E:/자동화 프로젝트/250705_스마트 콘텐츠 생성기(완성)/tests/e2e/test-results",
-        "repeatEach": 1,
-        "retries": 0,
-        "metadata": {},
-        "id": "performance",
-        "name": "performance",
-        "testDir": "E:/자동화 프로젝트/250705_스마트 콘텐츠 생성기(완성)/tests/e2e",
-        "testIgnore": [],
-        "testMatch": [
-          "**/performance/**/*.spec.ts"
-        ],
-        "timeout": 60000
-      },
-      {
-        "outputDir": "E:/자동화 프로젝트/250705_스마트 콘텐츠 생성기(완성)/tests/e2e/test-results",
-        "repeatEach": 1,
-        "retries": 0,
-        "metadata": {},
-        "id": "mobile-chrome",
-        "name": "mobile-chrome",
-        "testDir": "E:/자동화 프로젝트/250705_스마트 콘텐츠 생성기(완성)/tests/e2e",
-        "testIgnore": [],
-        "testMatch": [
-          "**/responsive/**/*.spec.ts"
-        ],
-        "timeout": 60000
-      }
-    ],
-    "quiet": false,
     "reporter": [
       [
         "list",
@@ -161,482 +35,240 @@
       "max": 5,
       "threshold": 300000
     },
-    "runAgents": "none",
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "/home/heo/workspace/insight-engine/tests/e2e/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "no-auth-chromium",
+        "name": "no-auth-chromium",
+        "testDir": "/home/heo/workspace/insight-engine/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/main-page/**/*.spec.ts",
+          "**/url-input/**/*.spec.ts",
+          "**/url-management/**/*.spec.ts",
+          "**/accessibility/**/*.spec.ts",
+          "**/responsive/**/*.spec.ts",
+          "**/settings-modals/**/*.spec.ts",
+          "**/history-usage/**/*.spec.ts",
+          "**/core-flow/**/*.spec.ts",
+          "**/result-card/**/*.spec.ts",
+          "**/dialog-close-regression/**/*.spec.ts",
+          "**/auth/login.spec.ts"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "/home/heo/workspace/insight-engine/tests/e2e/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "batch-generation",
+        "name": "batch-generation",
+        "testDir": "/home/heo/workspace/insight-engine/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/batch-generation/**/*.spec.ts"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "/home/heo/workspace/insight-engine/tests/e2e/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "auth-setup",
+        "name": "auth-setup",
+        "testDir": "/home/heo/workspace/insight-engine/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/auth/setup.spec.ts"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "/home/heo/workspace/insight-engine/tests/e2e/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "authenticated-tests",
+        "name": "authenticated-tests",
+        "testDir": "/home/heo/workspace/insight-engine/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/settings/**/*.spec.ts",
+          "**/history/**/*.spec.ts",
+          "**/usage/**/*.spec.ts"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "/home/heo/workspace/insight-engine/tests/e2e/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "error-handling",
+        "name": "error-handling",
+        "testDir": "/home/heo/workspace/insight-engine/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/error-handling/**/*.spec.ts"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "/home/heo/workspace/insight-engine/tests/e2e/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "performance",
+        "name": "performance",
+        "testDir": "/home/heo/workspace/insight-engine/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/performance/**/*.spec.ts"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "/home/heo/workspace/insight-engine/tests/e2e/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "mobile-chrome",
+        "name": "mobile-chrome",
+        "testDir": "/home/heo/workspace/insight-engine/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/responsive/**/*.spec.ts"
+        ],
+        "timeout": 60000
+      }
+    ],
     "shard": null,
     "tags": [],
     "updateSnapshots": "missing",
     "updateSourceMethod": "patch",
-    "version": "1.58.2",
-    "workers": 6,
-    "webServer": {
-      "command": "python app.py",
-      "url": "http://localhost:5001",
-      "cwd": "../../",
-      "reuseExistingServer": true,
-      "timeout": 120000,
-      "env": {
-        "ALLUSERSPROFILE": "C:\\ProgramData",
-        "APPDATA": "C:\\Users\\qlqla\\AppData\\Roaming",
-        "BROWSERSLIST_IGNORE_OLD_DATA": "true",
-        "ChocolateyInstall": "C:\\ProgramData\\chocolatey",
-        "ChocolateyLastPathUpdate": "133883356670266500",
-        "CLAUDECODE": "1",
-        "CLAUDE_CODE_DISABLE_AUTO_MEMORY": "0",
-        "CLAUDE_CODE_ENTRYPOINT": "cli",
-        "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
-        "COLOR": "0",
-        "COMMONPROGRAMFILES": "C:\\Program Files\\Common Files",
-        "CommonProgramFiles(x86)": "C:\\Program Files (x86)\\Common Files",
-        "CommonProgramW6432": "C:\\Program Files\\Common Files",
-        "COMPUTERNAME": "DESKTOP-JK9R39H",
-        "COMSPEC": "C:\\WINDOWS\\system32\\cmd.exe",
-        "COREPACK_ENABLE_AUTO_PIN": "0",
-        "DriverData": "C:\\Windows\\System32\\Drivers\\DriverData",
-        "EDITOR": "C:\\WINDOWS\\notepad.exe",
-        "EXEPATH": "C:\\Program Files\\Git\\bin",
-        "GIT_EDITOR": "true",
-        "HOME": "C:\\Users\\qlqla",
-        "HOMEDRIVE": "C:",
-        "HOMEPATH": "\\Users\\qlqla",
-        "INIT_CWD": "E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)",
-        "LOCALAPPDATA": "C:\\Users\\qlqla\\AppData\\Local",
-        "LOGONSERVER": "\\\\DESKTOP-JK9R39H",
-        "MSYS": "disable_pcon",
-        "MSYSTEM": "MINGW64",
-        "NODE": "C:\\Program Files\\nodejs\\node.exe",
-        "NoDefaultCurrentDirectoryInExePath": "1",
-        "npm_command": "exec",
-        "npm_config_cache": "C:\\Users\\qlqla\\AppData\\Local\\npm-cache",
-        "npm_config_globalconfig": "C:\\Users\\qlqla\\AppData\\Roaming\\npm\\etc\\npmrc",
-        "npm_config_global_prefix": "C:\\Users\\qlqla\\AppData\\Roaming\\npm",
-        "npm_config_init_module": "C:\\Users\\qlqla\\.npm-init.js",
-        "npm_config_local_prefix": "E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)",
-        "npm_config_node_gyp": "C:\\Program Files\\nodejs\\node_modules\\npm\\node_modules\\node-gyp\\bin\\node-gyp.js",
-        "npm_config_noproxy": "",
-        "npm_config_npm_version": "10.9.2",
-        "npm_config_prefix": "C:\\Users\\qlqla\\AppData\\Roaming\\npm",
-        "npm_config_userconfig": "C:\\Users\\qlqla\\.npmrc",
-        "npm_config_user_agent": "npm/10.9.2 node/v22.14.0 win32 x64 workspaces/false",
-        "npm_execpath": "C:\\Program Files\\nodejs\\node_modules\\npm\\bin\\npm-cli.js",
-        "npm_lifecycle_event": "npx",
-        "npm_lifecycle_script": "playwright",
-        "npm_node_execpath": "C:\\Program Files\\nodejs\\node.exe",
-        "npm_package_json": "E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\package.json",
-        "npm_package_name": "insight-engine",
-        "npm_package_version": "1.0.0",
-        "NUMBER_OF_PROCESSORS": "12",
-        "OLDPWD": "E:/자동화 프로젝트/250705_스마트 콘텐츠 생성기(완성)",
-        "OneDrive": "C:\\Users\\qlqla\\OneDrive",
-        "OneDriveConsumer": "C:\\Users\\qlqla\\OneDrive",
-        "OPENAI_API_KEY": "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",
-        "OS": "Windows_NT",
-        "OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE": "delta",
-        "PATH": "E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\node_modules\\.bin;E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\node_modules\\.bin;E:\\자동화 프로젝트\\node_modules\\.bin;E:\\node_modules\\.bin;C:\\Program Files\\nodejs\\node_modules\\npm\\node_modules\\@npmcli\\run-script\\lib\\node-gyp-bin;C:\\Program Files\\Git\\mingw64\\bin;C:\\Program Files\\Git\\usr\\bin;C:\\Users\\qlqla\\bin;C:\\Python313\\Scripts;C:\\Python313;C:\\Users\\qlqla\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0;C:\\WINDOWS\\System32\\OpenSSH;C:\\Program Files\\dotnet;C:\\Program Files\\Bandizip;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\bin;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\shims;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\bin;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\shims;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\bin;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\shims;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\bin;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\shims;C:\\Users\\qlqla\\AppData\\Local\\Programs\\Python\\Python312\\Scripts;C:\\Users\\qlqla\\AppData\\Local\\Programs\\Python\\Python312;C:\\Users\\qlqla\\AppData\\Local\\Programs\\Python\\Launcher;C:\\Users\\qlqla\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Users\\qlqla\\AppData\\Roaming\\npm;C:\\Program Files (x86)\\ESTsoft\\ALSee\\x64;C:\\Users\\qlqla\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin;C:\\Program Files\\Git\\cmd;C:\\Program Files\\nodejs;C:\\ProgramData\\chocolatey\\bin;C:\\Program Files\\GitHub CLI;C:\\Users\\qlqla\\.local\\bin;C:\\Program Files\\PowerToys\\DSCModules;C:\\Python313\\Scripts;C:\\Python313;C:\\Users\\qlqla\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0;C:\\WINDOWS\\System32\\OpenSSH;C:\\Program Files\\dotnet;C:\\Program Files\\Bandizip;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\bin;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\shims;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\bin;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\shims;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\bin;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\shims;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\bin;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\shims;C:\\Users\\qlqla\\AppData\\Local\\Programs\\Python\\Python312\\Scripts;C:\\Users\\qlqla\\AppData\\Local\\Programs\\Python\\Python312;C:\\Users\\qlqla\\AppData\\Local\\Programs\\Python\\Launcher;C:\\Users\\qlqla\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Users\\qlqla\\AppData\\Roaming\\npm;C:\\Program Files (x86)\\ESTsoft\\ALSee\\x64;C:\\Users\\qlqla\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin;C:\\Program Files\\Git\\cmd;C:\\Program Files\\nodejs;C:\\ProgramData\\chocolatey\\bin;C:\\Program Files\\GitHub CLI;C:\\Users\\qlqla\\.local\\bin;C:\\Program Files\\PowerToys\\DSCModules;C:\\Users\\qlqla\\.claude\\bin;C:\\Python313\\Scripts;C:\\Python313;C:\\Users\\qlqla\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0;C:\\WINDOWS\\System32\\OpenSSH;C:\\Program Files\\dotnet;C:\\Program Files\\Bandizip;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\bin;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\shims;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\bin;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\shims;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\bin;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\shims;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\bin;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\shims;C:\\Users\\qlqla\\AppData\\Local\\Programs\\Python\\Python312\\Scripts;C:\\Users\\qlqla\\AppData\\Local\\Programs\\Python\\Python312;C:\\Users\\qlqla\\AppData\\Local\\Programs\\Python\\Launcher;C:\\Users\\qlqla\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Users\\qlqla\\AppData\\Roaming\\npm;C:\\Program Files (x86)\\ESTsoft\\ALSee\\x64;C:\\Users\\qlqla\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin;C:\\Program Files\\Git\\cmd;C:\\Program Files\\nodejs;C:\\ProgramData\\chocolatey\\bin;C:\\Program Files\\GitHub CLI;C:\\Program Files\\PowerToys\\DSCModules;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\bin;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\shims;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\bin;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\shims;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\bin;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\shims;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\bin;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\shims;C:\\Users\\qlqla\\AppData\\Local\\Programs\\Python\\Python312\\Scripts;C:\\Users\\qlqla\\AppData\\Local\\Programs\\Python\\Python312;C:\\Users\\qlqla\\AppData\\Local\\Programs\\Python\\Launcher;C:\\Users\\qlqla\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Users\\qlqla\\AppData\\Local\\Programs\\Microsoft VS Code\\bin;C:\\Users\\qlqla\\AppData\\Roaming\\npm;C:\\Users\\qlqla\\AppData\\Local\\Google\\Cloud SDK\\google-cloud-sdk\\bin;C:\\Users\\qlqla\\AppData\\Local\\Microsoft\\WinGet\\Packages\\jqlang.jq_Microsoft.Winget.Source_8wekyb3d8bbwe;C:\\Users\\qlqla\\AppData\\Local\\Programs\\Warp\\bin;C:\\Users\\qlqla\\.local\\bin;C:\\Users\\qlqla\\AppData\\Roaming\\Python\\Python313\\Scripts",
-        "PATHEXT": ".COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC;.PY;.PYW;.CPL",
-        "PLINK_PROTOCOL": "ssh",
-        "PROCESSOR_ARCHITECTURE": "AMD64",
-        "PROCESSOR_IDENTIFIER": "AMD64 Family 23 Model 1 Stepping 1, AuthenticAMD",
-        "PROCESSOR_LEVEL": "23",
-        "PROCESSOR_REVISION": "0101",
-        "ProgramData": "C:\\ProgramData",
-        "PROGRAMFILES": "C:\\Program Files",
-        "ProgramFiles(x86)": "C:\\Program Files (x86)",
-        "ProgramW6432": "C:\\Program Files",
-        "PROMPT": "$P$G",
-        "PSModulePath": "C:\\Users\\qlqla\\Documents\\WindowsPowerShell\\Modules;;C:\\Program Files\\WindowsPowerShell\\Modules;C:\\WINDOWS\\system32\\WindowsPowerShell\\v1.0\\Modules",
-        "PUBLIC": "C:\\Users\\Public",
-        "PWD": "E:/자동화 프로젝트/250705_스마트 콘텐츠 생성기(완성)",
-        "PYENV": "C:\\Users\\qlqla\\.pyenv\\pyenv-win\\",
-        "PYENV_HOME": "C:\\Users\\qlqla\\.pyenv\\pyenv-win\\",
-        "PYENV_ROOT": "C:\\Users\\qlqla\\.pyenv\\pyenv-win\\",
-        "SESSIONNAME": "Console",
-        "SHELL": "C:\\Program Files\\Git\\usr\\bin\\bash.exe",
-        "SHLVL": "2",
-        "SSH_SOCKET_DIR": "~/.ssh",
-        "SYSTEMDRIVE": "C:",
-        "SYSTEMROOT": "C:\\WINDOWS",
-        "TEMP": "C:\\Users\\qlqla\\AppData\\Local\\Temp",
-        "TERM": "xterm-256color",
-        "TERM_PROGRAM": "WarpTerminal",
-        "TMP": "C:\\Users\\qlqla\\AppData\\Local\\Temp",
-        "USERDOMAIN": "DESKTOP-JK9R39H",
-        "USERDOMAIN_ROAMINGPROFILE": "DESKTOP-JK9R39H",
-        "USERNAME": "qlqla",
-        "USERPROFILE": "C:\\Users\\qlqla",
-        "WARP_HONOR_PS1": "0",
-        "WARP_IS_LOCAL_SHELL_SESSION": "1",
-        "WARP_PATH_APPEND": "",
-        "WARP_SHELL_DEBUG_MODE": "0",
-        "WARP_USE_SSH_WRAPPER": "1",
-        "WINDIR": "C:\\WINDOWS",
-        "_": "C:/Program Files/nodejs/node.exe",
-        "SUPABASE_URL": "",
-        "SUPABASE_ANON_KEY": ""
-      }
-    }
+    "version": "1.57.0",
+    "workers": 2,
+    "webServer": null
   },
-  "suites": [],
-  "errors": [
+  "suites": [
     {
-      "message": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.",
-      "stack": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.\n    at TestTypeImpl._currentSuite (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:75:13)\n    at TestTypeImpl._describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:115:24)\n    at Function.describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\transform\\transform.js:275:12)\n    at Object.<anonymous> (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\accessibility\\aria-labels.spec.ts:9:6)",
-      "location": {
-        "file": "E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\accessibility\\aria-labels.spec.ts",
-        "column": 6,
-        "line": 9
-      },
-      "snippet": "\u001b[90m   at \u001b[39maccessibility\\aria-labels.spec.ts:9\n\n\u001b[0m \u001b[90m  7 |\u001b[39m \u001b[36mimport\u001b[39m { test\u001b[33m,\u001b[39m expect } \u001b[36mfrom\u001b[39m \u001b[32m'../fixtures/test-fixtures'\u001b[39m\u001b[33m;\u001b[39m\n \u001b[90m  8 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m  9 |\u001b[39m test\u001b[33m.\u001b[39mdescribe(\u001b[32m'ARIA 레이블 @parallel @no-auth @a11y'\u001b[39m\u001b[33m,\u001b[39m () \u001b[33m=>\u001b[39m {\n \u001b[90m    |\u001b[39m      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 10 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ mainPage }) \u001b[33m=>\u001b[39m {\n \u001b[90m 11 |\u001b[39m     \u001b[36mawait\u001b[39m mainPage\u001b[33m.\u001b[39mgoto()\u001b[33m;\u001b[39m\n \u001b[90m 12 |\u001b[39m   })\u001b[33m;\u001b[39m\u001b[0m"
-    },
-    {
-      "message": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.",
-      "stack": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.\n    at TestTypeImpl._currentSuite (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:75:13)\n    at TestTypeImpl._describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:115:24)\n    at Function.describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\transform\\transform.js:275:12)\n    at Object.<anonymous> (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\accessibility\\keyboard-navigation.spec.ts:9:6)",
-      "location": {
-        "file": "E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\accessibility\\keyboard-navigation.spec.ts",
-        "column": 6,
-        "line": 9
-      },
-      "snippet": "\u001b[90m   at \u001b[39maccessibility\\keyboard-navigation.spec.ts:9\n\n\u001b[0m \u001b[90m  7 |\u001b[39m \u001b[36mimport\u001b[39m { test\u001b[33m,\u001b[39m expect } \u001b[36mfrom\u001b[39m \u001b[32m'../fixtures/test-fixtures'\u001b[39m\u001b[33m;\u001b[39m\n \u001b[90m  8 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m  9 |\u001b[39m test\u001b[33m.\u001b[39mdescribe(\u001b[32m'키보드 네비게이션 @parallel @no-auth @a11y'\u001b[39m\u001b[33m,\u001b[39m () \u001b[33m=>\u001b[39m {\n \u001b[90m    |\u001b[39m      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 10 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ mainPage }) \u001b[33m=>\u001b[39m {\n \u001b[90m 11 |\u001b[39m     \u001b[36mawait\u001b[39m mainPage\u001b[33m.\u001b[39mgoto()\u001b[33m;\u001b[39m\n \u001b[90m 12 |\u001b[39m   })\u001b[33m;\u001b[39m\u001b[0m"
-    },
-    {
-      "message": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.",
-      "stack": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.\n    at TestTypeImpl._currentSuite (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:75:13)\n    at TestTypeImpl._describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:115:24)\n    at Function.describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\transform\\transform.js:275:12)\n    at Object.<anonymous> (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\auth\\login.spec.ts:9:6)",
-      "location": {
-        "file": "E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\auth\\login.spec.ts",
-        "column": 6,
-        "line": 9
-      },
-      "snippet": "\u001b[90m   at \u001b[39mauth\\login.spec.ts:9\n\n\u001b[0m \u001b[90m  7 |\u001b[39m \u001b[36mimport\u001b[39m { test\u001b[33m,\u001b[39m expect } \u001b[36mfrom\u001b[39m \u001b[32m'../fixtures/test-fixtures'\u001b[39m\u001b[33m;\u001b[39m\n \u001b[90m  8 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m  9 |\u001b[39m test\u001b[33m.\u001b[39mdescribe(\u001b[32m'로그인 @parallel @no-auth'\u001b[39m\u001b[33m,\u001b[39m () \u001b[33m=>\u001b[39m {\n \u001b[90m    |\u001b[39m      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 10 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ mainPage }) \u001b[33m=>\u001b[39m {\n \u001b[90m 11 |\u001b[39m     \u001b[36mawait\u001b[39m mainPage\u001b[33m.\u001b[39mgoto()\u001b[33m;\u001b[39m\n \u001b[90m 12 |\u001b[39m   })\u001b[33m;\u001b[39m\u001b[0m"
-    },
-    {
-      "message": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.",
-      "stack": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.\n    at TestTypeImpl._currentSuite (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:75:13)\n    at TestTypeImpl._describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:115:24)\n    at Function.describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\transform\\transform.js:275:12)\n    at Object.<anonymous> (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\core-flow\\user-journey.spec.ts:8:6)",
-      "location": {
-        "file": "E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\core-flow\\user-journey.spec.ts",
-        "column": 6,
-        "line": 8
-      },
-      "snippet": "\u001b[90m   at \u001b[39mcore-flow\\user-journey.spec.ts:8\n\n\u001b[0m \u001b[90m  6 |\u001b[39m \u001b[90m */\u001b[39m\n \u001b[90m  7 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m  8 |\u001b[39m test\u001b[33m.\u001b[39mdescribe(\u001b[32m'핵심 사용자 흐름'\u001b[39m\u001b[33m,\u001b[39m () \u001b[33m=>\u001b[39m {\n \u001b[90m    |\u001b[39m      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m  9 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ mainPage }) \u001b[33m=>\u001b[39m {\n \u001b[90m 10 |\u001b[39m     \u001b[36mawait\u001b[39m mainPage\u001b[33m.\u001b[39mgoto()\u001b[33m;\u001b[39m\n \u001b[90m 11 |\u001b[39m   })\u001b[33m;\u001b[39m\u001b[0m"
-    },
-    {
-      "message": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.",
-      "stack": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.\n    at TestTypeImpl._currentSuite (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:75:13)\n    at TestTypeImpl._describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:115:24)\n    at Function.describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\transform\\transform.js:275:12)\n    at Object.<anonymous> (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\history-usage\\panels.spec.ts:11:6)",
-      "location": {
-        "file": "E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\history-usage\\panels.spec.ts",
-        "column": 6,
-        "line": 11
-      },
-      "snippet": "\u001b[90m   at \u001b[39mhistory-usage\\panels.spec.ts:11\n\n\u001b[0m \u001b[90m  9 |\u001b[39m \u001b[36mimport\u001b[39m { test\u001b[33m,\u001b[39m expect } \u001b[36mfrom\u001b[39m \u001b[32m'../fixtures/test-fixtures'\u001b[39m\u001b[33m;\u001b[39m\n \u001b[90m 10 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 11 |\u001b[39m test\u001b[33m.\u001b[39mdescribe(\u001b[32m'히스토리 및 사용량 패널 @parallel'\u001b[39m\u001b[33m,\u001b[39m () \u001b[33m=>\u001b[39m {\n \u001b[90m    |\u001b[39m      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 12 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ mainPage }) \u001b[33m=>\u001b[39m {\n \u001b[90m 13 |\u001b[39m     \u001b[36mawait\u001b[39m mainPage\u001b[33m.\u001b[39mgoto()\u001b[33m;\u001b[39m\n \u001b[90m 14 |\u001b[39m   })\u001b[33m;\u001b[39m\u001b[0m"
-    },
-    {
-      "message": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.",
-      "stack": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.\n    at TestTypeImpl._currentSuite (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:75:13)\n    at TestTypeImpl._describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:115:24)\n    at Function.describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\transform\\transform.js:275:12)\n    at Object.<anonymous> (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\main-page\\deepseek-provider.spec.ts:3:6)",
-      "location": {
-        "file": "E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\main-page\\deepseek-provider.spec.ts",
-        "column": 6,
-        "line": 3
-      },
-      "snippet": "\u001b[90m   at \u001b[39mmain-page\\deepseek-provider.spec.ts:3\n\n\u001b[0m \u001b[90m 1 |\u001b[39m \u001b[36mimport\u001b[39m { test\u001b[33m,\u001b[39m expect } \u001b[36mfrom\u001b[39m \u001b[32m'../fixtures/test-fixtures'\u001b[39m\u001b[33m;\u001b[39m\n \u001b[90m 2 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 3 |\u001b[39m test\u001b[33m.\u001b[39mdescribe(\u001b[32m'DeepSeek 프로바이더'\u001b[39m\u001b[33m,\u001b[39m () \u001b[33m=>\u001b[39m {\n \u001b[90m   |\u001b[39m      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 4 |\u001b[39m   test(\u001b[32m'프로바이더 목록에 DeepSeek가 표시된다'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n \u001b[90m 5 |\u001b[39m     \u001b[36mconst\u001b[39m response \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mrequest\u001b[33m.\u001b[39m\u001b[36mget\u001b[39m(\u001b[32m'/api/providers'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 6 |\u001b[39m     \u001b[36mconst\u001b[39m data \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m response\u001b[33m.\u001b[39mjson()\u001b[33m;\u001b[39m\u001b[0m"
-    },
-    {
-      "message": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.",
-      "stack": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.\n    at TestTypeImpl._currentSuite (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:75:13)\n    at TestTypeImpl._describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:115:24)\n    at Function.describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\transform\\transform.js:275:12)\n    at Object.<anonymous> (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\main-page\\page-load.spec.ts:9:6)",
-      "location": {
-        "file": "E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\main-page\\page-load.spec.ts",
-        "column": 6,
-        "line": 9
-      },
-      "snippet": "\u001b[90m   at \u001b[39mmain-page\\page-load.spec.ts:9\n\n\u001b[0m \u001b[90m  7 |\u001b[39m \u001b[36mimport\u001b[39m { test\u001b[33m,\u001b[39m expect\u001b[33m,\u001b[39m \u001b[33mTEST_DATA\u001b[39m } \u001b[36mfrom\u001b[39m \u001b[32m'../fixtures/test-fixtures'\u001b[39m\u001b[33m;\u001b[39m\n \u001b[90m  8 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m  9 |\u001b[39m test\u001b[33m.\u001b[39mdescribe(\u001b[32m'메인 페이지 로드 @parallel @no-auth'\u001b[39m\u001b[33m,\u001b[39m () \u001b[33m=>\u001b[39m {\n \u001b[90m    |\u001b[39m      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 10 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ mainPage }) \u001b[33m=>\u001b[39m {\n \u001b[90m 11 |\u001b[39m     \u001b[36mawait\u001b[39m mainPage\u001b[33m.\u001b[39mgoto()\u001b[33m;\u001b[39m\n \u001b[90m 12 |\u001b[39m   })\u001b[33m;\u001b[39m\u001b[0m"
-    },
-    {
-      "message": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.",
-      "stack": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.\n    at TestTypeImpl._currentSuite (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:75:13)\n    at TestTypeImpl._describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:115:24)\n    at Function.describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\transform\\transform.js:275:12)\n    at Object.<anonymous> (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\main-page\\provider-list.spec.ts:19:6)",
-      "location": {
-        "file": "E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\main-page\\provider-list.spec.ts",
-        "column": 6,
-        "line": 19
-      },
-      "snippet": "\u001b[90m   at \u001b[39mmain-page\\provider-list.spec.ts:19\n\n\u001b[0m \u001b[90m 17 |\u001b[39m }\n \u001b[90m 18 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 19 |\u001b[39m test\u001b[33m.\u001b[39mdescribe(\u001b[32m'AI provider list @parallel @no-auth'\u001b[39m\u001b[33m,\u001b[39m () \u001b[33m=>\u001b[39m {\n \u001b[90m    |\u001b[39m      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 20 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ mainPage }) \u001b[33m=>\u001b[39m {\n \u001b[90m 21 |\u001b[39m     \u001b[36mawait\u001b[39m mainPage\u001b[33m.\u001b[39mgoto()\u001b[33m;\u001b[39m\n \u001b[90m 22 |\u001b[39m   })\u001b[33m;\u001b[39m\u001b[0m"
-    },
-    {
-      "message": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.",
-      "stack": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.\n    at TestTypeImpl._currentSuite (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:75:13)\n    at TestTypeImpl._describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:115:24)\n    at Function.describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\transform\\transform.js:275:12)\n    at Object.<anonymous> (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\main-page\\style-options.spec.ts:9:6)",
-      "location": {
-        "file": "E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\main-page\\style-options.spec.ts",
-        "column": 6,
-        "line": 9
-      },
-      "snippet": "\u001b[90m   at \u001b[39mmain-page\\style-options.spec.ts:9\n\n\u001b[0m \u001b[90m  7 |\u001b[39m \u001b[36mimport\u001b[39m { test\u001b[33m,\u001b[39m expect\u001b[33m,\u001b[39m \u001b[33mTEST_DATA\u001b[39m } \u001b[36mfrom\u001b[39m \u001b[32m'../fixtures/test-fixtures'\u001b[39m\u001b[33m;\u001b[39m\n \u001b[90m  8 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m  9 |\u001b[39m test\u001b[33m.\u001b[39mdescribe(\u001b[32m'스타일 옵션 @parallel @no-auth'\u001b[39m\u001b[33m,\u001b[39m () \u001b[33m=>\u001b[39m {\n \u001b[90m    |\u001b[39m      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 10 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ mainPage }) \u001b[33m=>\u001b[39m {\n \u001b[90m 11 |\u001b[39m     \u001b[36mawait\u001b[39m mainPage\u001b[33m.\u001b[39mgoto()\u001b[33m;\u001b[39m\n \u001b[90m 12 |\u001b[39m   })\u001b[33m;\u001b[39m\u001b[0m"
-    },
-    {
-      "message": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.",
-      "stack": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.\n    at TestTypeImpl._currentSuite (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:75:13)\n    at TestTypeImpl._describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:115:24)\n    at Function.describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\transform\\transform.js:275:12)\n    at Object.<anonymous> (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\main-page\\theme-toggle.spec.ts:9:6)",
-      "location": {
-        "file": "E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\main-page\\theme-toggle.spec.ts",
-        "column": 6,
-        "line": 9
-      },
-      "snippet": "\u001b[90m   at \u001b[39mmain-page\\theme-toggle.spec.ts:9\n\n\u001b[0m \u001b[90m  7 |\u001b[39m \u001b[36mimport\u001b[39m { test\u001b[33m,\u001b[39m expect } \u001b[36mfrom\u001b[39m \u001b[32m'../fixtures/test-fixtures'\u001b[39m\u001b[33m;\u001b[39m\n \u001b[90m  8 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m  9 |\u001b[39m test\u001b[33m.\u001b[39mdescribe(\u001b[32m'테마 전환 @parallel @no-auth'\u001b[39m\u001b[33m,\u001b[39m () \u001b[33m=>\u001b[39m {\n \u001b[90m    |\u001b[39m      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 10 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ mainPage }) \u001b[33m=>\u001b[39m {\n \u001b[90m 11 |\u001b[39m     \u001b[36mawait\u001b[39m mainPage\u001b[33m.\u001b[39mgoto()\u001b[33m;\u001b[39m\n \u001b[90m 12 |\u001b[39m   })\u001b[33m;\u001b[39m\u001b[0m"
-    },
-    {
-      "message": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.",
-      "stack": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.\n    at TestTypeImpl._currentSuite (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:75:13)\n    at TestTypeImpl._describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:115:24)\n    at Function.describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\transform\\transform.js:275:12)\n    at Object.<anonymous> (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\responsive\\mobile-view.spec.ts:9:6)",
-      "location": {
-        "file": "E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\responsive\\mobile-view.spec.ts",
-        "column": 6,
-        "line": 9
-      },
-      "snippet": "\u001b[90m   at \u001b[39mresponsive\\mobile-view.spec.ts:9\n\n\u001b[0m \u001b[90m  7 |\u001b[39m \u001b[36mimport\u001b[39m { test\u001b[33m,\u001b[39m expect } \u001b[36mfrom\u001b[39m \u001b[32m'../fixtures/test-fixtures'\u001b[39m\u001b[33m;\u001b[39m\n \u001b[90m  8 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m  9 |\u001b[39m test\u001b[33m.\u001b[39mdescribe(\u001b[32m'모바일 뷰 @parallel @no-auth @responsive'\u001b[39m\u001b[33m,\u001b[39m () \u001b[33m=>\u001b[39m {\n \u001b[90m    |\u001b[39m      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 10 |\u001b[39m   test\u001b[33m.\u001b[39muse({ viewport\u001b[33m:\u001b[39m { width\u001b[33m:\u001b[39m \u001b[35m375\u001b[39m\u001b[33m,\u001b[39m height\u001b[33m:\u001b[39m \u001b[35m667\u001b[39m } })\u001b[33m;\u001b[39m \u001b[90m// iPhone SE\u001b[39m\n \u001b[90m 11 |\u001b[39m\n \u001b[90m 12 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ mainPage }) \u001b[33m=>\u001b[39m {\u001b[0m"
-    },
-    {
-      "message": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.",
-      "stack": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.\n    at TestTypeImpl._currentSuite (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:75:13)\n    at TestTypeImpl._describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:115:24)\n    at Function.describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\transform\\transform.js:275:12)\n    at Object.<anonymous> (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\responsive\\tablet-view.spec.ts:9:6)",
-      "location": {
-        "file": "E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\responsive\\tablet-view.spec.ts",
-        "column": 6,
-        "line": 9
-      },
-      "snippet": "\u001b[90m   at \u001b[39mresponsive\\tablet-view.spec.ts:9\n\n\u001b[0m \u001b[90m  7 |\u001b[39m \u001b[36mimport\u001b[39m { test\u001b[33m,\u001b[39m expect } \u001b[36mfrom\u001b[39m \u001b[32m'../fixtures/test-fixtures'\u001b[39m\u001b[33m;\u001b[39m\n \u001b[90m  8 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m  9 |\u001b[39m test\u001b[33m.\u001b[39mdescribe(\u001b[32m'태블릿 뷰 @parallel @no-auth @responsive'\u001b[39m\u001b[33m,\u001b[39m () \u001b[33m=>\u001b[39m {\n \u001b[90m    |\u001b[39m      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 10 |\u001b[39m   test\u001b[33m.\u001b[39muse({ viewport\u001b[33m:\u001b[39m { width\u001b[33m:\u001b[39m \u001b[35m768\u001b[39m\u001b[33m,\u001b[39m height\u001b[33m:\u001b[39m \u001b[35m1024\u001b[39m } })\u001b[33m;\u001b[39m \u001b[90m// iPad\u001b[39m\n \u001b[90m 11 |\u001b[39m\n \u001b[90m 12 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ mainPage }) \u001b[33m=>\u001b[39m {\u001b[0m"
-    },
-    {
-      "message": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.",
-      "stack": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.\n    at TestTypeImpl._currentSuite (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:75:13)\n    at TestTypeImpl._describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:115:24)\n    at Function.describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\transform\\transform.js:275:12)\n    at Object.<anonymous> (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\responsive\\ui-quality.spec.ts:8:6)",
-      "location": {
-        "file": "E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\responsive\\ui-quality.spec.ts",
-        "column": 6,
-        "line": 8
-      },
-      "snippet": "\u001b[90m   at \u001b[39mresponsive\\ui-quality.spec.ts:8\n\n\u001b[0m \u001b[90m  6 |\u001b[39m \u001b[90m */\u001b[39m\n \u001b[90m  7 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m  8 |\u001b[39m test\u001b[33m.\u001b[39mdescribe(\u001b[32m'반응형 레이아웃'\u001b[39m\u001b[33m,\u001b[39m () \u001b[33m=>\u001b[39m {\n \u001b[90m    |\u001b[39m      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m  9 |\u001b[39m   test(\u001b[32m'데스크톱(1280px) — 사이드바와 메인 영역이 나란히 표시된다'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n \u001b[90m 10 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39msetViewportSize({ width\u001b[33m:\u001b[39m \u001b[35m1280\u001b[39m\u001b[33m,\u001b[39m height\u001b[33m:\u001b[39m \u001b[35m800\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m 11 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\u001b[0m"
-    },
-    {
-      "message": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.",
-      "stack": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.\n    at TestTypeImpl._currentSuite (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:75:13)\n    at TestTypeImpl._describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:115:24)\n    at Function.describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\transform\\transform.js:275:12)\n    at Object.<anonymous> (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\result-card\\card-interactions.spec.ts:8:6)",
-      "location": {
-        "file": "E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\result-card\\card-interactions.spec.ts",
-        "column": 6,
-        "line": 8
-      },
-      "snippet": "\u001b[90m   at \u001b[39mresult-card\\card-interactions.spec.ts:8\n\n\u001b[0m \u001b[90m  6 |\u001b[39m \u001b[36mimport\u001b[39m { test\u001b[33m,\u001b[39m expect\u001b[33m,\u001b[39m makeMockReport\u001b[33m,\u001b[39m injectReports } \u001b[36mfrom\u001b[39m \u001b[32m'../fixtures/test-fixtures'\u001b[39m\u001b[33m;\u001b[39m\n \u001b[90m  7 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m  8 |\u001b[39m test\u001b[33m.\u001b[39mdescribe(\u001b[32m'결과 카드 상호작용'\u001b[39m\u001b[33m,\u001b[39m () \u001b[33m=>\u001b[39m {\n \u001b[90m    |\u001b[39m      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m  9 |\u001b[39m   test(\u001b[32m'접기/펼치기 토글'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n \u001b[90m 10 |\u001b[39m     \u001b[36mconst\u001b[39m report \u001b[33m=\u001b[39m makeMockReport({\n \u001b[90m 11 |\u001b[39m       id\u001b[33m:\u001b[39m \u001b[32m'toggle-test'\u001b[39m\u001b[33m,\u001b[39m\u001b[0m"
-    },
-    {
-      "message": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.",
-      "stack": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.\n    at TestTypeImpl._currentSuite (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:75:13)\n    at TestTypeImpl._describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:115:24)\n    at Function.describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\transform\\transform.js:275:12)\n    at Object.<anonymous> (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\settings-modals\\modals.spec.ts:12:6)",
-      "location": {
-        "file": "E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\settings-modals\\modals.spec.ts",
-        "column": 6,
-        "line": 12
-      },
-      "snippet": "\u001b[90m   at \u001b[39msettings-modals\\modals.spec.ts:12\n\n\u001b[0m \u001b[90m 10 |\u001b[39m \u001b[36mimport\u001b[39m { test\u001b[33m,\u001b[39m expect } \u001b[36mfrom\u001b[39m \u001b[32m'../fixtures/test-fixtures'\u001b[39m\u001b[33m;\u001b[39m\n \u001b[90m 11 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 12 |\u001b[39m test\u001b[33m.\u001b[39mdescribe(\u001b[32m'온보딩 모달 @parallel @no-auth'\u001b[39m\u001b[33m,\u001b[39m () \u001b[33m=>\u001b[39m {\n \u001b[90m    |\u001b[39m      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 13 |\u001b[39m   test(\u001b[32m'TC-1.1: 온보딩 모달 표시'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n \u001b[90m 14 |\u001b[39m     \u001b[90m// 1. 앱 첫 방문 시 (localStorage 클리어)\u001b[39m\n \u001b[90m 15 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\u001b[0m"
-    },
-    {
-      "message": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.",
-      "stack": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.\n    at TestTypeImpl._currentSuite (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:75:13)\n    at TestTypeImpl._describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:115:24)\n    at Function.describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\transform\\transform.js:275:12)\n    at Object.<anonymous> (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\tests\\url-management\\url-input.spec.ts:12:6)",
-      "location": {
-        "file": "E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\tests\\url-management\\url-input.spec.ts",
-        "column": 6,
-        "line": 12
-      },
-      "snippet": "\u001b[90m   at \u001b[39mtests\\url-management\\url-input.spec.ts:12\n\n\u001b[0m \u001b[90m 10 |\u001b[39m \u001b[36mimport\u001b[39m { test\u001b[33m,\u001b[39m expect\u001b[33m,\u001b[39m \u001b[33mTEST_DATA\u001b[39m } \u001b[36mfrom\u001b[39m \u001b[32m'../../fixtures/test-fixtures'\u001b[39m\u001b[33m;\u001b[39m\n \u001b[90m 11 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 12 |\u001b[39m test\u001b[33m.\u001b[39mdescribe(\u001b[32m'URL 입력 및 관리'\u001b[39m\u001b[33m,\u001b[39m () \u001b[33m=>\u001b[39m {\n \u001b[90m    |\u001b[39m      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 13 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ mainPage\u001b[33m,\u001b[39m page }) \u001b[33m=>\u001b[39m {\n \u001b[90m 14 |\u001b[39m     \u001b[90m// 앱 접속\u001b[39m\n \u001b[90m 15 |\u001b[39m     \u001b[36mawait\u001b[39m mainPage\u001b[33m.\u001b[39mgoto()\u001b[33m;\u001b[39m\u001b[0m"
-    },
-    {
-      "message": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.",
-      "stack": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.\n    at TestTypeImpl._currentSuite (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:75:13)\n    at TestTypeImpl._describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:115:24)\n    at Function.describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\transform\\transform.js:275:12)\n    at Object.<anonymous> (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\url-input\\invalid-url.spec.ts:9:6)",
-      "location": {
-        "file": "E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\url-input\\invalid-url.spec.ts",
-        "column": 6,
-        "line": 9
-      },
-      "snippet": "\u001b[90m   at \u001b[39murl-input\\invalid-url.spec.ts:9\n\n\u001b[0m \u001b[90m  7 |\u001b[39m \u001b[36mimport\u001b[39m { test\u001b[33m,\u001b[39m expect\u001b[33m,\u001b[39m \u001b[33mTEST_DATA\u001b[39m } \u001b[36mfrom\u001b[39m \u001b[32m'../fixtures/test-fixtures'\u001b[39m\u001b[33m;\u001b[39m\n \u001b[90m  8 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m  9 |\u001b[39m test\u001b[33m.\u001b[39mdescribe(\u001b[32m'잘못된 URL 입력 @parallel'\u001b[39m\u001b[33m,\u001b[39m () \u001b[33m=>\u001b[39m {\n \u001b[90m    |\u001b[39m      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 10 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ mainPage\u001b[33m,\u001b[39m page }) \u001b[33m=>\u001b[39m {\n \u001b[90m 11 |\u001b[39m     \u001b[36mawait\u001b[39m mainPage\u001b[33m.\u001b[39mgoto()\u001b[33m;\u001b[39m\n \u001b[90m 12 |\u001b[39m\u001b[0m"
-    },
-    {
-      "message": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.",
-      "stack": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.\n    at TestTypeImpl._currentSuite (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:75:13)\n    at TestTypeImpl._describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:115:24)\n    at Function.describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\transform\\transform.js:275:12)\n    at Object.<anonymous> (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\url-input\\url-drag-drop.spec.ts:3:6)",
-      "location": {
-        "file": "E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\url-input\\url-drag-drop.spec.ts",
-        "column": 6,
-        "line": 3
-      },
-      "snippet": "\u001b[90m   at \u001b[39murl-input\\url-drag-drop.spec.ts:3\n\n\u001b[0m \u001b[90m 1 |\u001b[39m \u001b[36mimport\u001b[39m { test\u001b[33m,\u001b[39m expect } \u001b[36mfrom\u001b[39m \u001b[32m'../fixtures/test-fixtures'\u001b[39m\u001b[33m;\u001b[39m\n \u001b[90m 2 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 3 |\u001b[39m test\u001b[33m.\u001b[39mdescribe(\u001b[32m'URL 드래그앤드롭 (전체 페이지)'\u001b[39m\u001b[33m,\u001b[39m () \u001b[33m=>\u001b[39m {\n \u001b[90m   |\u001b[39m      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 4 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ mainPage }) \u001b[33m=>\u001b[39m {\n \u001b[90m 5 |\u001b[39m     \u001b[36mawait\u001b[39m mainPage\u001b[33m.\u001b[39mgoto()\u001b[33m;\u001b[39m\n \u001b[90m 6 |\u001b[39m   })\u001b[33m;\u001b[39m\u001b[0m"
-    },
-    {
-      "message": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.",
-      "stack": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.\n    at TestTypeImpl._currentSuite (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:75:13)\n    at TestTypeImpl._describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:115:24)\n    at Function.describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\transform\\transform.js:275:12)\n    at Object.<anonymous> (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\url-input\\url-management.spec.ts:9:6)",
-      "location": {
-        "file": "E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\url-input\\url-management.spec.ts",
-        "column": 6,
-        "line": 9
-      },
-      "snippet": "\u001b[90m   at \u001b[39murl-input\\url-management.spec.ts:9\n\n\u001b[0m \u001b[90m  7 |\u001b[39m \u001b[36mimport\u001b[39m { test\u001b[33m,\u001b[39m expect\u001b[33m,\u001b[39m \u001b[33mTEST_DATA\u001b[39m } \u001b[36mfrom\u001b[39m \u001b[32m'../fixtures/test-fixtures'\u001b[39m\u001b[33m;\u001b[39m\n \u001b[90m  8 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m  9 |\u001b[39m test\u001b[33m.\u001b[39mdescribe(\u001b[32m'URL 관리 @parallel'\u001b[39m\u001b[33m,\u001b[39m () \u001b[33m=>\u001b[39m {\n \u001b[90m    |\u001b[39m      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 10 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ mainPage\u001b[33m,\u001b[39m page }) \u001b[33m=>\u001b[39m {\n \u001b[90m 11 |\u001b[39m     \u001b[36mawait\u001b[39m mainPage\u001b[33m.\u001b[39mgoto()\u001b[33m;\u001b[39m\n \u001b[90m 12 |\u001b[39m\u001b[0m"
-    },
-    {
-      "message": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.",
-      "stack": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.\n    at TestTypeImpl._currentSuite (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:75:13)\n    at TestTypeImpl._describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:115:24)\n    at Function.describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\transform\\transform.js:275:12)\n    at Object.<anonymous> (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\url-input\\valid-url.spec.ts:9:6)",
-      "location": {
-        "file": "E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\url-input\\valid-url.spec.ts",
-        "column": 6,
-        "line": 9
-      },
-      "snippet": "\u001b[90m   at \u001b[39murl-input\\valid-url.spec.ts:9\n\n\u001b[0m \u001b[90m  7 |\u001b[39m \u001b[36mimport\u001b[39m { test\u001b[33m,\u001b[39m expect\u001b[33m,\u001b[39m \u001b[33mTEST_DATA\u001b[39m\u001b[33m,\u001b[39m getRandomUrl } \u001b[36mfrom\u001b[39m \u001b[32m'../fixtures/test-fixtures'\u001b[39m\u001b[33m;\u001b[39m\n \u001b[90m  8 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m  9 |\u001b[39m test\u001b[33m.\u001b[39mdescribe(\u001b[32m'유효한 URL 입력 @parallel'\u001b[39m\u001b[33m,\u001b[39m () \u001b[33m=>\u001b[39m {\n \u001b[90m    |\u001b[39m      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 10 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ mainPage\u001b[33m,\u001b[39m page }) \u001b[33m=>\u001b[39m {\n \u001b[90m 11 |\u001b[39m     \u001b[36mawait\u001b[39m mainPage\u001b[33m.\u001b[39mgoto()\u001b[33m;\u001b[39m\n \u001b[90m 12 |\u001b[39m\u001b[0m"
-    },
-    {
-      "message": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.",
-      "stack": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.\n    at TestTypeImpl._currentSuite (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:75:13)\n    at TestTypeImpl._describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:115:24)\n    at Function.describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\transform\\transform.js:275:12)\n    at Object.<anonymous> (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\content-generation\\basic-generation.spec.ts:10:6)",
-      "location": {
-        "file": "E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\content-generation\\basic-generation.spec.ts",
-        "column": 6,
-        "line": 10
-      },
-      "snippet": "\u001b[90m   at \u001b[39mcontent-generation\\basic-generation.spec.ts:10\n\n\u001b[0m \u001b[90m  8 |\u001b[39m \u001b[36mimport\u001b[39m { test\u001b[33m,\u001b[39m expect\u001b[33m,\u001b[39m \u001b[33mTEST_DATA\u001b[39m } \u001b[36mfrom\u001b[39m \u001b[32m'../fixtures/test-fixtures'\u001b[39m\u001b[33m;\u001b[39m\n \u001b[90m  9 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 10 |\u001b[39m test\u001b[33m.\u001b[39mdescribe(\u001b[32m'기본 콘텐츠 생성'\u001b[39m\u001b[33m,\u001b[39m () \u001b[33m=>\u001b[39m {\n \u001b[90m    |\u001b[39m      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 11 |\u001b[39m   \u001b[90m// API 테스트는 시간이 오래 걸림 — 기본 타임아웃 3배\u001b[39m\n \u001b[90m 12 |\u001b[39m   test\u001b[33m.\u001b[39mdescribe\u001b[33m.\u001b[39mconfigure({ timeout\u001b[33m:\u001b[39m \u001b[35m180\u001b[39m_000 })\u001b[33m;\u001b[39m\n \u001b[90m 13 |\u001b[39m\u001b[0m"
-    },
-    {
-      "message": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.",
-      "stack": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.\n    at TestTypeImpl._currentSuite (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:75:13)\n    at TestTypeImpl._describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:115:24)\n    at Function.describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\transform\\transform.js:275:12)\n    at Object.<anonymous> (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\content-generation\\provider-switch.spec.ts:8:6)",
-      "location": {
-        "file": "E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\content-generation\\provider-switch.spec.ts",
-        "column": 6,
-        "line": 8
-      },
-      "snippet": "\u001b[90m   at \u001b[39mcontent-generation\\provider-switch.spec.ts:8\n\n\u001b[0m \u001b[90m  6 |\u001b[39m \u001b[36mimport\u001b[39m { test\u001b[33m,\u001b[39m expect\u001b[33m,\u001b[39m \u001b[33mTEST_DATA\u001b[39m } \u001b[36mfrom\u001b[39m \u001b[32m'../fixtures/test-fixtures'\u001b[39m\u001b[33m;\u001b[39m\n \u001b[90m  7 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m  8 |\u001b[39m test\u001b[33m.\u001b[39mdescribe(\u001b[32m'프로바이더 전환'\u001b[39m\u001b[33m,\u001b[39m () \u001b[33m=>\u001b[39m {\n \u001b[90m    |\u001b[39m      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m  9 |\u001b[39m   test\u001b[33m.\u001b[39mdescribe\u001b[33m.\u001b[39mconfigure({ timeout\u001b[33m:\u001b[39m \u001b[35m180\u001b[39m_000 })\u001b[33m;\u001b[39m\n \u001b[90m 10 |\u001b[39m\n \u001b[90m 11 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ mainPage }) \u001b[33m=>\u001b[39m {\u001b[0m"
-    },
-    {
-      "message": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.",
-      "stack": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.\n    at TestTypeImpl._currentSuite (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:75:13)\n    at TestTypeImpl._describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:115:24)\n    at Function.describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\transform\\transform.js:275:12)\n    at Object.<anonymous> (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\content-generation\\style-variations.spec.ts:8:6)",
-      "location": {
-        "file": "E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\content-generation\\style-variations.spec.ts",
-        "column": 6,
-        "line": 8
-      },
-      "snippet": "\u001b[90m   at \u001b[39mcontent-generation\\style-variations.spec.ts:8\n\n\u001b[0m \u001b[90m  6 |\u001b[39m \u001b[36mimport\u001b[39m { test\u001b[33m,\u001b[39m expect } \u001b[36mfrom\u001b[39m \u001b[32m'../fixtures/test-fixtures'\u001b[39m\u001b[33m;\u001b[39m\n \u001b[90m  7 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m  8 |\u001b[39m test\u001b[33m.\u001b[39mdescribe(\u001b[32m'설정 UI (SettingsPopover)'\u001b[39m\u001b[33m,\u001b[39m () \u001b[33m=>\u001b[39m {\n \u001b[90m    |\u001b[39m      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m  9 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ mainPage\u001b[33m,\u001b[39m contentGenerator }) \u001b[33m=>\u001b[39m {\n \u001b[90m 10 |\u001b[39m     \u001b[36mawait\u001b[39m mainPage\u001b[33m.\u001b[39mgoto()\u001b[33m;\u001b[39m\n \u001b[90m 11 |\u001b[39m     \u001b[36mawait\u001b[39m contentGenerator\u001b[33m.\u001b[39mopenSettings()\u001b[33m;\u001b[39m\u001b[0m"
-    },
-    {
-      "message": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.",
-      "stack": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.\n    at TestTypeImpl._currentSuite (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:75:13)\n    at TestTypeImpl._describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:115:24)\n    at Function.describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\transform\\transform.js:275:12)\n    at Object.<anonymous> (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\tests\\content-generation\\provider-model.spec.ts:12:6)",
-      "location": {
-        "file": "E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\tests\\content-generation\\provider-model.spec.ts",
-        "column": 6,
-        "line": 12
-      },
-      "snippet": "\u001b[90m   at \u001b[39mtests\\content-generation\\provider-model.spec.ts:12\n\n\u001b[0m \u001b[90m 10 |\u001b[39m \u001b[36mimport\u001b[39m { test\u001b[33m,\u001b[39m expect\u001b[33m,\u001b[39m \u001b[33mTEST_DATA\u001b[39m } \u001b[36mfrom\u001b[39m \u001b[32m'../../fixtures/test-fixtures'\u001b[39m\u001b[33m;\u001b[39m\n \u001b[90m 11 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 12 |\u001b[39m test\u001b[33m.\u001b[39mdescribe(\u001b[32m'콘텐츠 생성 테스트 @parallel @no-auth'\u001b[39m\u001b[33m,\u001b[39m () \u001b[33m=>\u001b[39m {\n \u001b[90m    |\u001b[39m      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 13 |\u001b[39m   test\u001b[33m.\u001b[39msetTimeout(\u001b[35m60\u001b[39m_000)\u001b[33m;\u001b[39m\n \u001b[90m 14 |\u001b[39m\n \u001b[90m 15 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ mainPage }) \u001b[33m=>\u001b[39m {\u001b[0m"
-    },
-    {
-      "message": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.",
-      "stack": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.\n    at TestTypeImpl._currentSuite (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:75:13)\n    at TestTypeImpl._describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:115:24)\n    at Function.describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\transform\\transform.js:275:12)\n    at Object.<anonymous> (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\batch-generation\\batch-processing.spec.ts:11:6)",
-      "location": {
-        "file": "E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\batch-generation\\batch-processing.spec.ts",
-        "column": 6,
-        "line": 11
-      },
-      "snippet": "\u001b[90m   at \u001b[39mbatch-generation\\batch-processing.spec.ts:11\n\n\u001b[0m \u001b[90m  9 |\u001b[39m \u001b[36mimport\u001b[39m { test\u001b[33m,\u001b[39m expect\u001b[33m,\u001b[39m \u001b[33mTEST_DATA\u001b[39m } \u001b[36mfrom\u001b[39m \u001b[32m'../fixtures/test-fixtures'\u001b[39m\u001b[33m;\u001b[39m\n \u001b[90m 10 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 11 |\u001b[39m test\u001b[33m.\u001b[39mdescribe(\u001b[32m'배치 처리 (각각 분석)'\u001b[39m\u001b[33m,\u001b[39m () \u001b[33m=>\u001b[39m {\n \u001b[90m    |\u001b[39m      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 12 |\u001b[39m   test\u001b[33m.\u001b[39mdescribe\u001b[33m.\u001b[39mconfigure({ timeout\u001b[33m:\u001b[39m \u001b[35m300\u001b[39m_000 })\u001b[33m;\u001b[39m\n \u001b[90m 13 |\u001b[39m\n \u001b[90m 14 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ mainPage }) \u001b[33m=>\u001b[39m {\u001b[0m"
-    },
-    {
-      "message": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.",
-      "stack": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.\n    at TestTypeImpl._currentSuite (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:75:13)\n    at TestTypeImpl._describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:115:24)\n    at Function.describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\transform\\transform.js:275:12)\n    at Object.<anonymous> (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\batch-generation\\fusion-generation.spec.ts:9:6)",
-      "location": {
-        "file": "E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\batch-generation\\fusion-generation.spec.ts",
-        "column": 6,
-        "line": 9
-      },
-      "snippet": "\u001b[90m   at \u001b[39mbatch-generation\\fusion-generation.spec.ts:9\n\n\u001b[0m \u001b[90m  7 |\u001b[39m \u001b[36mimport\u001b[39m { test\u001b[33m,\u001b[39m expect\u001b[33m,\u001b[39m \u001b[33mTEST_DATA\u001b[39m } \u001b[36mfrom\u001b[39m \u001b[32m'../fixtures/test-fixtures'\u001b[39m\u001b[33m;\u001b[39m\n \u001b[90m  8 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m  9 |\u001b[39m test\u001b[33m.\u001b[39mdescribe(\u001b[32m'퓨전 분석 (Fusion)'\u001b[39m\u001b[33m,\u001b[39m () \u001b[33m=>\u001b[39m {\n \u001b[90m    |\u001b[39m      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 10 |\u001b[39m   test\u001b[33m.\u001b[39mdescribe\u001b[33m.\u001b[39mconfigure({ timeout\u001b[33m:\u001b[39m \u001b[35m300\u001b[39m_000 })\u001b[33m;\u001b[39m\n \u001b[90m 11 |\u001b[39m\n \u001b[90m 12 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ mainPage }) \u001b[33m=>\u001b[39m {\u001b[0m"
-    },
-    {
-      "message": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.",
-      "stack": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.\n    at TestTypeImpl._currentSuite (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:75:13)\n    at TestTypeImpl._describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:115:24)\n    at Function.describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\transform\\transform.js:275:12)\n    at Object.<anonymous> (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\batch-generation\\merged-generation.spec.ts:9:6)",
-      "location": {
-        "file": "E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\batch-generation\\merged-generation.spec.ts",
-        "column": 6,
-        "line": 9
-      },
-      "snippet": "\u001b[90m   at \u001b[39mbatch-generation\\merged-generation.spec.ts:9\n\n\u001b[0m \u001b[90m  7 |\u001b[39m \u001b[36mimport\u001b[39m { test\u001b[33m,\u001b[39m expect\u001b[33m,\u001b[39m \u001b[33mTEST_DATA\u001b[39m } \u001b[36mfrom\u001b[39m \u001b[32m'../fixtures/test-fixtures'\u001b[39m\u001b[33m;\u001b[39m\n \u001b[90m  8 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m  9 |\u001b[39m test\u001b[33m.\u001b[39mdescribe(\u001b[32m'합쳐서 분석 (Merged)'\u001b[39m\u001b[33m,\u001b[39m () \u001b[33m=>\u001b[39m {\n \u001b[90m    |\u001b[39m      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 10 |\u001b[39m   test\u001b[33m.\u001b[39mdescribe\u001b[33m.\u001b[39mconfigure({ timeout\u001b[33m:\u001b[39m \u001b[35m300\u001b[39m_000 })\u001b[33m;\u001b[39m\n \u001b[90m 11 |\u001b[39m\n \u001b[90m 12 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ mainPage }) \u001b[33m=>\u001b[39m {\u001b[0m"
-    },
-    {
-      "message": "Error: Playwright Test did not expect test() to be called here.\nMost common reasons include:\n- You are calling test() in a configuration file.\n- You are calling test() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.",
-      "stack": "Error: Playwright Test did not expect test() to be called here.\nMost common reasons include:\n- You are calling test() in a configuration file.\n- You are calling test() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.\n    at TestTypeImpl._currentSuite (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:75:13)\n    at TestTypeImpl._createTest (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:88:24)\n    at E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\transform\\transform.js:275:12\n    at Object.<anonymous> (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\auth\\setup.spec.ts:12:6)",
-      "location": {
-        "file": "E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\auth\\setup.spec.ts",
-        "column": 6,
-        "line": 12
-      },
-      "snippet": "\u001b[90m   at \u001b[39mauth\\setup.spec.ts:12\n\n\u001b[0m \u001b[90m 10 |\u001b[39m \u001b[36mconst\u001b[39m authFile \u001b[33m=\u001b[39m path\u001b[33m.\u001b[39mjoin(__dirname\u001b[33m,\u001b[39m \u001b[32m'../.auth/user.json'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 11 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 12 |\u001b[39m setup(\u001b[32m'인증 상태 준비'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n \u001b[90m    |\u001b[39m      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 13 |\u001b[39m   \u001b[90m// 테스트 환경에서 인증 필요 여부 확인\u001b[39m\n \u001b[90m 14 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 15 |\u001b[39m\u001b[0m"
-    },
-    {
-      "message": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.",
-      "stack": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.\n    at TestTypeImpl._currentSuite (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:75:13)\n    at TestTypeImpl._describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:115:24)\n    at Function.describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\transform\\transform.js:275:12)\n    at Object.<anonymous> (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\history\\history-management.spec.ts:9:6)",
-      "location": {
-        "file": "E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\history\\history-management.spec.ts",
-        "column": 6,
-        "line": 9
-      },
-      "snippet": "\u001b[90m   at \u001b[39mhistory\\history-management.spec.ts:9\n\n\u001b[0m \u001b[90m  7 |\u001b[39m \u001b[36mimport\u001b[39m { test\u001b[33m,\u001b[39m expect } \u001b[36mfrom\u001b[39m \u001b[32m'../fixtures/test-fixtures'\u001b[39m\u001b[33m;\u001b[39m\n \u001b[90m  8 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m  9 |\u001b[39m test\u001b[33m.\u001b[39mdescribe(\u001b[32m'히스토리 관리 @parallel @auth-required'\u001b[39m\u001b[33m,\u001b[39m () \u001b[33m=>\u001b[39m {\n \u001b[90m    |\u001b[39m      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 10 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ mainPage\u001b[33m,\u001b[39m page }) \u001b[33m=>\u001b[39m {\n \u001b[90m 11 |\u001b[39m     \u001b[36mawait\u001b[39m mainPage\u001b[33m.\u001b[39mgoto()\u001b[33m;\u001b[39m\n \u001b[90m 12 |\u001b[39m\u001b[0m"
-    },
-    {
-      "message": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.",
-      "stack": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.\n    at TestTypeImpl._currentSuite (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:75:13)\n    at TestTypeImpl._describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:115:24)\n    at Function.describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\transform\\transform.js:275:12)\n    at Object.<anonymous> (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\settings\\api-keys.spec.ts:9:6)",
-      "location": {
-        "file": "E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\settings\\api-keys.spec.ts",
-        "column": 6,
-        "line": 9
-      },
-      "snippet": "\u001b[90m   at \u001b[39msettings\\api-keys.spec.ts:9\n\n\u001b[0m \u001b[90m  7 |\u001b[39m \u001b[36mimport\u001b[39m { test\u001b[33m,\u001b[39m expect } \u001b[36mfrom\u001b[39m \u001b[32m'../fixtures/test-fixtures'\u001b[39m\u001b[33m;\u001b[39m\n \u001b[90m  8 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m  9 |\u001b[39m test\u001b[33m.\u001b[39mdescribe(\u001b[32m'API 키 관리 @parallel @auth-required'\u001b[39m\u001b[33m,\u001b[39m () \u001b[33m=>\u001b[39m {\n \u001b[90m    |\u001b[39m      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 10 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ mainPage\u001b[33m,\u001b[39m page }) \u001b[33m=>\u001b[39m {\n \u001b[90m 11 |\u001b[39m     \u001b[36mawait\u001b[39m mainPage\u001b[33m.\u001b[39mgoto()\u001b[33m;\u001b[39m\n \u001b[90m 12 |\u001b[39m\u001b[0m"
-    },
-    {
-      "message": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.",
-      "stack": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.\n    at TestTypeImpl._currentSuite (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:75:13)\n    at TestTypeImpl._describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:115:24)\n    at Function.describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\transform\\transform.js:275:12)\n    at Object.<anonymous> (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\usage\\usage-tracking.spec.ts:9:6)",
-      "location": {
-        "file": "E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\usage\\usage-tracking.spec.ts",
-        "column": 6,
-        "line": 9
-      },
-      "snippet": "\u001b[90m   at \u001b[39musage\\usage-tracking.spec.ts:9\n\n\u001b[0m \u001b[90m  7 |\u001b[39m \u001b[36mimport\u001b[39m { test\u001b[33m,\u001b[39m expect } \u001b[36mfrom\u001b[39m \u001b[32m'../fixtures/test-fixtures'\u001b[39m\u001b[33m;\u001b[39m\n \u001b[90m  8 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m  9 |\u001b[39m test\u001b[33m.\u001b[39mdescribe(\u001b[32m'사용량 추적 @parallel @auth-required'\u001b[39m\u001b[33m,\u001b[39m () \u001b[33m=>\u001b[39m {\n \u001b[90m    |\u001b[39m      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 10 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ mainPage\u001b[33m,\u001b[39m page }) \u001b[33m=>\u001b[39m {\n \u001b[90m 11 |\u001b[39m     \u001b[36mawait\u001b[39m mainPage\u001b[33m.\u001b[39mgoto()\u001b[33m;\u001b[39m\n \u001b[90m 12 |\u001b[39m\u001b[0m"
-    },
-    {
-      "message": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.",
-      "stack": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.\n    at TestTypeImpl._currentSuite (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:75:13)\n    at TestTypeImpl._describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:115:24)\n    at Function.describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\transform\\transform.js:275:12)\n    at Object.<anonymous> (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\error-handling\\edge-cases.spec.ts:7:6)",
-      "location": {
-        "file": "E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\error-handling\\edge-cases.spec.ts",
-        "column": 6,
-        "line": 7
-      },
-      "snippet": "\u001b[90m   at \u001b[39merror-handling\\edge-cases.spec.ts:7\n\n\u001b[0m \u001b[90m  5 |\u001b[39m \u001b[90m */\u001b[39m\n \u001b[90m  6 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m  7 |\u001b[39m test\u001b[33m.\u001b[39mdescribe(\u001b[32m'입력 엣지케이스'\u001b[39m\u001b[33m,\u001b[39m () \u001b[33m=>\u001b[39m {\n \u001b[90m    |\u001b[39m      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m  8 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ mainPage }) \u001b[33m=>\u001b[39m {\n \u001b[90m  9 |\u001b[39m     \u001b[36mawait\u001b[39m mainPage\u001b[33m.\u001b[39mgoto()\u001b[33m;\u001b[39m\n \u001b[90m 10 |\u001b[39m   })\u001b[33m;\u001b[39m\u001b[0m"
-    },
-    {
-      "message": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.",
-      "stack": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.\n    at TestTypeImpl._currentSuite (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:75:13)\n    at TestTypeImpl._describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:115:24)\n    at Function.describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\transform\\transform.js:275:12)\n    at Object.<anonymous> (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\error-handling\\input-errors.spec.ts:9:6)",
-      "location": {
-        "file": "E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\error-handling\\input-errors.spec.ts",
-        "column": 6,
-        "line": 9
-      },
-      "snippet": "\u001b[90m   at \u001b[39merror-handling\\input-errors.spec.ts:9\n\n\u001b[0m \u001b[90m  7 |\u001b[39m \u001b[36mimport\u001b[39m { test\u001b[33m,\u001b[39m expect\u001b[33m,\u001b[39m \u001b[33mTEST_DATA\u001b[39m } \u001b[36mfrom\u001b[39m \u001b[32m'../fixtures/test-fixtures'\u001b[39m\u001b[33m;\u001b[39m\n \u001b[90m  8 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m  9 |\u001b[39m test\u001b[33m.\u001b[39mdescribe(\u001b[32m'입력 에러 처리 @parallel'\u001b[39m\u001b[33m,\u001b[39m () \u001b[33m=>\u001b[39m {\n \u001b[90m    |\u001b[39m      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 10 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ mainPage\u001b[33m,\u001b[39m page }) \u001b[33m=>\u001b[39m {\n \u001b[90m 11 |\u001b[39m     \u001b[36mawait\u001b[39m mainPage\u001b[33m.\u001b[39mgoto()\u001b[33m;\u001b[39m\n \u001b[90m 12 |\u001b[39m\u001b[0m"
-    },
-    {
-      "message": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.",
-      "stack": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.\n    at TestTypeImpl._currentSuite (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:75:13)\n    at TestTypeImpl._describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:115:24)\n    at Function.describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\transform\\transform.js:275:12)\n    at Object.<anonymous> (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\error-handling\\network-errors.spec.ts:9:6)",
-      "location": {
-        "file": "E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\error-handling\\network-errors.spec.ts",
-        "column": 6,
-        "line": 9
-      },
-      "snippet": "\u001b[90m   at \u001b[39merror-handling\\network-errors.spec.ts:9\n\n\u001b[0m \u001b[90m  7 |\u001b[39m \u001b[36mimport\u001b[39m { test\u001b[33m,\u001b[39m expect\u001b[33m,\u001b[39m \u001b[33mTEST_DATA\u001b[39m } \u001b[36mfrom\u001b[39m \u001b[32m'../fixtures/test-fixtures'\u001b[39m\u001b[33m;\u001b[39m\n \u001b[90m  8 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m  9 |\u001b[39m test\u001b[33m.\u001b[39mdescribe(\u001b[32m'네트워크 에러 처리 @parallel'\u001b[39m\u001b[33m,\u001b[39m () \u001b[33m=>\u001b[39m {\n \u001b[90m    |\u001b[39m      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 10 |\u001b[39m   test\u001b[33m.\u001b[39msetTimeout(\u001b[35m60\u001b[39m_000)\u001b[33m;\u001b[39m\n \u001b[90m 11 |\u001b[39m\n \u001b[90m 12 |\u001b[39m   test(\u001b[32m'오프라인 상태에서 적절한 에러 표시'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ context\u001b[33m,\u001b[39m page\u001b[33m,\u001b[39m mainPage\u001b[33m,\u001b[39m urlInput }) \u001b[33m=>\u001b[39m {\u001b[0m"
-    },
-    {
-      "message": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.",
-      "stack": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.\n    at TestTypeImpl._currentSuite (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:75:13)\n    at TestTypeImpl._describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\common\\testType.js:115:24)\n    at Function.describe (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\playwright\\lib\\transform\\transform.js:275:12)\n    at Object.<anonymous> (E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\performance\\load-time.spec.ts:9:6)",
-      "location": {
-        "file": "E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\performance\\load-time.spec.ts",
-        "column": 6,
-        "line": 9
-      },
-      "snippet": "\u001b[90m   at \u001b[39mperformance\\load-time.spec.ts:9\n\n\u001b[0m \u001b[90m  7 |\u001b[39m \u001b[36mimport\u001b[39m { test\u001b[33m,\u001b[39m expect } \u001b[36mfrom\u001b[39m \u001b[32m'../fixtures/test-fixtures'\u001b[39m\u001b[33m;\u001b[39m\n \u001b[90m  8 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m  9 |\u001b[39m test\u001b[33m.\u001b[39mdescribe(\u001b[32m'페이지 로드 성능 @parallel @no-auth @performance'\u001b[39m\u001b[33m,\u001b[39m () \u001b[33m=>\u001b[39m {\n \u001b[90m    |\u001b[39m      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 10 |\u001b[39m   test(\u001b[32m'초기 페이지 로드가 10초 이내'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n \u001b[90m 11 |\u001b[39m     \u001b[36mconst\u001b[39m startTime \u001b[33m=\u001b[39m \u001b[33mDate\u001b[39m\u001b[33m.\u001b[39mnow()\u001b[33m;\u001b[39m\n \u001b[90m 12 |\u001b[39m\u001b[0m"
-    },
-    {
-      "message": "Error: No tests found",
-      "stack": "Error: No tests found"
+      "title": "dialog-close-regression/dialog-close.spec.ts",
+      "file": "dialog-close-regression/dialog-close.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "ROOT-001 온보딩 Dialog 종료 회귀 @no-auth",
+          "file": "dialog-close-regression/dialog-close.spec.ts",
+          "line": 32,
+          "column": 6,
+          "specs": [
+            {
+              "title": "온보딩 종료(시작하기 버튼) 후 페이지가 조작 가능해야 함",
+              "ok": true,
+              "tags": [
+                "no-auth"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6208e0836cd01b421e34-16455dea5a5a1ee2e41e",
+              "file": "dialog-close-regression/dialog-close.spec.ts",
+              "line": 34,
+              "column": 9
+            },
+            {
+              "title": "온보딩 종료(ESC 키) 후 페이지가 조작 가능해야 함",
+              "ok": true,
+              "tags": [
+                "no-auth"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6208e0836cd01b421e34-10f095af15c2dd875678",
+              "file": "dialog-close-regression/dialog-close.spec.ts",
+              "line": 34,
+              "column": 9
+            },
+            {
+              "title": "온보딩 종료(X(Close) 버튼) 후 페이지가 조작 가능해야 함",
+              "ok": true,
+              "tags": [
+                "no-auth"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6208e0836cd01b421e34-e5f30121b05e4284ac4a",
+              "file": "dialog-close-regression/dialog-close.spec.ts",
+              "line": 34,
+              "column": 9
+            },
+            {
+              "title": "모달이 열려 있는 동안은 정상적으로 잠기고, 닫힌 후에만 풀려야 함",
+              "ok": true,
+              "tags": [
+                "no-auth"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6208e0836cd01b421e34-f9a81d42a79e05e7cd85",
+              "file": "dialog-close-regression/dialog-close.spec.ts",
+              "line": 158,
+              "column": 7
+            }
+          ]
+        }
+      ]
     }
   ],
+  "errors": [],
   "stats": {
-    "startTime": "2026-03-08T15:21:31.621Z",
-    "duration": 1968.8740000000016,
+    "startTime": "2026-08-30T23:13:15.518Z",
+    "duration": 88.65899999999999,
     "expected": 0,
-    "skipped": 0,
+    "skipped": 4,
     "unexpected": 0,
     "flaky": 0
   }

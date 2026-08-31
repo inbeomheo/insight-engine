@@ -1,8 +1,8 @@
 """Deployment provider policy tests.
 
-The local Insight Engine deployment intentionally exposes only the ChatMock-backed
-provider, branded as OPEN AI, even when other provider credentials exist in the
-environment.
+The local deployment exposes only the CLIProxyAPI-backed OPEN AI provider and
+the directly configured Z.AI provider. Unrelated credentials must never make
+additional providers appear in the UI.
 """
 from __future__ import annotations
 
@@ -13,14 +13,14 @@ from unittest.mock import patch
 
 
 class TestDeploymentProviderPolicy(unittest.TestCase):
-    def test_only_open_ai_chatmock_provider_is_exposed(self):
+    def test_only_approved_cliproxy_and_zai_providers_are_exposed(self):
         with patch.dict(
             os.environ,
             {
-                "CHATMOCK_API_KEY": "dummy",
+                "CLIPROXY_API_KEY": "test-cliproxy-key",
+                "ZAI_API_KEY": "test-zai-key",
                 "DEEPSEEK_API_KEY": "should-not-expose",
                 "OLLAMA_BASE_URL": "http://localhost:11434",
-                "ZHIPUAI_API_KEY": "should-not-expose",
                 "TRANSLATION_MODEL": "gemini/should-not-use",
                 "AGENT_DEFAULT_MODEL": "ollama/should-not-use",
             },
@@ -31,26 +31,28 @@ class TestDeploymentProviderPolicy(unittest.TestCase):
             config = importlib.reload(config)
             providers = config.get_available_providers()
 
-        self.assertEqual(list(providers.keys()), ["chatmock"])
-        self.assertEqual(providers["chatmock"]["name"], "OPEN AI")
+        self.assertEqual(list(providers.keys()), ["cliproxy", "zai"])
+        self.assertEqual(providers["cliproxy"]["name"], "OPEN AI")
+        self.assertEqual(providers["zai"]["name"], "Z.AI")
         self.assertEqual(
-            [m["id"] for m in providers["chatmock"]["models"]],
-            ["chatmock/gpt-5.3-codex-spark"],
+            providers["cliproxy"]["models"][0]["id"],
+            "cliproxy/gpt-5.6-sol",
         )
-        self.assertEqual(config.FALLBACK_CHAIN, ["chatmock/gpt-5.3-codex-spark"])
+        self.assertNotIn("chatmock", providers)
+        self.assertEqual(config.FALLBACK_CHAIN, ["cliproxy/gpt-5.6-sol"])
         self.assertEqual(config.MAX_FALLBACK_ATTEMPTS, 1)
-        self.assertEqual(config.TRANSLATION_MODEL, "chatmock/gpt-5.3-codex-spark")
+        self.assertEqual(config.TRANSLATION_MODEL, "cliproxy/gpt-5.6-sol")
 
-    def test_all_model_inputs_are_coerced_to_deployment_model(self):
+    def test_unknown_models_fall_back_but_verified_gpt_models_are_prefixed(self):
         import config
 
         self.assertEqual(
             config.coerce_deployment_model("gemini/gemini-3.1-pro-preview"),
-            "chatmock/gpt-5.3-codex-spark",
+            "cliproxy/gpt-5.6-sol",
         )
         self.assertEqual(
             config.coerce_deployment_model("gpt-5.4-mini"),
-            "chatmock/gpt-5.3-codex-spark",
+            "cliproxy/gpt-5.4-mini",
         )
 
 

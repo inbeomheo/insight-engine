@@ -26,6 +26,8 @@ services:
       AI_CACHE_DB: /app/cache/ai_cache.db
       JOB_STORE_DIR: /app/data/jobs
       MEDIA_TRANSCRIPTION_DIR: /app/data/media-transcriptions
+      CLIPROXY_BASE_URL: http://cli-proxy-api:8317/v1
+      CLIPROXY_API_KEY: ${CLIPROXY_API_KEY}
       WHISPER_ENABLED: "true"
       WHISPER_MODEL_SIZE: base
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
@@ -45,8 +47,8 @@ services:
         condition: service_healthy
       media-redis:
         condition: service_healthy
-      chatmock:
-        condition: service_started
+      cli-proxy-api:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
       interval: 30s
@@ -136,37 +138,24 @@ services:
       retries: 3
       start_period: 20s
 
-  chatmock:
-    image: python:3.11-slim
-    container_name: insight-chatmock
+  cli-proxy-api:
+    image: eceasy/cli-proxy-api:v7.2.146
+    container_name: insight-cliproxy
     restart: unless-stopped
-    # ~/.codex/auth.json is 0600 on the host. Run as the host user so ChatMock
-    # can read/refresh the mounted Codex ChatGPT credentials without loosening
-    # secret file permissions.
-    user: "${CHATMOCK_UID:-1000}:${CHATMOCK_GID:-1000}"
-    environment:
-      CODEX_HOME: /codex
-      HOME: /tmp/chatmock-home
-      PYTHONUSERBASE: /tmp/chatmock-userbase
-      PIP_CACHE_DIR: /tmp/pip-cache
-      PATH: /tmp/chatmock-userbase/bin:/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-      CHATGPT_LOCAL_REASONING_EFFORT: minimal
-      CHATGPT_LOCAL_FAST_MODE: "true"
-    command:
-      - sh
-      - -c
-      - >
-        mkdir -p "$$HOME" "$$PYTHONUSERBASE" "$$PIP_CACHE_DIR" &&
-        python -m pip install --user --no-cache-dir chatmock >/dev/null &&
-        chatmock serve --host 0.0.0.0 --port 8000 --reasoning-effort minimal --fast-mode
+    ports:
+      - "127.0.0.1:8317:8317"
     volumes:
-      - /home/heo/.codex:/codex
+      - /home/heo/cliproxyapi/config.yaml:/CLIProxyAPI/config.yaml:ro
+      - /home/heo/cliproxyapi/auths:/root/.cli-proxy-api
+      - /home/heo/cliproxyapi/logs:/CLIProxyAPI/logs
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/v1/models', timeout=5).read()"]
-      interval: 30s
-      timeout: 10s
+      # The official image intentionally ships without curl/wget/nc. Check the
+      # IPv4/IPv6 kernel socket tables for a listening 8317 (hex 207D) socket.
+      test: ["CMD-SHELL", "for f in /proc/net/tcp /proc/net/tcp6; do while read -r sl local_address rest; do case \"$$local_address\" in *:207D) exit 0;; esac; done < \"$$f\"; done; exit 1"]
+      interval: 10s
+      timeout: 5s
       retries: 5
-      start_period: 90s
+      start_period: 10s
 
   redis:
     image: redis:7-alpine

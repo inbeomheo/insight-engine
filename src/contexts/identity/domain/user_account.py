@@ -42,7 +42,7 @@ class ApiKey:
     `masked_key`는 UI 표시용으로 마지막 4자리만 남긴 형태 (예: `****abcd`).
     """
 
-    provider: str  # chatmock
+    provider: str  # cliproxy
     masked_key: str
     label: str
     is_active: bool

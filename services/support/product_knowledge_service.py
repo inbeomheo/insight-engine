@@ -26,9 +26,9 @@ FAQ_ITEMS = [
         "answer": "예약 발행과 캘린더 기능은 학습 엔진으로의 방향 전환 과정에서 제거됐어. 지금은 URL/텍스트를 넣어 바로 콘텐츠를 생성하고 학습하는 흐름에 집중하고 있어.",
     },
     {
-        "keywords": ["모델", "openrouter", "gpt", "키미", "kimi", "프로바이더", "open ai", "openai", "챗목", "chatmock"],
+        "keywords": ["모델", "gpt", "glm", "프로바이더", "open ai", "openai", "cli proxy", "cliproxy", "z.ai"],
         "title": "모델/프로바이더",
-        "answer": "현재 배포판은 모델 선택 혼선을 줄이기 위해 OPEN AI 하나만 노출해. 내부적으로는 ChatMock sidecar가 GPT-5.3 Codex Spark를 OpenAI 호환 방식으로 호출하는 구조야.",
+        "answer": "현재 OPEN AI는 내부 전용 CLIProxyAPI를 통해 GPT-5.6 계열과 호환 모델을 호출하고, Z.AI는 GLM-5.3 Flash를 직접 호출해. 두 경로 모두 설정 화면에서 선택할 수 있어.",
     },
     {
         "keywords": ["스타일", "출력", "요약", "qna", "q&a", "퀴즈", "quiz", "리텐션"],

@@ -9,9 +9,9 @@ class TestGetModelDisplayName(unittest.TestCase):
 
     def test_known_model_returns_name(self):
         """등록된 모델 ID → 표시명 반환"""
-        name = get_model_display_name('chatmock/gpt-5.3-codex-spark')
+        name = get_model_display_name('cliproxy/gpt-5.6-sol')
         self.assertIn('GPT', name)
-        self.assertNotEqual(name, 'chatmock/gpt-5.3-codex-spark')
+        self.assertNotEqual(name, 'cliproxy/gpt-5.6-sol')
 
     def test_unknown_model_returns_id(self):
         """미등록 모델 ID → ID 그대로 반환"""
@@ -19,7 +19,7 @@ class TestGetModelDisplayName(unittest.TestCase):
         self.assertEqual(name, 'unknown/model-xyz')
 
     def test_legacy_chatmock_model_is_not_registered(self):
-        """배포에서 제거한 ChatMock 모델은 다시 노출하지 않는다."""
+        """배포에서 제거한 ChatMock 식별자는 다시 노출하지 않는다."""
         name = get_model_display_name('chatmock/gpt-5.4')
         self.assertEqual(name, 'chatmock/gpt-5.4')
 

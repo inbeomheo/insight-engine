@@ -11,8 +11,8 @@ import litellm
 
 logger = logging.getLogger(__name__)
 
-# 기본 추출 모델 (ChatMock/OpenAI 호환)
-_DEFAULT_MODEL = "chatmock/gpt-5.3-codex-spark"
+# 기본 추출 모델 (CLIProxyAPI/OpenAI 호환)
+_DEFAULT_MODEL = "cliproxy/gpt-5.6-sol"
 
 _ENTITY_RELATION_PROMPT = """다음 텍스트에서 주요 엔티티와 관계를 추출하세요.
 

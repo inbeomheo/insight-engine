@@ -11,12 +11,15 @@ from services.core.logging_config import ServiceLogger
 logger = ServiceLogger('CostTrackerService')
 
 # 모델별 1K 토큰 단가 (USD)
-# ChatMock은 로컬 OpenAI 호환 프록시라 앱 내부 과금은 0으로 집계합니다.
+# CLIProxyAPI는 구독 기반 OpenAI 호환 프록시라 앱 내부 과금은 0으로 집계합니다.
 _PRICE_TABLE: dict[str, dict[str, float]] = {
-    'chatmock/gpt-5.4-mini': {'input': 0.0, 'output': 0.0},
-    'chatmock/gpt-5.4': {'input': 0.0, 'output': 0.0},
-    'chatmock/gpt-5.5': {'input': 0.0, 'output': 0.0},
-    'chatmock/gpt-5.3-codex-spark': {'input': 0.0, 'output': 0.0},
+    'cliproxy/gpt-5.6-sol': {'input': 0.0, 'output': 0.0},
+    'cliproxy/gpt-5.6-terra': {'input': 0.0, 'output': 0.0},
+    'cliproxy/gpt-5.6-luna': {'input': 0.0, 'output': 0.0},
+    'cliproxy/gpt-5.5': {'input': 0.0, 'output': 0.0},
+    'cliproxy/gpt-5.4': {'input': 0.0, 'output': 0.0},
+    'cliproxy/gpt-5.4-mini': {'input': 0.0, 'output': 0.0},
+    'cliproxy/gpt-5.3-codex-spark': {'input': 0.0, 'output': 0.0},
     'default': {'input': 0.0, 'output': 0.0},
 }
 

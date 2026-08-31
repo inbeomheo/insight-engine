@@ -341,10 +341,10 @@ class AIAgent:
                 kwargs["api_base"] = "https://open.bigmodel.cn/api/paas/v4/"
                 kwargs["api_key"] = zhipuai_key
 
-        elif self.model.startswith("chatmock/"):
-            kwargs["model"] = f"openai/{self.model.replace('chatmock/', '')}"
-            kwargs["api_base"] = os.getenv("CHATMOCK_BASE_URL", "http://127.0.0.1:8000/v1")
-            kwargs["api_key"] = os.getenv("CHATMOCK_API_KEY", "dummy")
+        elif self.model.startswith("cliproxy/"):
+            kwargs["model"] = f"openai/{self.model.replace('cliproxy/', '', 1)}"
+            kwargs["api_base"] = os.getenv("CLIPROXY_BASE_URL", "http://127.0.0.1:8317/v1")
+            kwargs["api_key"] = os.getenv("CLIPROXY_API_KEY", "")
             kwargs["drop_params"] = True
             kwargs.pop("temperature", None)
 

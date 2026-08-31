@@ -13,8 +13,10 @@ export default function OnboardingModal() {
   const { activeModal, setOnboardingOpen } = useUIStore();
   const onboardingOpen = activeModal === 'onboarding';
   const { providers } = useSettingsStore();
-  const activeProvider = Object.values(providers)[0] ?? null;
-  const hasModels = Boolean(activeProvider?.models.length);
+  const activeProviders = Object.values(providers);
+  const providerNames = activeProviders.map((provider) => provider.name).filter(Boolean);
+  const totalModels = activeProviders.reduce((sum, provider) => sum + (provider.models?.length ?? 0), 0);
+  const hasModels = totalModels > 0;
   const { t } = useTranslation();
 
   function handleStart() {
@@ -37,16 +39,16 @@ export default function OnboardingModal() {
           </DialogDescription>
         </div>
 
-        {activeProvider ? (
+        {providerNames.length > 0 ? (
           <div
             role="group"
             aria-label={t('onboarding.serviceInfoLabel')}
             className="mb-4 flex items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4 text-left"
           >
             <div className="flex-1">
-              <div className="text-sm font-medium">{activeProvider.name}</div>
+              <div className="text-sm font-medium">{providerNames.join(' · ')}</div>
               <div className="text-xs text-muted-foreground">
-                {t('onboarding.singleService')} · {t('onboarding.modelCount', { count: activeProvider.models.length })}
+                {t('onboarding.serviceCount', { count: providerNames.length })} · {t('onboarding.modelCount', { count: totalModels })}
               </div>
             </div>
             <Check className="h-4 w-4 text-primary" aria-hidden="true" />
@@ -56,7 +58,7 @@ export default function OnboardingModal() {
             {t('onboarding.noServer')}
           </p>
         )}
-        {activeProvider && !hasModels && (
+        {providerNames.length > 0 && !hasModels && (
           <p role="alert" className="mb-4 text-center text-xs text-destructive">
             {t('onboarding.noModels')}
           </p>

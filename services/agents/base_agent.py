@@ -15,7 +15,7 @@ class BaseAgent(ABC):
     """모든 에이전트의 기반 추상 클래스.
 
     Args:
-        model: 사용할 AI 모델 ID (예: 'chatmock/gpt-5.4-mini').
+        model: 사용할 AI 모델 ID (예: 'cliproxy/gpt-5.6-sol').
                None이면 기본 모델 자동 선택.
     """
 
@@ -58,7 +58,7 @@ class BaseAgent(ABC):
             return AGENT_DEFAULT_MODEL
         except Exception:
             pass
-        return 'chatmock/gpt-5.3-codex-spark'
+        return 'cliproxy/gpt-5.6-sol'
 
     def _call_ai(self, prompt: str, temperature: float = 0.7, max_tokens: int = 4000) -> str:
         """AI 모델을 호출하여 응답을 반환하는 헬퍼.
@@ -85,12 +85,12 @@ class BaseAgent(ABC):
             'timeout': 180,
         }
 
-        if model.startswith('chatmock/') or model.startswith('gpt-'):
+        if model.startswith('cliproxy/') or model.startswith('gpt-'):
             # LiteLLM은 OpenAI 호환 사설 endpoint에도 provider 접두사가
             # 필요하다. 접두사 없이 raw gpt-*를 넘기면 Provider NOT provided.
-            kwargs['model'] = f"openai/{model.replace('chatmock/', '', 1)}"
-            kwargs['api_base'] = os.getenv('CHATMOCK_BASE_URL', 'http://127.0.0.1:8000/v1')
-            kwargs['api_key'] = os.getenv('CHATMOCK_API_KEY', 'dummy') or 'dummy'
+            kwargs['model'] = f"openai/{model.replace('cliproxy/', '', 1)}"
+            kwargs['api_base'] = os.getenv('CLIPROXY_BASE_URL', 'http://127.0.0.1:8317/v1')
+            kwargs['api_key'] = os.getenv('CLIPROXY_API_KEY', '')
             kwargs['reasoning_effort'] = 'medium'
             kwargs['drop_params'] = True
             kwargs.pop('temperature', None)

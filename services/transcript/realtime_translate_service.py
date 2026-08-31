@@ -69,7 +69,7 @@ def _translate_with_ai(text: str, target_lang: str, model: Optional[str] = None)
     from services.core.ai_service import call_litellm
 
     prompt = _TRANSLATE_PROMPTS.get(target_lang, _TRANSLATE_PROMPTS['en'])
-    target_model = model or os.getenv('TRANSLATION_MODEL', 'chatmock/gpt-5.3-codex-spark')
+    target_model = model or os.getenv('TRANSLATION_MODEL', 'cliproxy/gpt-5.6-sol')
 
     messages = [
         {"role": "system", "content": prompt},

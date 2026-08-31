@@ -49,20 +49,27 @@ async function renderHook() {
   await act(async () => root!.render(<Harness />));
 }
 
-function chatMockProviders() {
+function providerFixture() {
   return {
-    chatmock: {
-      name: 'ChatMock',
-      api_base: 'http://127.0.0.1:8000/v1',
+    cliproxy: {
+      name: 'OPEN AI',
+      api_base: 'http://cli-proxy-api:8317/v1',
       models: [
-        { id: 'chatmock/gpt-5.4-mini', name: 'GPT-5.4 Mini', max_input_tokens: 128000, price_input: 0, price_output: 0 },
-        { id: 'chatmock/gpt-5.4', name: 'GPT-5.4', max_input_tokens: 128000, price_input: 0, price_output: 0 },
+        { id: 'cliproxy/gpt-5.6-sol', name: 'GPT-5.6 Sol', max_input_tokens: 128000, price_input: 0, price_output: 0 },
+        { id: 'cliproxy/gpt-5.4', name: 'GPT-5.4', max_input_tokens: 128000, price_input: 0, price_output: 0 },
+      ],
+    },
+    zai: {
+      name: 'Z.AI',
+      api_base: 'https://api.z.ai/api/coding/paas/v4',
+      models: [
+        { id: 'zai/glm-5.3-flash', name: 'GLM-5.3 Flash', max_input_tokens: 1000000, price_input: 0.15, price_output: 0.5 },
       ],
     },
   };
 }
 
-describe('useProviders 단일 ChatMock 모델 동기화', () => {
+describe('useProviders 다중 provider 모델 동기화', () => {
   beforeEach(() => {
     mocks.query.data = undefined;
     mocks.query.error = null;
@@ -76,24 +83,34 @@ describe('useProviders 단일 ChatMock 모델 동기화', () => {
     document.body.innerHTML = '';
   });
 
-  it('모델 목록을 저장하고 유효하지 않은 선택을 첫 모델로 복구한다', async () => {
-    const providers = chatMockProviders();
+  it('목록을 저장하고 유효하지 않은 선택을 첫 모델로 복구한다', async () => {
+    const providers = providerFixture();
     mocks.query.data = { providers };
-    mocks.store.selectedModel = 'removed-model';
+    mocks.store.selectedModel = 'chatmock/gpt-5.3-codex-spark';
 
     await renderHook();
 
     expect(mocks.store.setProviders).toHaveBeenCalledWith(providers);
-    expect(mocks.store.setSelectedModel).toHaveBeenCalledWith('chatmock/gpt-5.4-mini');
+    expect(mocks.store.setSelectedModel).toHaveBeenCalledWith('cliproxy/gpt-5.6-sol');
   });
 
-  it('현재 모델이 유효하면 선택을 다시 저장하지 않는다', async () => {
-    mocks.query.data = { providers: chatMockProviders() };
-    mocks.store.selectedModel = 'chatmock/gpt-5.4';
+  it('두 번째 provider의 GLM 모델 선택도 유효하게 유지한다', async () => {
+    mocks.query.data = { providers: providerFixture() };
+    mocks.store.selectedModel = 'zai/glm-5.3-flash';
 
     await renderHook();
 
     expect(mocks.store.setSelectedModel).not.toHaveBeenCalled();
+  });
+
+  it('첫 provider가 비어도 다음 provider의 첫 모델을 선택한다', async () => {
+    const providers = providerFixture();
+    providers.cliproxy.models = [];
+    mocks.query.data = { providers };
+
+    await renderHook();
+
+    expect(mocks.store.setSelectedModel).toHaveBeenCalledWith('zai/glm-5.3-flash');
   });
 
   it('모델이 없어도 빈 provider 목록 상태만 저장한다', async () => {

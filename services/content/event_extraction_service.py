@@ -20,7 +20,7 @@ EVENT_TYPES = {
 }
 
 # 기본 모델 (설정 없을 때 사용)
-DEFAULT_MODEL = 'chatmock/gpt-5.3-codex-spark'
+DEFAULT_MODEL = 'cliproxy/gpt-5.6-sol'
 
 
 def extract_events(transcript: str, model: Optional[str] = None) -> List[Dict]:

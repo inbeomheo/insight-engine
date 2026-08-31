@@ -2,7 +2,7 @@
 NLP 분석 서비스 — LLM 기반 키워드/감성/토픽 분석
 
 외부 NLP 라이브러리(spaCy, nltk 등) 없이 LiteLLM을 통해 분석.
-ChatMock 기본 모델을 사용합니다.
+CLIProxyAPI 기본 모델을 사용합니다.
 """
 import json
 import logging
@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 # 분석에 사용할 기본 모델
 _ANALYSIS_MODEL_CHAIN = [
-    'chatmock/gpt-5.3-codex-spark',
+    'cliproxy/gpt-5.6-sol',
 ]
 
 # NLP 분석 프롬프트 — 최소 토큰으로 정확한 JSON 반환 유도
@@ -60,19 +60,19 @@ _EMPTY_ANALYSIS = {
 
 
 def _get_analysis_model() -> str:
-    """분석에 사용할 ChatMock 기본 모델을 반환합니다."""
+    """분석에 사용할 CLIProxyAPI 기본 모델을 반환합니다."""
     return _ANALYSIS_MODEL_CHAIN[0]
 
 
-def _apply_chatmock_kwargs(kwargs: dict, model: str) -> None:
-    """ChatMock 모델 ID를 OpenAI 호환 호출 파라미터로 변환합니다."""
-    if not model.startswith('chatmock/'):
+def _apply_cliproxy_kwargs(kwargs: dict, model: str) -> None:
+    """CLIProxyAPI 모델 ID를 OpenAI 호환 호출 파라미터로 변환합니다."""
+    if not model.startswith('cliproxy/'):
         return
     import os
 
-    kwargs["model"] = model.replace('chatmock/', '')
-    kwargs["api_base"] = os.getenv('CHATMOCK_BASE_URL', 'http://127.0.0.1:8000/v1')
-    kwargs["api_key"] = 'dummy'
+    kwargs["model"] = f"openai/{model.replace('cliproxy/', '', 1)}"
+    kwargs["api_base"] = os.getenv('CLIPROXY_BASE_URL', 'http://127.0.0.1:8317/v1')
+    kwargs["api_key"] = os.getenv('CLIPROXY_API_KEY', '')
     kwargs["drop_params"] = True
     kwargs.pop("temperature", None)
 
@@ -103,7 +103,7 @@ def _call_llm_for_analysis(content: str, model: str) -> dict:
         "temperature": 0.3,
     }
 
-    _apply_chatmock_kwargs(kwargs, model)
+    _apply_cliproxy_kwargs(kwargs, model)
 
     response = completion(**kwargs)
     raw = response.choices[0].message.content or ''
@@ -313,7 +313,7 @@ def analyze_sentiment_flow(content: str, model: str = None) -> dict:
             "temperature": 0.3,
         }
 
-        _apply_chatmock_kwargs(kwargs, model)
+        _apply_cliproxy_kwargs(kwargs, model)
 
         response = completion(**kwargs)
         raw = response.choices[0].message.content or ''

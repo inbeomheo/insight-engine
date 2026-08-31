@@ -44,8 +44,9 @@ export default function SettingsModal() {
     setSelectedModel,
   } = useSettingsStore();
 
-  const activeProvider = Object.values(providers)[0] ?? null;
-  const currentModels = activeProvider?.models ?? [];
+  const activeProviders = Object.values(providers);
+  const currentModels = activeProviders.flatMap((provider) => provider.models ?? []);
+  const providerNames = activeProviders.map((provider) => provider.name).filter(Boolean);
   const activeModelId = currentModels.some((model) => model.id === selectedModel)
     ? selectedModel
     : currentModels[0]?.id ?? '';
@@ -146,7 +147,7 @@ export default function SettingsModal() {
         <div className="space-y-3 pt-4 border-t">
           <h3 className="text-sm font-semibold flex items-center gap-2">{t('settings.aiService')}</h3>
 
-          {!activeProvider ? (
+          {!activeProviders.length ? (
             <p className="text-xs text-muted-foreground">
               {t('settings.noProviders')}
             </p>
@@ -157,8 +158,8 @@ export default function SettingsModal() {
                 aria-label={t('settings.serviceInfoLabel')}
                 className="rounded-md border border-border bg-muted/30 px-3 py-2"
               >
-                <p className="text-sm font-medium">{activeProvider.name}</p>
-                <p className="text-xs text-muted-foreground">{t('settings.singleServiceActive')}</p>
+                <p className="text-sm font-medium">{providerNames.join(' · ')}</p>
+                <p className="text-xs text-muted-foreground">{t('settings.multiServiceActive', { count: providerNames.length })}</p>
               </div>
 
               {currentModels.length === 0 ? (

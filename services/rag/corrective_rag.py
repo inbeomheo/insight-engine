@@ -19,7 +19,7 @@ import litellm
 logger = logging.getLogger(__name__)
 
 # 품질 평가 및 쿼리 재구성에 사용할 빠른 모델
-_DEFAULT_MODEL = "chatmock/gpt-5.3-codex-spark"
+_DEFAULT_MODEL = "cliproxy/gpt-5.6-sol"
 
 # 품질 결정 임계값
 _SCORE_CORRECT_THRESHOLD = 0.7    # 이상이면 correct

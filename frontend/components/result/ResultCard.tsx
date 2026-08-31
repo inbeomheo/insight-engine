@@ -38,6 +38,7 @@ import type { VideoEvent, EventSummary } from '@/lib/types';
 
 import { ReportProvider } from './ReportContext';
 import { EXPORT_HTML_STYLE } from '@/lib/exportHtmlTemplate';
+import { canonicalizeShareUrl } from '@/lib/shareUrl';
 
 // 조건부 서브컴포넌트 — 특정 스타일/데이터에서만 사용되므로 dynamic import
 const SeoSection = dynamic(() => import('./SeoSection'), { ssr: false });
@@ -359,14 +360,15 @@ const ResultCard = memo(function ResultCard({ report, viewMode = 'full', onExpan
     setIsSharing(true);
     try {
       const existingUrl = report.share_url;
-      const shareUrl = existingUrl || (await createSharePage({
+      const rawShareUrl = existingUrl || (await createSharePage({
         title: report.title,
         content: report.content,
         html: report.html,
         url: report.url,
         style: report.style,
       })).share_url;
-      if (!existingUrl) updateReport(report.id, { share_url: shareUrl });
+      const shareUrl = canonicalizeShareUrl(rawShareUrl, window.location.origin);
+      if (shareUrl !== existingUrl) updateReport(report.id, { share_url: shareUrl });
 
       await copyToClipboard(shareUrl);
       setPanel('copiedField', 'share');

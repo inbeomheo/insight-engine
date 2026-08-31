@@ -6,6 +6,10 @@ import { useSettingsStore } from '@/stores/settingsStore';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
 
+function collectModels(providers: NonNullable<Awaited<ReturnType<typeof fetchProviders>>['providers']>) {
+  return Object.values(providers).flatMap((provider) => provider.models ?? []);
+}
+
 export function useProviders() {
   const { setProviders, selectedModel, setSelectedModel } = useSettingsStore();
 
@@ -20,7 +24,7 @@ export function useProviders() {
     if (!providers) return;
 
     setProviders(providers);
-    const models = Object.values(providers)[0]?.models ?? [];
+    const models = collectModels(providers);
     if (models.length > 0 && !models.some((model) => model.id === selectedModel)) {
       setSelectedModel(models[0].id);
     }

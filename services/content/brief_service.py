@@ -139,7 +139,7 @@ def _get_model() -> str:
     """사용 가능한 모델을 반환합니다."""
     from config import PROVIDER_API_KEYS
 
-    candidates = ['chatmock/gpt-5.3-codex-spark']
+    candidates = ['cliproxy/gpt-5.6-sol']
     for model_id in candidates:
         provider = model_id.split('/')[0]
         if PROVIDER_API_KEYS.get(provider, ''):

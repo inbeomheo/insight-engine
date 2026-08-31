@@ -1,6 +1,6 @@
 """
 스마트 콘텐츠 생성기 설정 파일
-ChatMock(OpenAI 호환) 서비스, 스타일 옵션 정의
+CLIProxyAPI(OpenAI 호환) 서비스, 스타일 옵션 정의
 프롬프트 템플릿은 prompts/ 패키지에서 관리
 
 v3.0 업데이트:
@@ -26,18 +26,16 @@ from prompts import (
 
 YOUTUBE_API_KEY: str = os.getenv('YOUTUBE_API_KEY', '')
 
-# 이 배포에서 실제 호출을 허용하는 단일 모델. 요청 본문이나 환경변수로
-# 다른 모델을 넣어도 모든 LLM 호출 경계에서 이 값으로 정규화한다.
-DEPLOYMENT_MODEL: str = 'chatmock/gpt-5.3-codex-spark'
+# 기본 모델. 허용 목록에 없는 모델 입력은 이 값으로 정규화한다.
+DEPLOYMENT_MODEL: str = 'cliproxy/gpt-5.6-sol'
+GLM_FLASH_MODEL: str = 'zai/glm-5.3-flash'
 
 PROVIDER_API_KEYS: Dict[str, str] = {
-    # Deployment policy: expose only the ChatGPT/Codex-backed ChatMock sidecar.
-    # It is branded as "OPEN AI" in the UI to avoid leaking the internal proxy
-    # name and to prevent DeepSeek/Ollama/etc. from reappearing just because
-    # their env vars happen to exist on the host.
-    'chatmock': os.getenv('CHATMOCK_API_KEY', 'dummy'),
+    # ChatGPT/Codex OAuth is served by the internal-only CLIProxyAPI sidecar.
+    'cliproxy': os.getenv('CLIPROXY_API_KEY', ''),
+    'zai': os.getenv('ZAI_API_KEY') or os.getenv('ZHIPUAI_API_KEY', ''),
 }
-ENABLED_PROVIDER_IDS: Tuple[str, ...] = ('chatmock',)
+ENABLED_PROVIDER_IDS: Tuple[str, ...] = ('cliproxy', 'zai')
 
 SUPADATA_API_KEY: str = os.getenv('SUPADATA_API_KEY', '')
 
@@ -187,12 +185,31 @@ DETAIL_PRESETS: Dict[str, Dict[str, Any]] = {
 # === Providers ===
 
 SUPPORTED_PROVIDERS: Dict[str, Dict[str, Any]] = {
-    'chatmock': {
+    'cliproxy': {
         'name': 'OPEN AI',
-        'api_base': os.getenv('CHATMOCK_BASE_URL', 'http://127.0.0.1:8000/v1'),
+        'api_base': os.getenv('CLIPROXY_BASE_URL', 'http://127.0.0.1:8317/v1'),
         'models': [
-            {'id': DEPLOYMENT_MODEL, 'name': 'GPT-5.3 Codex Spark', 'max_input_tokens': 128000, 'price_input': 0, 'price_output': 0},
+            {'id': 'cliproxy/gpt-5.6-sol', 'name': 'GPT-5.6 Sol', 'max_input_tokens': 128000, 'price_input': 0, 'price_output': 0},
+            {'id': 'cliproxy/gpt-5.6-terra', 'name': 'GPT-5.6 Terra', 'max_input_tokens': 128000, 'price_input': 0, 'price_output': 0},
+            {'id': 'cliproxy/gpt-5.6-luna', 'name': 'GPT-5.6 Luna', 'max_input_tokens': 128000, 'price_input': 0, 'price_output': 0},
+            {'id': 'cliproxy/gpt-5.5', 'name': 'GPT-5.5', 'max_input_tokens': 128000, 'price_input': 0, 'price_output': 0},
+            {'id': 'cliproxy/gpt-5.4', 'name': 'GPT-5.4', 'max_input_tokens': 128000, 'price_input': 0, 'price_output': 0},
+            {'id': 'cliproxy/gpt-5.4-mini', 'name': 'GPT-5.4 Mini', 'max_input_tokens': 128000, 'price_input': 0, 'price_output': 0},
+            {'id': 'cliproxy/gpt-5.3-codex-spark', 'name': 'GPT-5.3 Codex Spark', 'max_input_tokens': 128000, 'price_input': 0, 'price_output': 0},
         ]
+    },
+    'zai': {
+        'name': 'Z.AI',
+        'api_base': os.getenv('ZHIPUAI_API_BASE', 'https://api.z.ai/api/paas/v4'),
+        'models': [
+            {
+                'id': GLM_FLASH_MODEL,
+                'name': 'GLM-5.3 Flash',
+                'max_input_tokens': 1_000_000,
+                'price_input': 0.15,
+                'price_output': 0.50,
+            },
+        ],
     },
 }
 
@@ -205,8 +222,8 @@ _PROVIDERS_CACHE_TTL: float = 60.0  # 60초 TTL
 def get_available_providers() -> Dict[str, Dict[str, Any]]:
     """배포에서 허용된 프로바이더만 반환합니다.
 
-    이 배포판은 UI/자동 선택 혼선을 막기 위해 ChatMock-backed OPEN AI만
-    노출한다. DeepSeek/Ollama 등 다른 키나 URL이 환경변수에 있어도
+    이 배포판은 UI/자동 선택 혼선을 막기 위해 CLIProxyAPI-backed OPEN AI와
+    직접 연결된 Z.AI만 노출한다. 다른 키나 URL이 환경변수에 있어도
     `/api/providers`에는 나오지 않는다.
     결과를 60초간 캐싱합니다.
     """
@@ -229,13 +246,29 @@ def get_available_providers() -> Dict[str, Dict[str, Any]]:
 @functools.lru_cache(maxsize=128)
 def get_provider_from_model(model_id: str) -> str:
     """모델 ID에서 프로바이더를 추출합니다."""
-    if model_id.startswith('chatmock/') or model_id.startswith('gpt-'):
-        return 'chatmock'
-    return 'chatmock'  # 기본값 (ChatMock/OpenAI 호환)
+    if model_id.startswith('zai/') or model_id == 'glm-5.3-flash':
+        return 'zai'
+    if model_id.startswith('cliproxy/') or model_id.startswith('chatmock/') or model_id.startswith('gpt-'):
+        return 'cliproxy'
+    return 'cliproxy'  # 기본값 (CLIProxyAPI/OpenAI 호환)
 
 
 def coerce_deployment_model(model_id: str | None = None) -> str:
-    """모든 외부/내부 모델 입력을 배포 고정 모델로 정규화한다."""
+    """허용 모델만 통과시키고 알 수 없는 입력은 기본 모델로 정규화한다."""
+    if model_id in {GLM_FLASH_MODEL, 'glm-5.3-flash'}:
+        return GLM_FLASH_MODEL
+    cliproxy_ids = {
+        model['id'] for model in SUPPORTED_PROVIDERS['cliproxy']['models']
+    }
+    if model_id in cliproxy_ids:
+        return str(model_id)
+    if isinstance(model_id, str):
+        if model_id.startswith('chatmock/'):
+            migrated = 'cliproxy/' + model_id.removeprefix('chatmock/')
+            return migrated if migrated in cliproxy_ids else DEPLOYMENT_MODEL
+        if model_id.startswith('gpt-'):
+            prefixed = 'cliproxy/' + model_id
+            return prefixed if prefixed in cliproxy_ids else DEPLOYMENT_MODEL
     return DEPLOYMENT_MODEL
 
 
