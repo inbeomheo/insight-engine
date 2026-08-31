@@ -12,4 +12,8 @@ describe('공개 공유 페이지 reverse proxy', () => {
       destination: 'http://localhost:5001/share/:path*',
     });
   });
+
+  it('장시간 AI 생성 요청을 30초에 끊지 않는다', () => {
+    expect(nextConfig.experimental?.proxyTimeout).toBe(300_000);
+  });
 });

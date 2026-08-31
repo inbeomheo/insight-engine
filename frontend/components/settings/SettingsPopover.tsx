@@ -73,12 +73,12 @@ export default function SettingsPopover() {
 
   if (!settingsPopoverOpen) return null;
 
-  const activeProvider = Object.values(providers)[0];
-  const currentModels = activeProvider?.models ?? [];
+  const activeProviders = Object.values(providers);
+  const currentModels = activeProviders.flatMap((provider) => provider.models ?? []);
+  const providerNames = activeProviders.map((provider) => provider.name).filter(Boolean);
   const activeModelId = currentModels.some((model) => model.id === selectedModel)
     ? selectedModel
     : currentModels[0]?.id ?? '';
-  const providerName = activeProvider?.name ?? 'ChatMock';
 
   // 내장 + 커스텀 스타일
   const allStyles: StyleOption[] = [
@@ -98,8 +98,15 @@ export default function SettingsPopover() {
       {/* AI 모델 */}
       <div>
         <label className="text-sm font-medium text-muted-foreground mb-2 block">AI 모델</label>
-        <div className="mb-2 rounded-sm border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-          {providerName} · {t('settings.singleServiceActive')}
+        <div
+          className="mb-2 rounded-sm border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground"
+          aria-label={t('settings.serviceInfoLabel')}
+        >
+          {providerNames.length === 0
+            ? t('settings.noProviders')
+            : `${providerNames.join(' · ')} · ${providerNames.length === 1
+              ? t('settings.singleServiceActive')
+              : t('settings.multiServiceActive', { count: providerNames.length })}`}
         </div>
         {currentModels.length === 0 ? (
           <p role="alert" className="text-xs text-destructive">{t('settings.noModels')}</p>

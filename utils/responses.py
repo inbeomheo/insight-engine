@@ -16,7 +16,8 @@ logger = logging.getLogger(__name__)
 _ERROR_PREFIXES = [
     '[인증 실패]', '[사용량 초과]', '[모델 오류]', '[타임아웃]',
     '[연결 실패]', '[서비스 불가]', '[서버 오류]', '[잔액 부족]',
-    '[컨텐츠 차단]', '[AI 오류]', '[노트 조회 실패]',
+    '[컨텐츠 차단]', '[AI 오류]', '[노트 조회 실패]', '[요청 제한]',
+    '[생성 실패]',
 ]
 
 # 클라이언트에 노출해도 안전한 에러 접두사
@@ -25,7 +26,7 @@ _SAFE_ERROR_PREFIXES = [
     '[생성 실패]', '[타임아웃]', '[모델 오류]', '[잔액 부족]',
     '[컨텐츠 차단]', '[AI 오류]', '[아티클 추출 실패]',
     '[노트 생성 실패]', '[노트 조회 실패]', '[검색 실패]', '[채팅 실패]',
-    '자막을', '댓글을', 'YouTube', 'API', '영상', 'URL',
+    '[요청 제한]', '자막을', '댓글을', 'YouTube', 'API', '영상', 'URL',
 ]
 
 # 내부 정보 키워드 (노출 차단 대상)
@@ -119,7 +120,7 @@ def handle_error(error_msg, log_detail=None):
         safe_error = sanitize_error_for_client(error_text)
         if error_text.startswith('[인증 실패]'):
             return jsonify({'error': safe_error}), 401
-        if error_text.startswith('[사용량 초과]'):
+        if error_text.startswith(('[사용량 초과]', '[요청 제한]')):
             return jsonify({'error': safe_error}), 429
         return jsonify({'error': safe_error}), 503
 

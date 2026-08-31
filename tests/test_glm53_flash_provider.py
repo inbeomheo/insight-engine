@@ -49,7 +49,7 @@ class Glm53FlashProviderTests(unittest.TestCase):
         self.assertEqual(kwargs["model"], "zai/glm-5.3-flash")
         self.assertEqual(kwargs["api_key"], "test-zai-key")
         self.assertEqual(kwargs["api_base"], "https://api.z.ai/api/coding/paas/v4")
-        self.assertEqual(kwargs["reasoning_effort"], "max")
+        self.assertEqual(kwargs["reasoning_effort"], "low")
 
 
 if __name__ == "__main__":

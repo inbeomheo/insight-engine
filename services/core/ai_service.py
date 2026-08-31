@@ -166,9 +166,16 @@ def _build_completion_kwargs(model, prompt, style_id=None, modifiers=None, strea
     if model.startswith("zai/"):
         kwargs["api_base"] = os.getenv("ZHIPUAI_API_BASE", "https://api.z.ai/api/paas/v4")
         kwargs["api_key"] = os.getenv("ZAI_API_KEY") or os.getenv("ZHIPUAI_API_KEY", "")
-        kwargs["reasoning_effort"] = "max"
+        # 콘텐츠 요약/변환은 코딩·수학 문제가 아니므로 경량 추론을 사용합니다.
+        # max는 짧은 출력 예산을 reasoning_content에 모두 소진해 빈 본문을
+        # 반환할 수 있습니다(GLM-5.3 계열은 추론 비활성화를 지원하지 않음).
+        kwargs["reasoning_effort"] = "low"
+        kwargs["max_tokens"] = max(kwargs["max_tokens"], 4000)
         kwargs["temperature"] = 1.0
         kwargs["drop_params"] = True
+        # 단기 RPM 제한(429)은 LiteLLM의 프로바이더 측 재시도로 흡수합니다.
+        # 재시도 사이 지수 백오프가 적용되어 사용자에게 429가 노출되지 않습니다.
+        kwargs["num_retries"] = 3
 
     # CLIProxyAPI → OpenAI 호환 프록시 (ChatGPT/Codex 구독 기반)
     elif model.startswith("cliproxy/") or model.startswith("gpt-"):
@@ -233,9 +240,25 @@ def _convert_error_message(error_msg, model=None):
     if 'invalid_api_key' in error_lower or 'authentication' in error_lower or 'unauthorized' in error_lower:
         return f"[인증 실패] API 키가 유효하지 않습니다{model_info}. 환경변수를 확인해주세요."
 
-    # 사용량 제한
-    if 'rate_limit' in error_lower or 'quota' in error_lower or 'too many requests' in error_lower or '429' in error_lower:
-        return f"[사용량 초과] API 요청 한도에 도달했습니다{model_info}. 잠시 후 다시 시도해주세요."
+    # 순간 요청 제한(RPM/동시성)과 총 사용량(quota)을 구분합니다.
+    # LiteLLM의 실제 예외 문자열은 ``RateLimitError``와 ``Rate limit``처럼
+    # 언더스코어 없이 들어오므로 모든 표기를 명시적으로 처리합니다.
+    rate_limit_markers = (
+        'ratelimit', 'rate_limit', 'rate limit', 'too many requests', '429',
+    )
+    if any(marker in error_lower for marker in rate_limit_markers):
+        if model and model.startswith('zai/'):
+            return (
+                "[요청 제한] Z.AI의 단기 요청 한도에 도달했습니다. "
+                "잠시 후 다시 시도하거나 OPEN AI 모델을 선택해주세요."
+            )
+        return "[요청 제한] AI 서비스의 단기 요청 한도에 도달했습니다. 잠시 후 다시 시도해주세요."
+
+    if 'quota' in error_lower:
+        return f"[사용량 초과] API 사용량 한도에 도달했습니다{model_info}. 잠시 후 다시 시도해주세요."
+
+    if '빈 응답' in error_lower or 'empty response' in error_lower:
+        return "[생성 실패] AI 모델이 빈 응답을 반환했습니다. 잠시 후 다시 시도하거나 다른 모델을 선택해주세요."
 
     # 모델 관련
     if 'model' in error_lower and ('not found' in error_lower or 'does not exist' in error_lower):
@@ -307,6 +330,8 @@ def create_content(content: str, model: str, style_prompt: Optional[str] = None,
         response = _call_completion_with_model_retry(model, completion_kwargs)
 
         markdown_content = response.choices[0].message.content
+        if not isinstance(markdown_content, str) or not markdown_content.strip():
+            raise ValueError("AI 모델이 빈 응답을 반환했습니다.")
         title, body = _extract_title_and_content(markdown_content)
 
         # 토큰 사용량 정보 추출 (기본값 설정으로 None 방지)

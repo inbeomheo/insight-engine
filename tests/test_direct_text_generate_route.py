@@ -57,6 +57,54 @@ def test_generate_direct_text_happy_path_sets_source_meta():
     assert data["source_meta"]["chars"] == len(text)
 
 
+def test_generate_direct_text_zai_rate_limit_returns_429_with_recovery_hint():
+    _, client = _app_client()
+    text = "Z.AI 요청 제한 응답을 검증하기 위한 충분히 긴 직접 입력 텍스트입니다. " * 3
+    provider_error = (
+        "[요청 제한] Z.AI 요청이 일시적으로 제한되었습니다. "
+        "잠시 후 다시 시도하거나 OPEN AI 모델을 선택해주세요."
+    )
+
+    p1, p2 = _no_auth_patches()
+    with (
+        p1,
+        p2,
+        patch("services.core.ai_service.create_content", side_effect=Exception(provider_error)),
+    ):
+        resp = client.post(
+            "/generate",
+            json={"content": text, "model": "zai/glm-5.3-flash", "style": "summary"},
+            headers=_H,
+        )
+
+    assert resp.status_code == 429
+    assert resp.get_json()["error"] == provider_error
+
+
+def test_generate_direct_text_empty_model_response_returns_503_not_500():
+    _, client = _app_client()
+    text = "빈 AI 응답을 일반 서버 오류와 구분하기 위한 충분히 긴 직접 입력 텍스트입니다. " * 3
+    provider_error = (
+        "[생성 실패] AI 모델이 빈 응답을 반환했습니다. "
+        "잠시 후 다시 시도하거나 다른 모델을 선택해주세요."
+    )
+
+    p1, p2 = _no_auth_patches()
+    with (
+        p1,
+        p2,
+        patch("services.core.ai_service.create_content", side_effect=Exception(provider_error)),
+    ):
+        resp = client.post(
+            "/generate",
+            json={"content": text, "model": "zai/glm-5.3-flash", "style": "summary"},
+            headers=_H,
+        )
+
+    assert resp.status_code == 503
+    assert resp.get_json()["error"] == provider_error
+
+
 def test_generate_direct_text_too_short_returns_400_korean_message():
     _, client = _app_client()
 

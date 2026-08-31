@@ -135,7 +135,7 @@ class TestCreateContent(unittest.TestCase):
         """앱 컨텍스트 정리"""
         self.ctx.pop()
 
-    @patch('litellm.completion')
+    @patch('services.core.ai_service._call_completion_with_model_retry')
     def test_create_content_success(self, mock_completion):
         """콘텐츠 생성 성공 케이스"""
         mock_response = MagicMock()
@@ -155,7 +155,7 @@ class TestCreateContent(unittest.TestCase):
         self.assertIn('content', result)
         self.assertIn('html', result)
 
-    @patch('litellm.completion')
+    @patch('services.core.ai_service._call_completion_with_model_retry')
     def test_create_content_returns_prompt(self, mock_completion):
         """프롬프트 반환 옵션 테스트"""
         mock_response = MagicMock()
@@ -174,6 +174,24 @@ class TestCreateContent(unittest.TestCase):
         self.assertIsInstance(result, dict)
         self.assertIsInstance(prompt, str)
         self.assertIn("테스트", prompt)
+
+    @patch('services.core.ai_service._call_completion_with_model_retry')
+    def test_create_content_rejects_empty_model_response(self, mock_completion):
+        """모델 본문이 비어 있으면 HTTP 성공 결과로 취급하지 않는다."""
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = ""
+        mock_completion.return_value = mock_response
+
+        from services.core.ai_service import create_content
+
+        with self.assertRaisesRegex(Exception, r"\[생성 실패\].*빈 응답"):
+            create_content(
+                content="빈 모델 응답 검증",
+                model="zai/glm-5.3-flash",
+                modifiers={"length": "short"},
+                detail_level="brief",
+            )
 
 
 class TestStreamingUsage(unittest.TestCase):

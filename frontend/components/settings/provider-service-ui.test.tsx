@@ -3,6 +3,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import OnboardingModal from '@/components/modals/OnboardingModal';
 import SettingsModal from './SettingsModal';
+import SettingsPopover from './SettingsPopover';
 
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -10,8 +11,10 @@ const mocks = vi.hoisted(() => ({
   setOnboardingDone: vi.fn(),
   ui: {
     activeModal: 'onboarding',
+    settingsPopoverOpen: false,
     setOnboardingOpen: vi.fn(),
     setSettingsModalOpen: vi.fn(),
+    setSettingsPopoverOpen: vi.fn(),
   },
   settings: {
     providers: {} as Record<string, {
@@ -26,7 +29,22 @@ const mocks = vi.hoisted(() => ({
       }>;
     }>,
     selectedModel: '',
+    selectedStyle: 'summary',
+    modifiers: {
+      length: 'medium',
+      writing_style: 'conversational',
+      language: 'ko',
+    },
+    customStyles: [],
+    webhookUrl: '',
+    enableWebSearch: false,
+    transcriptLanguage: null,
     setSelectedModel: vi.fn(),
+    setSelectedStyle: vi.fn(),
+    setModifiers: vi.fn(),
+    setWebhookUrl: vi.fn(),
+    setEnableWebSearch: vi.fn(),
+    setTranscriptLanguage: vi.fn(),
   },
 }));
 
@@ -49,6 +67,7 @@ vi.mock('@/hooks/useTranslation', () => ({
       'settings.aiService': 'AI 서비스',
       'settings.serviceInfoLabel': 'AI 서비스 정보',
       'settings.multiServiceActive': `${values?.count ?? 0}개 AI 서비스 사용 중`,
+      'settings.singleServiceActive': '단일 AI 서비스 사용 중',
       'settings.modelSelectLabel': 'AI 모델 선택',
       'settings.noModels': '사용 가능한 AI 모델이 없습니다',
       'settings.noProviders': '사용 가능한 AI 서비스가 없습니다',
@@ -105,12 +124,14 @@ vi.mock('@/components/ui/select', () => ({
 }));
 vi.mock('@/lib/api', () => ({
   clearCache: vi.fn(),
+  testWebhook: vi.fn(),
   getStyleMemory: vi.fn(() => new Promise(() => undefined)),
   updateStyleMemory: vi.fn(),
   resetStyleMemory: vi.fn(),
 }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock('./LanguageSwitcher', () => ({ default: () => <div>언어 전환</div> }));
+vi.mock('./KnowledgeManager', () => ({ default: () => <div>지식 관리</div> }));
 
 let root: Root | null = null;
 let container: HTMLDivElement | null = null;
@@ -151,6 +172,7 @@ function findButton(view: HTMLElement, text: string) {
 describe('다중 AI 서비스 UI', () => {
   beforeEach(() => {
     mocks.ui.activeModal = 'onboarding';
+    mocks.ui.settingsPopoverOpen = false;
     mocks.settings.providers = {};
     mocks.settings.selectedModel = '';
     vi.clearAllMocks();
@@ -212,6 +234,19 @@ describe('다중 AI 서비스 UI', () => {
 
     await act(async () => view.querySelector<HTMLButtonElement>('[aria-label="테스트 모델 변경"]')?.click());
     expect(mocks.settings.setSelectedModel).toHaveBeenCalledWith('zai/glm-5.3-flash');
+  });
+
+  it('입력창 설정도 모든 서비스 모델을 보여주고 저장된 GLM 선택을 유지한다', async () => {
+    mocks.ui.settingsPopoverOpen = true;
+    setMultiProvider();
+    mocks.settings.selectedModel = 'zai/glm-5.3-flash';
+    const view = await render(<SettingsPopover />);
+
+    expect(view.textContent).toContain('OPEN AI · Z.AI');
+    expect(view.textContent).toContain('GPT-5.6 Sol');
+    expect(view.textContent).toContain('GLM-5.3 Flash');
+    expect(view.querySelector('[data-testid="select-control"]')?.getAttribute('data-value'))
+      .toBe('zai/glm-5.3-flash');
   });
 
   it('저장된 모델이 유효하지 않아도 첫 모델로 복구한다', async () => {

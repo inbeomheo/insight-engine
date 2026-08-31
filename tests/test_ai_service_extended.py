@@ -80,6 +80,32 @@ class TestBuildCompletionKwargs(unittest.TestCase):
         kwargs_deep = _build_completion_kwargs('custom/local-model', 'test', detail_level='deep')
         self.assertLess(kwargs_brief['max_tokens'], kwargs_deep['max_tokens'])
 
+    def test_glm_short_brief_generation_reserves_reasoning_budget(self):
+        from services.core.ai_service import _build_completion_kwargs
+
+        kwargs = _build_completion_kwargs(
+            'zai/glm-5.3-flash',
+            '짧은 요약',
+            modifiers={'length': 'short'},
+            detail_level='brief',
+        )
+
+        self.assertEqual(kwargs['max_tokens'], 4000)
+        self.assertEqual(kwargs['reasoning_effort'], 'low')
+
+    def test_glm_kwargs_request_provider_side_rate_limit_retries(self):
+        from services.core.ai_service import _build_completion_kwargs
+
+        kwargs = _build_completion_kwargs(
+            'zai/glm-5.3-flash',
+            '짧은 요약',
+            modifiers={'length': 'short'},
+        )
+
+        self.assertGreaterEqual(kwargs.get('num_retries', 0), 2)
+        cliproxy_kwargs = _build_completion_kwargs('cliproxy/gpt-5.6-sol', 'test')
+        self.assertNotIn('num_retries', cliproxy_kwargs)
+
 
 class TestExtractSeoMetadata(unittest.TestCase):
     """extract_seo_metadata 테스트"""
@@ -294,6 +320,19 @@ class TestConvertErrorMessageExtended(unittest.TestCase):
         from services.core.ai_service import _convert_error_message
         result = _convert_error_message('Request timed out')
         self.assertIn('타임아웃', result)
+
+    def test_zai_rate_limit_error_is_actionable_and_hides_provider_internals(self):
+        from services.core.ai_service import _convert_error_message
+
+        result = _convert_error_message(
+            'litellm.RateLimitError: ZaiException - Rate limit reached for requests',
+            model='zai/glm-5.3-flash',
+        )
+
+        self.assertTrue(result.startswith('[요청 제한]'))
+        self.assertIn('Z.AI', result)
+        self.assertIn('OPEN AI 모델', result)
+        self.assertNotIn('litellm', result.lower())
 
     def test_connection_error(self):
         from services.core.ai_service import _convert_error_message
