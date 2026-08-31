@@ -90,6 +90,7 @@
     "selectModel": "モデルを選択",
     "serviceInfoLabel": "AIサービス情報",
     "singleServiceActive": "AIサービス使用中",
+    "multiServiceActive": "{count}個のAIサービス使用中",
     "modelSelectLabel": "AIモデルを選択",
     "noModels": "利用可能なAIモデルがありません。",
     "noProviders": "AIモデル一覧を読み込めません。サーバー状態を確認してください。",
@@ -109,6 +110,7 @@
     "modelCount": "{count}モデル",
     "serviceInfoLabel": "AIサービス情報",
     "singleService": "AIサービス",
+    "serviceCount": "{count}個のAIサービス",
     "noModels": "利用可能なAIモデルがありません。",
     "start": "始める",
     "step2Desc": "要約、Q&A、クイズ、復習カードから学習スタイルを選択してください。"

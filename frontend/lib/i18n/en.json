@@ -90,6 +90,7 @@
     "selectModel": "Select model",
     "serviceInfoLabel": "AI service information",
     "singleServiceActive": "AI service active",
+    "multiServiceActive": "{count} AI services active",
     "modelSelectLabel": "Select AI model",
     "noModels": "No AI models are available.",
     "noProviders": "Could not load AI models. Check the server status.",
@@ -109,6 +110,7 @@
     "modelCount": "{count} models",
     "serviceInfoLabel": "AI service information",
     "singleService": "AI service",
+    "serviceCount": "{count} AI services",
     "noModels": "No AI models are available.",
     "start": "Get Started",
     "step2Desc": "Select a learning style: summary, Q&A, quiz, or retention cards."

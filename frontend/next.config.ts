@@ -15,6 +15,7 @@ const nextConfig: NextConfig = {
     const backend = process.env.NEXT_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
     return [
       { source: '/api/:path*', destination: `${backend}/api/:path*` },
+      { source: '/share/:path*', destination: `${backend}/share/:path*` },
       { source: '/generate', destination: `${backend}/generate` },
       { source: '/generate-stream', destination: `${backend}/generate-stream` },
       { source: '/generate-batch', destination: `${backend}/generate-batch` },

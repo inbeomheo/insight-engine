@@ -3,7 +3,6 @@
 실행: python tests/web_feature_test.py
 서버가 localhost:5001에서 실행 중이어야 함
 """
-from playwright.sync_api import sync_playwright
 import time
 import sys
 
@@ -19,6 +18,8 @@ def log(name, passed, detail=""):
     print(msg)
 
 def run_tests():
+    from playwright.sync_api import sync_playwright  # pyright: ignore[reportMissingImports]
+
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page(viewport={"width": 1440, "height": 900})
