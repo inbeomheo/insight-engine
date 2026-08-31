@@ -75,7 +75,7 @@ def test_post_notes_generates_saves_and_returns_note(tmp_path, monkeypatch):
     assert data["summary"] == "생성된 요약"
     assert data["learning_points"] == ["생성된 요약을 복습한다."]
     assert data["review_questions"][0]["question"] == "무엇을 복습하나?"
-    assert (tmp_path / f"{data['id']}.json").exists()
+    assert (tmp_path / "users" / "_local" / f"{data['id']}.json").exists()
     assert create_content.call_args.kwargs["style_id"] == "knowledge_note"
     assert create_content.call_args.kwargs["modifiers"]["language"] == "ko"
     assert "length" not in create_content.call_args.kwargs["modifiers"]
@@ -358,7 +358,7 @@ def test_search_notes_returns_results(tmp_path, monkeypatch):
 
     assert resp.status_code == 200
     assert resp.get_json()["notes"] == expected
-    search_notes.assert_called_once_with("AI", limit=2)
+    search_notes.assert_called_once_with("AI", limit=2, owner_id="_local")
 
 
 def test_search_notes_empty_query_returns_korean_400(tmp_path, monkeypatch):
@@ -391,7 +391,7 @@ def test_search_notes_clamps_large_limit(tmp_path, monkeypatch):
         )
 
     assert resp.status_code == 200
-    search_notes.assert_called_once_with("AI", limit=note_index_service.MAX_SEARCH_LIMIT)
+    search_notes.assert_called_once_with("AI", limit=note_index_service.MAX_SEARCH_LIMIT, owner_id="_local")
 
 
 def test_search_notes_long_query_returns_korean_400(tmp_path, monkeypatch):
@@ -491,7 +491,7 @@ def test_post_notes_index_failure_still_returns_note(tmp_path, monkeypatch):
     assert resp.status_code == 200
     data = resp.get_json()
     assert data["summary"] == "생성된 요약"
-    assert (tmp_path / f"{data['id']}.json").exists()
+    assert (tmp_path / "users" / "_local" / f"{data['id']}.json").exists()
 
 
 def test_post_notes_provider_prefixed_exception_uses_handle_error(tmp_path, monkeypatch):

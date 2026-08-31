@@ -13,6 +13,7 @@
 테스트 호환성을 위해 utility_routes.py가 이 모듈의 심볼들을 그대로 re-export 하므로
 `from routes.utility_routes import _CLIENT_TRACKER` 등 기존 호출은 그대로 동작한다.
 """
+import os
 import threading
 import time
 from typing import Dict
@@ -37,6 +38,7 @@ _active_requests_lock = threading.Lock()
 
 # ============================================================
 # 서버 시작 후 총 요청 수 / 에러 응답 수
+# Redis가 있으면 워커 공유 카운터, 없으면 프로세스 메모리 폴백
 # ============================================================
 _total_request_count: int = 0
 _total_request_count_lock = threading.Lock()
@@ -44,10 +46,65 @@ _total_request_count_lock = threading.Lock()
 _total_error_count: int = 0
 _total_error_count_lock = threading.Lock()
 
+_REDIS_REQUESTS_KEY = "ie:metrics:requests"
+_REDIS_ERRORS_KEY = "ie:metrics:errors"
+_redis_client = None
+_redis_disabled = False
+
+
+def _get_redis():
+    global _redis_client, _redis_disabled
+    if _redis_disabled:
+        return None
+    if _redis_client is not None:
+        return _redis_client
+    url = (os.getenv("REDIS_URL") or "").strip()
+    if not url or url.startswith("memory"):
+        _redis_disabled = True
+        return None
+    try:
+        import redis
+        client = redis.Redis.from_url(
+            url,
+            socket_connect_timeout=0.4,
+            socket_timeout=0.4,
+            decode_responses=True,
+        )
+        client.ping()
+        _redis_client = client
+        return _redis_client
+    except Exception:
+        _redis_disabled = True
+        return None
+
+
+def _redis_incr(key: str) -> int | None:
+    client = _get_redis()
+    if client is None:
+        return None
+    try:
+        return int(client.incr(key))
+    except Exception:
+        return None
+
+
+def _redis_get(key: str) -> int | None:
+    client = _get_redis()
+    if client is None:
+        return None
+    try:
+        raw = client.get(key)
+        return int(raw or 0)
+    except Exception:
+        return None
+
 
 def increment_request_count():
     """총 요청 수 1 증가."""
     global _total_request_count
+    redis_value = _redis_incr(_REDIS_REQUESTS_KEY)
+    if redis_value is not None:
+        return
     with _total_request_count_lock:
         _total_request_count += 1
 
@@ -55,17 +112,26 @@ def increment_request_count():
 def increment_error_count():
     """에러 응답 수 1 증가."""
     global _total_error_count
+    redis_value = _redis_incr(_REDIS_ERRORS_KEY)
+    if redis_value is not None:
+        return
     with _total_error_count_lock:
         _total_error_count += 1
 
 
 def get_request_count() -> int:
     """서버 시작 후 총 요청 수 반환."""
+    redis_value = _redis_get(_REDIS_REQUESTS_KEY)
+    if redis_value is not None:
+        return redis_value
     return _total_request_count
 
 
 def get_error_count() -> int:
     """서버 시작 후 에러 응답 수 반환."""
+    redis_value = _redis_get(_REDIS_ERRORS_KEY)
+    if redis_value is not None:
+        return redis_value
     return _total_error_count
 
 

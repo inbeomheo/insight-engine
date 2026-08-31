@@ -72,14 +72,54 @@ class AICacheService:
         writing_style: str = 'conversational',
         transcript_language: Optional[str] = None,
         enable_citations: bool = False,
+        *,
+        custom_prompt: Optional[str] = None,
+        detail_level: Optional[str] = None,
+        web_search: bool = False,
+        output_format: str = 'html',
+        max_chars: Optional[int] = None,
+        analyze: bool = False,
+        language: Optional[str] = None,
+        modifiers: Optional[Dict[str, Any]] = None,
+        user_id: Optional[str] = None,
+        rag_scope: Optional[str] = None,
     ) -> str:
-        """캐시 키 생성 (SHA256). 언어/인용 모드별로 캐시를 분리합니다."""
-        raw = f"{video_id}|{style_id}|{model}|{length}|{writing_style}"
-        if transcript_language:
-            raw = f"{raw}|lang={transcript_language}"
-        if enable_citations:
-            raw = f"{raw}|citations=1"
-        return hashlib.sha256(raw.encode()).hexdigest()
+        """생성 조건 fingerprint를 canonical JSON으로 해시한 캐시 키.
+
+        원문 커스텀 프롬프트는 키에 넣지 않고 SHA256 해시만 포함한다.
+        """
+        mods = modifiers if isinstance(modifiers, dict) else {}
+        prompt_hash = ''
+        if custom_prompt:
+            prompt_hash = hashlib.sha256(str(custom_prompt).encode('utf-8')).hexdigest()
+        # 커스텀 프롬프트/RAG는 사용자 캐시, 기본 공개 결과는 글로벌 캐시
+        user_scope = (user_id or '') if (prompt_hash or rag_scope) else ''
+        fingerprint = {
+            'v': 2,
+            'video_id': video_id,
+            'style_id': style_id,
+            'model': model,
+            'length': length or 'medium',
+            'writing_style': writing_style or 'conversational',
+            'transcript_language': transcript_language or '',
+            'enable_citations': bool(enable_citations),
+            'custom_prompt_hash': prompt_hash,
+            'detail_level': detail_level or 'standard',
+            'web_search': bool(web_search),
+            'output_format': output_format or 'html',
+            'max_chars': int(max_chars) if max_chars else 0,
+            'analyze': bool(analyze),
+            'language': language or mods.get('language') or '',
+            'modifiers': {
+                'length': mods.get('length', length or 'medium'),
+                'writing_style': mods.get('writing_style', writing_style or 'conversational'),
+                'language': mods.get('language') or language or '',
+            },
+            'user_scope': user_scope,
+            'rag_scope': rag_scope or '',
+        }
+        raw = json.dumps(fingerprint, sort_keys=True, separators=(',', ':'), ensure_ascii=True)
+        return hashlib.sha256(raw.encode('utf-8')).hexdigest()
 
     def get(self, cache_key: str) -> Optional[Dict[str, Any]]:
         """캐시에서 결과 조회. TTL 만료 시 None 반환.

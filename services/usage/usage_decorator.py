@@ -81,23 +81,21 @@ def check_usage(f):
 
 def require_usage(f):
     """
-    사용량 체크 + 성공 시 자동 차감 데코레이터
+    사용량 체크 + 실행 전 원자적 예약 데코레이터
     콘텐츠 생성 등 실제 리소스 소비 API에 사용
 
     Usage:
         @require_auth
         @require_usage
         def generate():
-            # 함수 실행 후 자동으로 사용량 차감
-            # g.usage에 차감 전 사용량 정보
-            # g.updated_usage에 차감 후 사용량 정보 (함수 실행 후)
+            # 함수 실행 전 사용량을 예약하고, 검증/프로바이더 실패 시 환불
             pass
 
     Note:
         - 관리자는 차감하지 않음
-        - 함수가 성공적으로 완료된 경우(2xx/3xx)에만 차감됨
-        - 차감 경로: UsageService.decrement → SupabaseUsageGateway.check_and_consume
-        - QuotaExceeded 예외는 UsageService.decrement에서 호환 dict로 변환됨
+        - 예약 실패 시 라우트를 실행하지 않음 (결과 미전달)
+        - 2xx/3xx가 아니면 refund
+        - skip_usage_decrement(캐시 히트 등)이면 refund
     """
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -115,29 +113,32 @@ def require_usage(f):
             g.is_admin = False
             return f(*args, **kwargs)
 
-        # 사용량 체크
-        can_use, usage = UsageService.check_can_use(user_id)
+        consumed, usage = UsageService.try_consume_atomic(user_id)
         g.usage = usage
         g.is_admin = usage.get('is_admin', False)
 
-        if not can_use:
+        if g.is_admin:
+            g.updated_usage = ADMIN_USAGE
+            return f(*args, **kwargs)
+
+        if not consumed:
             return jsonify({
                 'error': '오늘 사용 가능 횟수를 모두 소진했습니다. 내일 다시 시도해주세요.',
                 'code': 'USAGE_LIMIT_EXCEEDED',
                 'usage': usage
             }), 429
 
-        # 함수 실행
-        result = f(*args, **kwargs)
+        g.quota_reserved = True
+        try:
+            result = f(*args, **kwargs)
+        except Exception:
+            UsageService.refund(user_id)
+            g.quota_reserved = False
+            raise
 
-        # 성공 시 사용량 차감 (관리자 제외)
-        # 차감은 UsageService.decrement → SupabaseUsageGateway 위임.
-        if g.is_admin:
-            g.updated_usage = ADMIN_USAGE
-        elif getattr(g, 'skip_usage_decrement', False):
-            g.updated_usage = usage  # 바이패스/캐시 히트 시 차감 안 함
-        elif _is_success_response(result):
-            g.updated_usage = UsageService.decrement(user_id)
+        if getattr(g, 'skip_usage_decrement', False) or not _is_success_response(result):
+            g.updated_usage = UsageService.refund(user_id)
+            g.quota_reserved = False
         else:
             g.updated_usage = usage
 

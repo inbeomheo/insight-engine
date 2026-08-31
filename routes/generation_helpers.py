@@ -38,6 +38,40 @@ def _get_style_label(style_id: str) -> str:
     return style_id
 
 
+def build_generation_cache_key(video_id, params, *, web_search=False, user_id=None, rag_scope=None):
+    """생성 요청 fingerprint 캐시 키. 원문 프롬프트는 해시만 포함."""
+    from services.core.cache_service import AICacheService
+
+    modifiers = params.get('modifiers') or {}
+    custom_prompt = params.get('custom_prompt')
+    if not rag_scope and user_id:
+        try:
+            from config import RAG_ENABLED
+            if RAG_ENABLED:
+                rag_scope = f'user:{user_id}'
+        except Exception:
+            rag_scope = None
+    return AICacheService.make_key(
+        video_id,
+        params.get('style'),
+        params.get('model'),
+        modifiers.get('length', 'medium'),
+        modifiers.get('writing_style', 'conversational'),
+        transcript_language=params.get('transcript_language'),
+        enable_citations=params.get('enable_citations', False),
+        custom_prompt=custom_prompt,
+        detail_level=params.get('detail_level'),
+        web_search=bool(web_search),
+        output_format=params.get('output_format', 'html'),
+        max_chars=params.get('max_chars'),
+        analyze=params.get('analyze', False),
+        language=modifiers.get('language'),
+        modifiers=modifiers,
+        user_id=user_id,
+        rag_scope=rag_scope,
+    )
+
+
 def _truncate_for_model(model_id: str, label: str, source_content: str) -> str:
     """소스 콘텐츠에 라벨을 붙이고 모델 토큰 한도에 맞춰 잘라냅니다."""
     max_tokens = get_model_max_tokens(model_id)
@@ -489,7 +523,8 @@ def _handle_short_content_bypass(transcript_text, style, youtube_title,
     })
 
 
-def _handle_cache_hit(cache_key, force, video_id, url, start_time, transcript_language=None):
+def _handle_cache_hit(cache_key, force, video_id, url, start_time, transcript_language=None,
+                      output_format='html', max_chars=None):
     """캐시 히트 체크. 히트 시 Response 반환, 아니면 None.
 
     자막/제목 추출 전에 호출된다 — 히트 시 YouTube 왕복(제목 API + 자막
@@ -497,6 +532,7 @@ def _handle_cache_hit(cache_key, force, video_id, url, start_time, transcript_la
     video_id 기반 파일 캐시에서 가져오고, 둘 다 없으면 그때만 조회한다.
     단, transcript_language 지정 시 언어 무관 파일 캐시를 신뢰할 수 없어
     자막 페이로드는 매번 언어 지정 재추출로 채운다 (의도된 트레이드오프).
+    캐시된 본문은 요청의 output_format/max_chars를 다시 적용한다.
     """
     if force:
         return None
@@ -530,8 +566,10 @@ def _handle_cache_hit(cache_key, force, video_id, url, start_time, transcript_la
         # 구버전 캐시 엔트리 폴백 (신규 저장분은 페이로드에 제목 포함)
         youtube_title = content_service.get_content_title(url) or 'YouTube 영상'
 
+    formatted = _apply_output_format(dict(cached), output_format or 'html', max_chars)
+
     return jsonify({
-        **cached,
+        **formatted,
         'id': str(uuid.uuid4()),
         'elapsed_time': elapsed_time,
         'youtube_title': youtube_title,

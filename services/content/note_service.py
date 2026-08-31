@@ -1,7 +1,8 @@
 """Knowledge note generation and file storage.
 
-First slice: notes are stored in one shared local directory without per-user
-separation. User-scoped storage is a follow-up slice.
+Notes are stored per owner at ``notes/users/<owner_id>/<note_id>.json``.
+Legacy files that already exist at ``notes/<note_id>.json`` are never deleted;
+they are only readable through an explicit legacy/admin path.
 """
 from __future__ import annotations
 
@@ -23,8 +24,26 @@ NOTES_DIR = Path(os.getenv("KNOWLEDGE_NOTES_DIR", "data/notes"))
 NOTE_STYLE_ID = "knowledge_note"
 SOURCE_TYPES = {"youtube", "article", "text"}
 URL_REQUIRED_SOURCE_TYPES = {"youtube", "article"}
+LOCAL_OWNER = "_local"
+LEGACY_SCOPE = "legacy"
 _ID_RE = re.compile(r"[A-Za-z0-9_-]{1,128}")
+_OWNER_RE = re.compile(r"[A-Za-z0-9_-]{1,128}")
 logger = get_logger(__name__)
+
+
+def resolve_note_owner(owner_id: str | None) -> str:
+    raw = str(owner_id or "").strip()
+    if not raw:
+        return LOCAL_OWNER
+    cleaned = re.sub(r"[^A-Za-z0-9_-]", "", raw)[:128]
+    return cleaned if _OWNER_RE.fullmatch(cleaned) else LOCAL_OWNER
+
+
+def is_legacy_notes_accessor(owner_id: str | None, is_admin: bool = False) -> bool:
+    if is_admin:
+        return True
+    configured = (os.getenv("LEGACY_NOTES_OWNER_ID") or "").strip()
+    return bool(configured and owner_id and configured == str(owner_id))
 
 
 def validate_note(note: dict[str, Any]) -> tuple[bool, list[str]]:
@@ -134,17 +153,18 @@ def parse_note_response(raw: Any) -> dict[str, Any]:
     raise ValueError("AI 응답에서 노트 JSON을 찾을 수 없습니다.")
 
 
-def save_note(note: dict[str, Any]) -> dict[str, Any]:
+def save_note(note: dict[str, Any], owner_id: str | None = None) -> dict[str, Any]:
     valid, errors = validate_note(note)
     if not valid:
         raise ValueError("[노트 생성 실패] " + "; ".join(errors))
 
-    notes_dir = Path(NOTES_DIR)
-    notes_dir.mkdir(parents=True, exist_ok=True)
-    path = _note_path(note["id"])
+    owner = resolve_note_owner(owner_id or note.get("owner_id"))
+    note = {**note, "owner_id": owner}
+    path = _note_path(note["id"], owner_id=owner)
     if path is None:
         raise ValueError("[노트 생성 실패] 유효하지 않은 노트 ID입니다.")
 
+    path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(f".{path.stem}.{uuid.uuid4().hex}.tmp")
     try:
         tmp.write_text(json.dumps(note, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -155,46 +175,51 @@ def save_note(note: dict[str, Any]) -> dict[str, Any]:
     return note
 
 
-def load_note(note_id: str) -> dict[str, Any] | None:
-    path = _note_path(note_id)
-    if path is None or not path.exists():
-        return None
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        logger.warning("Knowledge note load failed: %s", exc)
-        return None
+def load_note(
+    note_id: str,
+    owner_id: str | None = None,
+    include_legacy: bool = False,
+) -> dict[str, Any] | None:
+    owner = resolve_note_owner(owner_id)
+    path = _note_path(note_id, owner_id=owner)
+    note = _read_note_file(path)
+    if note is not None:
+        return note
+    if include_legacy:
+        return _read_note_file(_legacy_note_path(note_id))
+    return None
 
 
-def list_notes() -> list[dict[str, Any]]:
+def list_notes(
+    owner_id: str | None = None,
+    include_legacy: bool = False,
+) -> list[dict[str, Any]]:
     items: list[dict[str, Any]] = []
-    notes_dir = Path(NOTES_DIR)
-    if not notes_dir.exists():
-        return items
+    owner = resolve_note_owner(owner_id)
+    user_dir = _user_notes_dir(owner)
+    if user_dir.exists():
+        for path in user_dir.glob("*.json"):
+            note = _read_note_file(path)
+            summary = _note_list_item(note)
+            if summary:
+                items.append(summary)
 
-    for path in notes_dir.glob("*.json"):
-        note = load_note(path.stem)
-        if not isinstance(note, dict):
-            continue
-        source = note.get("source") or {}
-        items.append({
-            "id": note.get("id"),
-            "title": source.get("title", ""),
-            "tags": note.get("tags", []),
-            "key_concepts": note.get("key_concepts", []),
-            "summary": note.get("summary", ""),
-            "quote_count": len(note.get("quotes", []) if isinstance(note.get("quotes"), list) else []),
-            "learning_point_count": len(note.get("learning_points", []) if isinstance(note.get("learning_points"), list) else []),
-            "review_question_count": len(note.get("review_questions", []) if isinstance(note.get("review_questions"), list) else []),
-            "created_at": note.get("created_at", ""),
-            "source": source,
-        })
+    if include_legacy:
+        notes_dir = Path(NOTES_DIR)
+        if notes_dir.exists():
+            for path in notes_dir.glob("*.json"):
+                note = _read_note_file(path)
+                summary = _note_list_item(note, legacy=True)
+                if summary:
+                    items.append(summary)
+
     return sorted(items, key=lambda item: item.get("created_at", ""), reverse=True)
 
 
 def find_notes_by_source_url(
     source: dict[str, Any],
     notes: list[dict[str, Any]] | None = None,
+    owner_id: str | None = None,
 ) -> list[dict[str, Any]]:
     """Find existing notes with the same canonical source URL."""
     normalized = normalize_source(source)
@@ -202,7 +227,7 @@ def find_notes_by_source_url(
     if not target_url:
         return []
     duplicates: list[dict[str, Any]] = []
-    source_notes = list_notes() if notes is None else notes
+    source_notes = list_notes(owner_id=owner_id) if notes is None else notes
 
     for item in source_notes:
         item_source = item.get("source") if isinstance(item.get("source"), dict) else {}
@@ -223,6 +248,7 @@ def generate_knowledge_note(
     model: str,
     language: str = "ko",
     style_prompt: str | None = None,
+    owner_id: str | None = None,
 ) -> dict[str, Any]:
     if not isinstance(content, str) or not content.strip():
         raise ValueError("[노트 생성 실패] 콘텐츠가 필요합니다.")
@@ -252,17 +278,61 @@ def generate_knowledge_note(
         "source": source,
         "language": parsed.get("language") or language,
         "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "owner_id": resolve_note_owner(owner_id),
     }
     valid, errors = validate_note(note)
     if not valid:
         raise ValueError("[노트 생성 실패] " + "; ".join(errors))
-    return save_note(note)
+    return save_note(note, owner_id=note["owner_id"])
 
 
-def _note_path(note_id: str) -> Path | None:
+def _user_notes_dir(owner_id: str) -> Path:
+    return Path(NOTES_DIR) / "users" / resolve_note_owner(owner_id)
+
+
+def _legacy_note_path(note_id: str) -> Path | None:
     if not isinstance(note_id, str) or not _ID_RE.fullmatch(note_id):
         return None
     return Path(NOTES_DIR) / f"{note_id}.json"
+
+
+def _note_path(note_id: str, owner_id: str | None = None) -> Path | None:
+    if not isinstance(note_id, str) or not _ID_RE.fullmatch(note_id):
+        return None
+    return _user_notes_dir(resolve_note_owner(owner_id)) / f"{note_id}.json"
+
+
+def _read_note_file(path: Path | None) -> dict[str, Any] | None:
+    if path is None or not path.exists() or not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning("Knowledge note load failed: %s", exc)
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def _note_list_item(note: dict[str, Any] | None, legacy: bool = False) -> dict[str, Any] | None:
+    if not isinstance(note, dict):
+        return None
+    source = note.get("source") or {}
+    item = {
+        "id": note.get("id"),
+        "title": source.get("title", ""),
+        "tags": note.get("tags", []),
+        "key_concepts": note.get("key_concepts", []),
+        "summary": note.get("summary", ""),
+        "quote_count": len(note.get("quotes", []) if isinstance(note.get("quotes"), list) else []),
+        "learning_point_count": len(note.get("learning_points", []) if isinstance(note.get("learning_points"), list) else []),
+        "review_question_count": len(note.get("review_questions", []) if isinstance(note.get("review_questions"), list) else []),
+        "created_at": note.get("created_at", ""),
+        "source": source,
+        "owner_id": note.get("owner_id") or (LEGACY_SCOPE if legacy else LOCAL_OWNER),
+    }
+    if legacy:
+        item["legacy"] = True
+    return item
 
 
 def _normalize_source(source: dict[str, Any]) -> dict[str, str]:

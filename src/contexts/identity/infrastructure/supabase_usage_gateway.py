@@ -76,14 +76,14 @@ class SupabaseUsageGateway(IUsageGateway):
         return remaining
 
     def refund(self, account_id: AccountId, amount: int = 1) -> None:
-        """생성 실패 시 사용량 환불.
-
-        현재 미구현 — Supabase에 increment_usage_safe RPC 추가 후 Phase 7에서.
-        """
-        logger.warning(
-            "SupabaseUsageGateway.refund: 미구현 (account=%s, amount=%d) — Phase 7에서 트랜잭션 도입과 함께 구현 예정",
-            account_id, amount
-        )
+        """생성 실패 시 사용량 환불 (usage_count 증가)."""
+        remaining_amount = max(1, int(amount or 1))
+        refund_fn = getattr(self.accounts, "refund_quota_atomic", None)
+        if refund_fn is None:
+            logger.warning("refund_quota_atomic missing on accounts repo")
+            return
+        for _ in range(remaining_amount):
+            refund_fn(account_id)
 
 
 __all__ = ["SupabaseUsageGateway"]

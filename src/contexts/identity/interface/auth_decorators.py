@@ -23,6 +23,10 @@ from typing import Callable
 from flask import g, jsonify, request
 
 from services.core.logging_config import supabase_logger as logger
+from src.contexts.identity.interface.auth_policy import (
+    is_auth_bypass_allowed,
+    is_production_env,
+)
 from src.shared.infrastructure.supabase_client import (
     get_supabase,
     is_supabase_enabled,
@@ -125,13 +129,24 @@ def inject_auth_context() -> None:
 def require_auth(f: Callable) -> Callable:
     """JWT 토큰 검증 데코레이터.
 
-    Supabase가 비활성화된 개발 환경에서는 `g.user_id = None`으로 진입 허용.
-    활성 환경에서는 Bearer 토큰 누락 시 401, 검증 실패 시 401.
+    Supabase가 없으면 production은 503으로 닫는다(fail-closed).
+    개발/테스트 우회는 AUTH_BYPASS=true일 때만 허용하며 production에서는 무시한다.
+    활성 환경에서는 Bearer 토큰 누락/검증 실패 시 401.
     UserAccount Aggregate가 필요한 라우트는 `get_auth_account()`로 지연 조회.
     """
     @wraps(f)
     def decorated(*args, **kwargs):
         if not is_supabase_enabled():
+            if is_production_env():
+                return jsonify({
+                    'error': '인증 서비스를 사용할 수 없습니다.',
+                    'code': 'AUTH_UNAVAILABLE',
+                }), 503
+            if not is_auth_bypass_allowed():
+                return jsonify({
+                    'error': '인증이 필요합니다.',
+                    'code': 'AUTH_REQUIRED',
+                }), 401
             g.user_id = None
             return f(*args, **kwargs)
 

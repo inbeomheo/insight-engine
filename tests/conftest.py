@@ -11,6 +11,8 @@ import pytest
 # 개발/운영 .env에 의존하지 않도록 앱 import 전에 명시적으로 중립화한다.
 os.environ.setdefault('RATELIMIT_STORAGE_URI', 'memory://')
 os.environ.setdefault('RATE_LIMIT_ENABLED', 'false')
+os.environ.setdefault('FLASK_ENV', 'testing')
+os.environ.setdefault('AUTH_BYPASS', 'true')
 os.environ['CLIPROXY_BASE_URL'] = 'http://cli-proxy-api:8317/v1'
 os.environ['CLIPROXY_API_KEY'] = 'test-cliproxy-key'
 for _external_env in (

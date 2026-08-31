@@ -106,17 +106,17 @@ class TestUsageDecorator(unittest.TestCase):
 
 
     @patch('services.usage.usage_decorator.is_supabase_enabled', return_value=True)
-    @patch('services.usage.usage_decorator.UsageService.decrement')
-    @patch('services.usage.usage_decorator.UsageService.check_can_use')
-    def test_require_usage_decrements_only_on_success_status(self, mock_check_can_use, mock_decrement, mock_enabled):
-        """require_usage는 2xx/3xx 응답에서만 차감"""
+    @patch('services.usage.usage_decorator.UsageService.refund')
+    @patch('services.usage.usage_decorator.UsageService.try_consume_atomic')
+    def test_require_usage_decrements_only_on_success_status(self, mock_consume, mock_refund, mock_enabled):
+        """require_usage는 실패 응답에서 환불하고 성공에서는 유지"""
         from services.usage.usage_decorator import require_usage
         from flask import Flask, g
 
         app = Flask(__name__)
         usage = {'usage_count': 3, 'max_usage': 5, 'can_use': True, 'is_admin': False}
-        mock_check_can_use.return_value = (True, usage)
-        mock_decrement.return_value = {'usage_count': 2, 'max_usage': 5, 'can_use': True, 'is_admin': False}
+        mock_consume.return_value = (True, usage)
+        mock_refund.return_value = {'usage_count': 4, 'max_usage': 5, 'can_use': True, 'is_admin': False}
 
         @require_usage
         def ok_route():
@@ -129,14 +129,13 @@ class TestUsageDecorator(unittest.TestCase):
         with app.app_context():
             g.user_id = 'user-1'
             ok_route()
-            mock_decrement.assert_called_once_with('user-1')
-            self.assertEqual(g.updated_usage['usage_count'], 2)
+            mock_consume.assert_called_with('user-1')
+            mock_refund.assert_not_called()
 
-            mock_decrement.reset_mock()
+            mock_refund.reset_mock()
             g.user_id = 'user-1'
             bad_route()
-            mock_decrement.assert_not_called()
-            self.assertEqual(g.updated_usage['usage_count'], 3)
+            mock_refund.assert_called_once_with('user-1')
 
 
 class TestAdminUsageConstant(unittest.TestCase):

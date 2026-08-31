@@ -42,22 +42,14 @@ class TestAICacheService(unittest.TestCase):
         key2 = AICacheService.make_key('abc', 'blog_seo', 'gemini/flash')
         self.assertNotEqual(key1, key2)
 
-    def test_make_key_without_language_matches_legacy_format(self):
-        """transcript_language 없으면 기존 원문 키 형식을 유지."""
-        expected = hashlib.sha256(
-            b'abc|summary|gemini/flash|medium|conversational'
-        ).hexdigest()
-
+    def test_make_key_without_language_is_stable(self):
+        """transcript_language 없으면 동일 fingerprint."""
         self.assertEqual(
             AICacheService.make_key('abc', 'summary', 'gemini/flash', 'medium', 'conversational'),
-            expected,
-        )
-        self.assertEqual(
             AICacheService.make_key(
                 'abc', 'summary', 'gemini/flash', 'medium', 'conversational',
                 transcript_language=None,
             ),
-            expected,
         )
 
     def test_make_key_differs_by_transcript_language(self):

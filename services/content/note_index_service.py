@@ -19,7 +19,7 @@ _QUERY_TOKEN_PATTERN = re.compile(r"[^\W_]+", re.UNICODE)
 logger = get_logger(__name__)
 
 
-def index_note(note: dict[str, Any]) -> None:
+def index_note(note: dict[str, Any], owner_id: str | None = None) -> None:
     """Upsert one knowledge note into the dedicated notes collection."""
     note_id = _required_note_id(note)
     document = _build_searchable_text(note)
@@ -29,7 +29,7 @@ def index_note(note: dict[str, Any]) -> None:
     _get_collection().upsert(
         ids=[note_id],
         documents=[document],
-        metadatas=[_build_metadata(note)],
+        metadatas=[_build_metadata(note, owner_id=owner_id)],
     )
     logger.info("Knowledge note indexed: %s", note_id)
 
@@ -42,7 +42,11 @@ def remove_note(note_id: str) -> None:
     _get_collection().delete(ids=[note_id])
 
 
-def search_notes(query: str, limit: int = DEFAULT_SEARCH_LIMIT) -> list[dict[str, Any]]:
+def search_notes(
+    query: str,
+    limit: int = DEFAULT_SEARCH_LIMIT,
+    owner_id: str | None = None,
+) -> list[dict[str, Any]]:
     """Search similar notes by ChromaDB text query."""
     query = _normalize_whitespace(query)
     if not query:
@@ -54,13 +58,18 @@ def search_notes(query: str, limit: int = DEFAULT_SEARCH_LIMIT) -> list[dict[str
         return []
 
     n_results = min(_normalize_limit(limit), count)
-    results = collection.query(query_texts=[query], n_results=n_results)
+    query_kwargs: dict[str, Any] = {"query_texts": [query], "n_results": n_results}
+    owner_filter = _owner_where(owner_id)
+    if owner_filter:
+        query_kwargs["where"] = owner_filter
+    results = collection.query(**query_kwargs)
     return _map_results(results, query=query)
 
 
 def get_related_notes(
     note: dict[str, Any],
     limit: int = DEFAULT_RELATED_LIMIT,
+    owner_id: str | None = None,
 ) -> list[dict[str, Any]]:
     """Return similar notes, excluding the note itself."""
     note_id = _required_note_id(note)
@@ -75,7 +84,11 @@ def get_related_notes(
 
     normalized_limit = _normalize_related_limit(limit)
     n_results = min(normalized_limit + 1, count, MAX_SEARCH_LIMIT)
-    results = collection.query(query_texts=[query], n_results=n_results)
+    query_kwargs: dict[str, Any] = {"query_texts": [query], "n_results": n_results}
+    owner_filter = _owner_where(owner_id or (note.get("owner_id") if isinstance(note, dict) else None))
+    if owner_filter:
+        query_kwargs["where"] = owner_filter
+    results = collection.query(**query_kwargs)
     related = [
         result
         for result in _map_results(results)
@@ -126,13 +139,22 @@ def _build_searchable_text(note: dict[str, Any]) -> str:
     return "\n".join(parts).strip()
 
 
-def _build_metadata(note: dict[str, Any]) -> dict[str, str]:
+def _build_metadata(note: dict[str, Any], owner_id: str | None = None) -> dict[str, str]:
     source = note.get("source") if isinstance(note.get("source"), dict) else {}
+    owner = str(owner_id or note.get("owner_id") or "_local").strip() or "_local"
     return {
         "title": str(source.get("title", "")).strip(),
         "source_url": str(source.get("url", "")).strip(),
         "created_at": str(note.get("created_at", "")).strip(),
+        "owner_id": owner,
     }
+
+
+def _owner_where(owner_id: str | None) -> dict[str, str] | None:
+    owner = str(owner_id or "").strip()
+    if not owner:
+        return None
+    return {"owner_id": owner}
 
 
 def _str_list(value: Any) -> list[str]:

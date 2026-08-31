@@ -228,13 +228,14 @@ class TestGenerateBatchRoute(_Base):
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     @patch('services.usage.usage_service.UsageService.try_consume_atomic')
     def test_batch_no_json(self, mock_usage, _):
-        """JSON이 아닌 content-type은 500 (UnsupportedMediaType catch)."""
+        """JSON이 아닌 content-type은 검증 단계에서 400 (사용량 미차감)."""
         mock_usage.return_value = (True, {'remaining': 5})
         resp = self.client.post('/generate-batch',
                                 data='not json',
                                 content_type='text/plain',
                                 headers=_H)
-        self.assertEqual(resp.status_code, 500)
+        self.assertEqual(resp.status_code, 400)
+        mock_usage.assert_not_called()
 
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     @patch('services.usage.usage_service.UsageService.try_consume_atomic')
@@ -244,6 +245,7 @@ class TestGenerateBatchRoute(_Base):
                                 json={'model': 'test'},
                                 headers=_H)
         self.assertEqual(resp.status_code, 400)
+        mock_usage.assert_not_called()
 
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     @patch('services.usage.usage_service.UsageService.try_consume_atomic')
@@ -254,6 +256,7 @@ class TestGenerateBatchRoute(_Base):
                                 json={'urls': urls},
                                 headers=_H)
         self.assertEqual(resp.status_code, 400)
+        mock_usage.assert_not_called()
 
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     @patch('services.usage.usage_service.UsageService.try_consume_atomic')

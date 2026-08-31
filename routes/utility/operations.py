@@ -17,14 +17,12 @@ from routes.utility._state import (
     get_error_count,
     get_error_rate,
     get_request_count,
-    increment_request_count,
 )
 
 
 @blog_bp.route('/health')
 def health():
-    """헬스체크 엔드포인트 (Railway/Docker용)"""
-    increment_request_count()
+    """Liveness — 프로세스 생존만 확인. 의존성 검사는 /ready."""
     env = 'production' if os.environ.get('FLASK_ENV') != 'development' and not current_app.debug else 'development'
     # 프로세스 메모리 사용량 (MB) — 표준 라이브러리만 사용
     mem_mb = None
@@ -64,6 +62,40 @@ def health():
         'request_count': get_request_count(), 'error_count': get_error_count(),
         'error_rate': get_error_rate(), 'memory_usage_mb': mem_mb,
     }), 200
+
+
+@blog_bp.route('/ready')
+def ready():
+    """Readiness — 필수 의존성 확인. 실패해도 프로세스는 살아 있음(/health)."""
+    checks = {}
+    ready_ok = True
+
+    redis_url = (os.environ.get('REDIS_URL') or '').strip()
+    if redis_url and not redis_url.startswith('memory'):
+        try:
+            from routes.utility._state import _get_redis
+            client = _get_redis()
+            if client is None:
+                raise RuntimeError('redis unavailable')
+            client.ping()
+            checks['redis'] = 'ok'
+        except Exception:
+            checks['redis'] = 'error'
+            ready_ok = False
+    else:
+        checks['redis'] = 'skipped'
+
+    try:
+        cache = getattr(current_app, 'ai_cache', None)
+        if cache is not None:
+            cache.get_stats()
+        checks['ai_cache'] = 'ok'
+    except Exception:
+        checks['ai_cache'] = 'error'
+        ready_ok = False
+
+    status = 'ready' if ready_ok else 'not_ready'
+    return jsonify({'status': status, 'checks': checks}), (200 if ready_ok else 503)
 
 
 @blog_bp.route('/')

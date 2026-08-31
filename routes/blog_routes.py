@@ -476,6 +476,7 @@ from routes.generation_helpers import (
     _get_style_label, _apply_output_format,
     _generate_comment_summary, _combine_results,
     _validate_direct_text_content,
+    build_generation_cache_key,
 )
 
 
@@ -778,19 +779,19 @@ def generate():
             return api_error('유효하지 않은 YouTube URL입니다.', 400)
 
         # 캐시 체크 — 자막/제목 추출 전에 선조회 (히트 시 YouTube I/O 전부 생략)
-        from services.core.cache_service import AICacheService
         force = (request.get_json(silent=True) or {}).get('force', False)
-        modifiers = params['modifiers'] or {}
-        cache_key = AICacheService.make_key(
-            video_id, params['style'], params['model'],
-            modifiers.get('length', 'medium'),
-            modifiers.get('writing_style', 'conversational'),
-            transcript_language=params.get('transcript_language'),
-            enable_citations=params.get('enable_citations', False),
+        request_data_all = request.get_json(silent=True) or {}
+        web_search = bool(request_data_all.get('web_search', False))
+        cache_key = build_generation_cache_key(
+            video_id, params,
+            web_search=web_search,
+            user_id=getattr(g, 'user_id', None),
         )
         cache_resp = _handle_cache_hit(
             cache_key, force, video_id, url, start_time,
             transcript_language=params.get('transcript_language'),
+            output_format=params.get('output_format', 'html'),
+            max_chars=params.get('max_chars'),
         )
         if cache_resp:
             return cache_resp
@@ -955,20 +956,9 @@ def generate_batch():
     from services.usage.usage_service import UsageService
 
     try:
-        # 원자적 사용량 체크 + 차감 (Race Condition 방지)
-        can_use, usage = UsageService.try_consume_atomic(g.user_id)
-        if not can_use:
-            return jsonify({
-                'error': '오늘 사용 가능 횟수를 모두 소진했습니다. 내일 다시 시도해주세요.',
-                'code': 'USAGE_LIMIT_EXCEEDED',
-                'usage': usage
-            }), 429
-
         current_app.logger.info("Batch generate request received")
 
-        data = request.get_json()
-        current_app.logger.info(f"Request data: {data}")
-
+        data = request.get_json(silent=True)
         if not data:
             current_app.logger.error("No JSON data received")
             return api_error('JSON 데이터가 제공되지 않았습니다', 400)
@@ -978,13 +968,28 @@ def generate_batch():
         style = data.get('style', DEFAULT_STYLE)
         modifiers = data.get('modifiers')
         custom_prompt = data.get('customPrompt')
-
-        current_app.logger.info(f"URLs to process: {urls}, Model: {model}, Style: {style}")
+        url_count = len(urls) if isinstance(urls, list) else 0
+        current_app.logger.info(
+            "Batch generate meta url_count=%s model=%s style=%s",
+            url_count, model, style,
+        )
 
         if not urls or not isinstance(urls, list):
             return api_error('URL 목록이 제공되지 않았습니다', 400)
         if len(urls) > MAX_BATCH_URLS:
             return api_error(f'최대 {MAX_BATCH_URLS}개의 URL만 처리할 수 있습니다', 400)
+        if not all(isinstance(url, str) and url.strip() for url in urls):
+            return api_error('URL 목록이 올바르지 않습니다', 400)
+
+        # 검증 이후 원자적 사용량 예약
+        can_use, usage = UsageService.try_consume_atomic(g.user_id)
+        if not can_use:
+            return jsonify({
+                'error': '오늘 사용 가능 횟수를 모두 소진했습니다. 내일 다시 시도해주세요.',
+                'code': 'USAGE_LIMIT_EXCEEDED',
+                'usage': usage
+            }), 429
+        quota_reserved = bool(g.user_id) and not usage.get('is_admin', False)
 
         app = current_app._get_current_object()
         results = [None] * len(urls)
@@ -1050,7 +1055,11 @@ def generate_batch():
 
         current_app.logger.info(f"Batch processing completed. Success: {success_count}, Failed: {fail_count}")
 
-        # 사용량은 try_consume_atomic()으로 이미 차감됨
+        if quota_reserved and success_count == 0 and g.user_id:
+            UsageService.refund(g.user_id)
+            quota_reserved = False
+
+        # 사용량은 try_consume_atomic()으로 이미 차감됨 (전체 실패 시 환불)
         updated_usage = usage
 
         # P2 버그 #7 수정: 배치 히스토리 저장 (N+1 → 배치 INSERT)
@@ -1090,9 +1099,13 @@ def generate_batch():
 
     except ValueError as e:
         current_app.logger.error(f"ValueError in batch generate: {e}")
+        if locals().get('quota_reserved') and g.user_id:
+            UsageService.refund(g.user_id)
         return handle_error(str(e))
     except Exception as e:
         current_app.logger.error(f"Batch generate failed: {e}", exc_info=True)
+        if locals().get('quota_reserved') and g.user_id:
+            UsageService.refund(g.user_id)
         return api_error_from_exception(e, '배치 처리 중 오류가 발생했습니다.')
 
 
@@ -1302,17 +1315,20 @@ def generate_stream():
             'X-Accel-Buffering': 'no',
         }
 
-        # 사용량 체크 (수동)
+        # 검증 이후 원자적 사용량 예약. 소비 실패 시 결과를 전달하지 않는다.
         user_id = getattr(g, 'user_id', None)
+        quota_reserved = False
         if is_supabase_enabled() and user_id:
-            can_use, usage = UsageService.check_can_use(user_id)
-            if not can_use:
+            consumed, usage = UsageService.try_consume_atomic(user_id)
+            if not consumed:
                 return jsonify({
                     'error': '오늘 사용 가능 횟수를 모두 소진했습니다.',
                     'code': 'USAGE_LIMIT_EXCEEDED',
                     'usage': usage
                 }), 429
             g.usage = usage
+            quota_reserved = not usage.get('is_admin', False)
+            g.quota_reserved = quota_reserved
 
         force = request_data_all.get('force', False)
         modifiers = params['modifiers'] or {}
@@ -1348,19 +1364,23 @@ def generate_stream():
                 source_meta['detected_language'] = params['detected_language']
         else:
             # 캐시 체크 — /generate와 동일한 키/force 의미론
-            from services.core.cache_service import AICacheService
-            cache_key = AICacheService.make_key(
-                video_id, params['style'], params['model'],
-                modifiers.get('length', 'medium'),
-                modifiers.get('writing_style', 'conversational'),
-                transcript_language=params.get('transcript_language'),
+            cache_key = build_generation_cache_key(
+                video_id, params,
+                web_search=bool(request_data_all.get('web_search', False)),
+                user_id=user_id,
             )
             cache_resp = _handle_cache_hit(
                 cache_key, force, video_id, url, start_time,
                 transcript_language=params.get('transcript_language'),
+                output_format=params.get('output_format', 'html'),
+                max_chars=params.get('max_chars'),
             )
             if cache_resp:
                 cached_payload = cache_resp.get_json() or {}
+                if quota_reserved and user_id:
+                    g.updated_usage = UsageService.refund(user_id)
+                    quota_reserved = False
+                    cached_payload['quota'] = g.updated_usage
 
                 def cached_sse():
                     yield _sse({
@@ -1381,6 +1401,8 @@ def generate_stream():
                 video_id, params.get('transcript_language')
             )
             if error:
+                if quota_reserved and user_id:
+                    UsageService.refund(user_id)
                 return api_error(error, 400)
 
             main_content = f"[영상 자막]\n{transcript_text}"
@@ -1491,9 +1513,7 @@ def generate_stream():
                         html = base_result.get('html') or html
                         usage = base_result.get('usage') or usage
 
-                    # 사용량 차감 (성공 시)
-                    if is_supabase_enabled() and user_id:
-                        UsageService.decrement(user_id)
+                    # 사용량은 스트림 시작 전 이미 예약됨
 
                     # 메타데이터 추출 — 비스트리밍 /generate와 동일하게 채워 회귀 방지
                     style = params['style']
@@ -1570,6 +1590,8 @@ def generate_stream():
                     # 스트림 실패 시 미시작 댓글 요약은 취소해 불필요한 AI 호출 방지
                     if comment_future is not None:
                         comment_future.cancel()
+                    if quota_reserved and user_id:
+                        UsageService.refund(user_id)
                     safe_message = safe_error_or_fallback(
                         e,
                         '생성 중 오류가 발생했습니다. 다시 시도해주세요.',
@@ -1588,6 +1610,8 @@ def generate_stream():
 
     except Exception as e:
         current_app.logger.error(f"Generate stream setup failed: {e}")
+        if locals().get('quota_reserved') and locals().get('user_id'):
+            UsageService.refund(user_id)
         return _handle_error_response(str(e))
 
 @blog_bp.route('/api/video-qa', methods=['POST'])
@@ -1723,6 +1747,9 @@ def text_to_speech():
 # =============================================
 
 @blog_bp.route('/api/extract-events', methods=['POST'])
+@limiter.limit("10/minute")
+@require_auth
+@require_usage
 def extract_events_endpoint():
     """YouTube 영상 자막에서 구조화된 이벤트를 추출합니다.
 

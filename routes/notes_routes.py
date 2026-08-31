@@ -1,9 +1,9 @@
 """Knowledge notes API routes.
 
-First slice: notes are stored in one shared local directory without per-user
-separation. User-scoped storage is a follow-up slice.
+Notes are user-scoped. Legacy root files stay on disk and are only listed via
+an explicit admin/legacy-owner path (`?scope=legacy`).
 """
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, current_app, g, jsonify, request
 
 from extensions import limiter
 from routes.blog_routes import DEFAULT_MODEL
@@ -16,6 +16,22 @@ MAX_SEARCH_QUERY_CHARS = 200
 DUPLICATE_SIMILARITY_THRESHOLD = 0.92
 DUPLICATE_SIMILARITY_LIMIT = 3
 DUPLICATE_QUERY_MAX_CHARS = 2000
+
+
+def _current_owner_id() -> str:
+    return note_service.resolve_note_owner(getattr(g, "user_id", None))
+
+
+def _can_access_legacy() -> bool:
+    from services.usage.usage_service import UsageService
+
+    user_id = getattr(g, "user_id", None)
+    is_admin = bool(user_id and UsageService.is_admin_user(user_id))
+    return note_service.is_legacy_notes_accessor(user_id, is_admin=is_admin)
+
+
+def _legacy_requested() -> bool:
+    return (request.args.get("scope") or "").strip().lower() == note_service.LEGACY_SCOPE
 
 
 @notes_bp.route("", methods=["POST"])
@@ -42,15 +58,17 @@ def create_note():
         style_prompt = current_app.config.get("STYLE_PROMPTS", {}).get(
             note_service.NOTE_STYLE_ID
         )
+        owner_id = _current_owner_id()
         note = note_service.generate_knowledge_note(
             content,
             source,
             language=language,
             model=model,
             style_prompt=style_prompt,
+            owner_id=owner_id,
         )
         try:
-            note_index_service.index_note(note)
+            note_index_service.index_note(note, owner_id=owner_id)
         except Exception as index_exc:
             current_app.logger.warning(
                 "Knowledge note indexing failed (ignored): %s",
@@ -70,7 +88,13 @@ def create_note():
 @notes_bp.route("", methods=["GET"])
 @require_auth
 def list_notes():
-    return jsonify({"notes": note_service.list_notes()})
+    include_legacy = _legacy_requested() and _can_access_legacy()
+    return jsonify({
+        "notes": note_service.list_notes(
+            owner_id=_current_owner_id(),
+            include_legacy=include_legacy,
+        )
+    })
 
 
 @notes_bp.route("/search", methods=["GET"])
@@ -93,7 +117,13 @@ def search_notes():
         max_val=note_index_service.MAX_SEARCH_LIMIT,
     )
     try:
-        return jsonify({"notes": note_index_service.search_notes(query, limit=limit)})
+        return jsonify({
+            "notes": note_index_service.search_notes(
+                query,
+                limit=limit,
+                owner_id=_current_owner_id(),
+            )
+        })
     except Exception as exc:
         current_app.logger.error("Knowledge note search failed: %s", exc, exc_info=True)
         return api_error("[검색 실패] 노트 검색 중 오류가 발생했습니다.", 500)
@@ -102,11 +132,20 @@ def search_notes():
 @notes_bp.route("/<note_id>", methods=["GET"])
 @require_auth
 def get_note(note_id):
-    note = note_service.load_note(note_id)
+    include_legacy = _legacy_requested() and _can_access_legacy()
+    note = note_service.load_note(
+        note_id,
+        owner_id=_current_owner_id(),
+        include_legacy=include_legacy,
+    )
     if note is None:
         return api_error("[노트 조회 실패] 노트를 찾을 수 없습니다.", 404)
     try:
-        note["related_notes"] = note_index_service.get_related_notes(note, limit=3)
+        note["related_notes"] = note_index_service.get_related_notes(
+            note,
+            limit=3,
+            owner_id=_current_owner_id(),
+        )
     except Exception as exc:
         current_app.logger.warning(
             "Related note lookup failed (ignored): %s",
@@ -118,9 +157,12 @@ def get_note(note_id):
 
 
 def _find_duplicate_notes(content: str, source: dict) -> tuple[str, list[dict]]:
+    owner_id = _current_owner_id()
     normalized_source = note_service.normalize_source(source)
-    existing_notes = note_service.list_notes()
-    same_url_notes = note_service.find_notes_by_source_url(normalized_source, notes=existing_notes)
+    existing_notes = note_service.list_notes(owner_id=owner_id)
+    same_url_notes = note_service.find_notes_by_source_url(
+        normalized_source, notes=existing_notes, owner_id=owner_id
+    )
     if same_url_notes:
         return "same_url", same_url_notes
 
@@ -134,7 +176,9 @@ def _find_duplicate_notes(content: str, source: dict) -> tuple[str, list[dict]]:
     try:
         similar_notes = [
             note
-            for note in note_index_service.search_notes(query, limit=DUPLICATE_SIMILARITY_LIMIT)
+            for note in note_index_service.search_notes(
+                query, limit=DUPLICATE_SIMILARITY_LIMIT, owner_id=owner_id
+            )
             if float(note.get("score") or 0) > DUPLICATE_SIMILARITY_THRESHOLD
         ]
     except Exception as exc:

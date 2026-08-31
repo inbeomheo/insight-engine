@@ -194,9 +194,34 @@ class UsageService:
             except Exception:  # pragma: no cover
                 pass
 
-            # 그 외 예외는 기존 폴백 — 안전장치 (check_can_use)
-            logger.error(f"사용량 RPC 호출 실패: {exc}, 폴백 사용")
-            return UsageService.check_can_use(user_id)
+            # 소비 실패 시 결과를 전달하지 않도록 fail-closed
+            logger.error(f"사용량 RPC 호출 실패: {exc}")
+            return False, {
+                'usage_count': 0,
+                'can_use': False,
+                'max_usage': MAX_USAGE_COUNT,
+                'reason': 'consume_failed',
+            }
+
+    @staticmethod
+    def refund(user_id: str, amount: int = 1) -> dict:
+        """예약/차감된 사용량을 환불한다. 관리자·비활성 환경은 no-op."""
+        if not is_supabase_enabled() or not user_id:
+            return ADMIN_USAGE
+        if _is_admin_cached(user_id):
+            return ADMIN_USAGE
+        try:
+            from src.contexts.identity.infrastructure.supabase_usage_gateway import (
+                SupabaseUsageGateway,
+            )
+            from src.shared.domain.value_objects import AccountId
+
+            gateway = SupabaseUsageGateway(_get_account_repository())
+            gateway.refund(AccountId(value=user_id), amount)
+            return UsageService.get_current(user_id)
+        except Exception as exc:
+            logger.warning(f"refund 실패: {exc}")
+            return UsageService.get_current(user_id)
 
     @staticmethod
     def get_current(user_id: str) -> dict:

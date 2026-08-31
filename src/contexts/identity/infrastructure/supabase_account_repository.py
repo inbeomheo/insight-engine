@@ -552,6 +552,37 @@ class SupabaseAccountRepository(IAccountRepository):
             )
             return _UNLIMITED_DEV_QUOTA
 
+    def refund_quota_atomic(self, account_id: AccountId, amount: int = 1) -> int:
+        """사용량 환불 — increment_usage_safe RPC, 없으면 테이블 UPDATE 폴백."""
+        client = self._get_client()
+        if client is None:
+            return _UNLIMITED_DEV_QUOTA
+        try:
+            res = client.rpc(
+                "increment_usage_safe",
+                {"p_user_id": str(account_id)},
+            ).execute()
+            data = getattr(res, "data", None)
+            if isinstance(data, dict) and data.get("success"):
+                return int(data.get("new_count", 0))
+        except Exception as exc:
+            logger.warning(
+                "increment_usage_safe RPC 실패, 테이블 폴백 (account_id=%s, error=%s)",
+                account_id,
+                exc,
+            )
+        try:
+            remaining = self._read_remaining_quota(client, account_id)
+            new_count = (remaining or 0) + max(1, amount)
+            client.table("ie_usage").update(
+                {"usage_count": new_count}
+            ).eq("user_id", str(account_id)).execute()
+            return new_count
+        except Exception as exc:
+            logger.warning("refund_quota_atomic 실패: %s", exc)
+            remaining = self._read_remaining_quota(client, account_id)
+            return remaining if remaining is not None else 0
+
     def _read_remaining_quota(
         self, client: Any, account_id: AccountId
     ) -> Optional[int]:

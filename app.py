@@ -124,6 +124,13 @@ def create_app(test_config=None):
             response.headers['X-Response-Time'] = f'{elapsed_ms:.1f}ms'
             if elapsed_ms > 1000:  # 1초 이상은 warning
                 _perf_logger.warning('느린 응답: %s %s %.1fms', request.method, request.path, elapsed_ms)
+        try:
+            from routes.utility._state import increment_error_count, increment_request_count
+            increment_request_count()
+            if response.status_code >= 500:
+                increment_error_count()
+        except Exception:
+            pass
         return response
 
     # 보안 헤더 설정
@@ -148,7 +155,7 @@ def create_app(test_config=None):
             if app.testing:
                 return None
             # 헬스체크, 정적 파일은 제외
-            if request.path in ('/health', '/api/heartbeat'):
+            if request.path in ('/health', '/ready', '/api/heartbeat'):
                 return None
             # Origin 또는 Referer 헤더 검증
             origin = request.headers.get('Origin')

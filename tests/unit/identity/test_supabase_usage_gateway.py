@@ -25,7 +25,9 @@ def account_id() -> AccountId:
 
 @pytest.fixture
 def accounts_mock():
-    return MagicMock(spec=IAccountRepository)
+    mock = MagicMock(spec=IAccountRepository)
+    mock.refund_quota_atomic = MagicMock(return_value=5)
+    return mock
 
 
 @pytest.fixture
@@ -60,19 +62,12 @@ class TestCheckAndConsume:
 
 
 class TestRefund:
-    def test_refund_is_noop_and_logs_warning(
-        self, gateway, account_id, caplog
-    ):
-        """refund는 현재 미구현 — warning 로그만 + 예외 없음."""
-        with caplog.at_level(logging.WARNING):
-            gateway.refund(account_id, 1)
-        # 경고 메시지 확인
-        assert any(
-            "미구현" in record.message or "refund" in record.message.lower()
-            for record in caplog.records
-        )
+    def test_refund_calls_repository(self, gateway, accounts_mock, account_id):
+        accounts_mock.refund_quota_atomic.return_value = 5
+        gateway.refund(account_id, 1)
+        accounts_mock.refund_quota_atomic.assert_called_once_with(account_id)
 
     def test_refund_with_custom_amount(self, gateway, accounts_mock, account_id):
-        """amount > 1도 no-op이며 accounts 호출 없음."""
+        accounts_mock.refund_quota_atomic.return_value = 5
         gateway.refund(account_id, 5)
-        accounts_mock.consume_quota_atomic.assert_not_called()
+        assert accounts_mock.refund_quota_atomic.call_count == 5

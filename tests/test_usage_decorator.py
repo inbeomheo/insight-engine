@@ -69,8 +69,7 @@ class TestRequireUsage(unittest.TestCase):
     def test_success_decrements(self, mock_usage_svc, mock_enabled):
         from services.usage.usage_decorator import require_usage
 
-        mock_usage_svc.check_can_use.return_value = (True, {'remaining': 5, 'is_admin': False})
-        mock_usage_svc.decrement.return_value = {'remaining': 4}
+        mock_usage_svc.try_consume_atomic.return_value = (True, {'remaining': 5, 'is_admin': False})
 
         @require_usage
         def dummy():
@@ -78,8 +77,9 @@ class TestRequireUsage(unittest.TestCase):
 
         with self.app.test_request_context():
             g.user_id = 'user-2'
-            result = dummy()
-            mock_usage_svc.decrement.assert_called_once_with('user-2')
+            dummy()
+            mock_usage_svc.try_consume_atomic.assert_called_once_with('user-2')
+            mock_usage_svc.refund.assert_not_called()
 
 
 class TestGetUsageForResponse(unittest.TestCase):

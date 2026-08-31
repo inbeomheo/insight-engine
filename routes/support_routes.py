@@ -24,6 +24,7 @@ from services.support.github_handoff_service import (
     github_config_status,
 )
 from services.support.support_agent_service import handle_support_chat
+from src.contexts.identity.interface.auth_decorators import require_auth
 
 support_bp = Blueprint("support", __name__)
 
@@ -46,7 +47,17 @@ def _current_user_id() -> str:
     return f"support-session:fallback-{fallback}"
 
 
+def _is_admin() -> bool:
+    user_id = getattr(g, "user_id", None)
+    if not user_id:
+        return False
+    from services.usage.usage_service import UsageService
+    return UsageService.is_admin_user(str(user_id))
+
+
 def _owns(ticket: dict) -> bool:
+    if _is_admin():
+        return True
     return ticket.get("user_id") == _current_user_id()
 
 
@@ -90,17 +101,22 @@ def support_chat():
 
 
 @support_bp.route("/api/support/tickets", methods=["GET"])
+@require_auth
 def list_support_tickets():
     limit = min(request.args.get("limit", 50, type=int), 100)
     include_internal = request.args.get("include_internal", "false").lower() in {"1", "true", "yes"}
+    if include_internal and not _is_admin():
+        include_internal = False
     status = request.args.get("status") or None
+    list_user_id = None if (_is_admin() and request.args.get("all", "false").lower() in {"1", "true", "yes"}) else _current_user_id()
     tickets = get_feedback_store().list_tickets(
-        user_id=_current_user_id(), limit=limit, include_internal=include_internal, status=status
+        user_id=list_user_id, limit=limit, include_internal=include_internal, status=status
     )
     return jsonify({"tickets": tickets, "github": github_config_status()})
 
 
 @support_bp.route("/api/support/tickets/<ticket_id>", methods=["GET"])
+@require_auth
 def get_support_ticket(ticket_id: str):
     try:
         ticket = get_feedback_store().get_ticket(ticket_id)
@@ -109,6 +125,23 @@ def get_support_ticket(ticket_id: str):
     if not _owns(ticket):
         return api_error("피드백을 찾을 수 없습니다.", 404)
     return jsonify({"ticket": ticket, "github": github_config_status()})
+
+
+@support_bp.route("/api/support/tickets/<ticket_id>", methods=["PATCH"])
+@require_auth
+def update_support_ticket(ticket_id: str):
+    store = get_feedback_store()
+    try:
+        ticket = store.get_ticket(ticket_id)
+    except KeyError:
+        return api_error("피드백을 찾을 수 없습니다.", 404)
+    if not _owns(ticket):
+        return api_error("피드백을 찾을 수 없습니다.", 404)
+    updates = _payload()
+    if not _is_admin():
+        updates = {k: v for k, v in updates.items() if k in {"status", "message", "title"}}
+    updated = store.update_ticket(ticket_id, updates)
+    return jsonify({"ticket": updated})
 
 
 @support_bp.route("/api/support/tickets/<ticket_id>/create-github-issue", methods=["POST"])

@@ -224,8 +224,12 @@ class TestGenerateStreamDelta(unittest.TestCase):
                 side_effect=fake_validate,
             ),
             check_can_use=patch(
-                'services.usage.usage_service.UsageService.check_can_use',
+                'services.usage.usage_service.UsageService.try_consume_atomic',
                 return_value=(True, real_usage),
+            ),
+            refund=patch(
+                'services.usage.usage_service.UsageService.refund',
+                return_value=real_usage,
             ),
             make_key=patch('services.core.cache_service.AICacheService.make_key', return_value='cache-key'),
             create_stream=patch('routes.blog_routes.ai_service.create_content_stream'),
@@ -263,7 +267,7 @@ class TestGenerateStreamDelta(unittest.TestCase):
                 side_effect=fake_validate,
             ),
             check_can_use=patch(
-                'services.usage.usage_service.UsageService.check_can_use',
+                'services.usage.usage_service.UsageService.try_consume_atomic',
                 return_value=(False, {'remaining': 0}),
             ),
             make_key=patch('services.core.cache_service.AICacheService.make_key', return_value='cache-key'),

@@ -49,6 +49,7 @@ def test_index_note_upserts_searchable_text_and_metadata(mock_get_client):
         "title": "테스트 글",
         "source_url": "https://example.com/a",
         "created_at": "2026-07-04T12:00:00Z",
+        "owner_id": "_local",
     }]
 
 

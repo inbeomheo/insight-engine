@@ -66,10 +66,10 @@ def test_save_load_round_trip_utf8(tmp_path, monkeypatch):
     monkeypatch.setattr(note_service, "NOTES_DIR", tmp_path)
     note = _note()
 
-    note_service.save_note(note)
+    saved = note_service.save_note(note)
 
-    assert note_service.load_note("note-1") == note
-    raw = (tmp_path / "note-1.json").read_text(encoding="utf-8")
+    assert note_service.load_note("note-1") == saved
+    raw = (tmp_path / "users" / "_local" / "note-1.json").read_text(encoding="utf-8")
     assert "요약입니다." in raw
     assert "\\uc694" not in raw
 
@@ -101,6 +101,7 @@ def test_list_notes_newest_first(tmp_path, monkeypatch):
         "review_question_count": 1,
         "created_at": "2026-07-04T12:00:00Z",
         "source": {"type": "article", "url": "https://example.com/a", "title": "테스트 글"},
+        "owner_id": "_local",
     }
 
 
