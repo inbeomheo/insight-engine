@@ -40,6 +40,7 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
       AUTH_MODE: trusted_proxy
       AUTH_PROXY_SECRET: ${AUTH_PROXY_SECRET}
+      LEGACY_NOTES_OWNER_ID: proxy_inbeom
     ports:
       - "127.0.0.1:5001:5001"
     extra_hosts:

@@ -1,7 +1,7 @@
 """Knowledge notes API routes.
 
-Notes are user-scoped. Legacy root files stay on disk and are only listed via
-an explicit admin/legacy-owner path (`?scope=legacy`).
+Notes are user-scoped. Legacy root files stay on disk and are visible only to
+the configured legacy owner/admin; other users cannot enumerate them.
 """
 from flask import Blueprint, current_app, g, jsonify, request
 
@@ -31,7 +31,8 @@ def _can_access_legacy() -> bool:
 
 
 def _legacy_requested() -> bool:
-    return (request.args.get("scope") or "").strip().lower() == note_service.LEGACY_SCOPE
+    scope = (request.args.get("scope") or "").strip().lower()
+    return scope in {"", note_service.LEGACY_SCOPE}
 
 
 @notes_bp.route("", methods=["POST"])

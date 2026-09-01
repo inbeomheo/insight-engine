@@ -7,6 +7,13 @@ const backendCommand =
 const frontendCommand = 'node node_modules/next/dist/bin/next dev';
 const backendUrl = 'http://127.0.0.1:5001';
 const frontendUrl = 'http://127.0.0.1:3000';
+const baseURL = process.env.PLAYWRIGHT_BASE_URL || frontendUrl;
+const httpCredentials = process.env.E2E_BASIC_USER && process.env.E2E_BASIC_PASSWORD
+  ? {
+      username: process.env.E2E_BASIC_USER,
+      password: process.env.E2E_BASIC_PASSWORD,
+    }
+  : undefined;
 
 /**
  * Insight Engine E2E 테스트 설정
@@ -41,7 +48,8 @@ export default defineConfig({
 
   /* 전역 설정 */
   use: {
-    baseURL: frontendUrl,
+    baseURL,
+    httpCredentials,
 
     /* 추적 및 디버깅 */
     trace: 'on-first-retry',
@@ -197,6 +205,8 @@ export default defineConfig({
               ...process.env,
               SUPABASE_URL: '',
               SUPABASE_ANON_KEY: '',
+              FLASK_ENV: 'testing',
+              AUTH_BYPASS: 'true',
             },
           },
           {
