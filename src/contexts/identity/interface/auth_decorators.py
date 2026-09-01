@@ -26,6 +26,7 @@ from services.core.logging_config import supabase_logger as logger
 from src.contexts.identity.interface.auth_policy import (
     is_auth_bypass_allowed,
     is_production_env,
+    trusted_proxy_user,
 )
 from src.shared.infrastructure.supabase_client import (
     get_supabase,
@@ -136,6 +137,14 @@ def require_auth(f: Callable) -> Callable:
     """
     @wraps(f)
     def decorated(*args, **kwargs):
+        proxy_user = trusted_proxy_user(request.headers)
+        if proxy_user:
+            g.user_id = proxy_user
+            g.user_email = None
+            g.access_token = None
+            g.auth_via = 'trusted_proxy'
+            return f(*args, **kwargs)
+
         if not is_supabase_enabled():
             if is_production_env():
                 return jsonify({

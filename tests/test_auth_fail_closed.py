@@ -81,3 +81,37 @@ def test_testing_bypass_allows_request(monkeypatch):
         client = _app().test_client()
         resp = client.get("/protected")
     assert resp.status_code == 200
+
+
+def test_production_accepts_signed_trusted_proxy(monkeypatch):
+    monkeypatch.setenv("FLASK_ENV", "production")
+    monkeypatch.setenv("AUTH_MODE", "trusted_proxy")
+    monkeypatch.setenv("AUTH_PROXY_SECRET", "s" * 64)
+    with patch(
+        "src.contexts.identity.interface.auth_decorators.is_supabase_enabled",
+        return_value=False,
+    ):
+        client = _app().test_client()
+        resp = client.get("/protected", headers={
+            "X-Insight-Proxy-Secret": "s" * 64,
+            "X-Insight-Proxy-User": "inbeom",
+        })
+    assert resp.status_code == 200
+    assert resp.get_json()["user_id"] == "proxy_inbeom"
+
+
+def test_production_rejects_forged_trusted_proxy(monkeypatch):
+    monkeypatch.setenv("FLASK_ENV", "production")
+    monkeypatch.setenv("AUTH_MODE", "trusted_proxy")
+    monkeypatch.setenv("AUTH_PROXY_SECRET", "s" * 64)
+    with patch(
+        "src.contexts.identity.interface.auth_decorators.is_supabase_enabled",
+        return_value=False,
+    ):
+        client = _app().test_client()
+        resp = client.get("/protected", headers={
+            "X-Insight-Proxy-Secret": "wrong" * 16,
+            "X-Insight-Proxy-User": "inbeom",
+        })
+    assert resp.status_code == 503
+    assert resp.get_json()["code"] == "AUTH_UNAVAILABLE"

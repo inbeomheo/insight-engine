@@ -28,8 +28,11 @@
             inbeom $2a$14$2eRC3ysAzH9h1uIdUx0W.uuWpfDGYU2LhAJWtsV1ylsVhqtsGroRm
         }
 
-        @backend path /api/* /generate /generate-stream /generate-batch /feed.xml /version /metrics /openapi.json /oauth/*
-        reverse_proxy @backend backend:5001
+        @backend path /api/* /generate /generate-stream /generate-batch /feed.xml /version /ready /metrics /openapi.json /oauth/*
+        reverse_proxy @backend backend:5001 {
+            header_up X-Insight-Proxy-Secret {env.AUTH_PROXY_SECRET}
+            header_up X-Insight-Proxy-User inbeom
+        }
 
         reverse_proxy frontend:3000
     }

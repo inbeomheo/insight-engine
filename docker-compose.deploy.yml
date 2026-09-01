@@ -38,6 +38,8 @@ services:
       WHISPER_ENABLED: "true"
       WHISPER_MODEL_SIZE: base
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      AUTH_MODE: trusted_proxy
+      AUTH_PROXY_SECRET: ${AUTH_PROXY_SECRET}
     ports:
       - "127.0.0.1:5001:5001"
     extra_hosts:
@@ -148,6 +150,8 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
+    environment:
+      AUTH_PROXY_SECRET: ${AUTH_PROXY_SECRET}
     ports:
       - "127.0.0.1:8090:8090"
     volumes:
