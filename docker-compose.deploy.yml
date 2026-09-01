@@ -6,6 +6,13 @@ services:
     image: insight-engine:local
     container_name: insight-backend
     restart: unless-stopped
+    mem_limit: 4g
+    cpus: 2.0
+    pids_limit: 512
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     command:
       - gunicorn
       - --workers=2
@@ -89,11 +96,23 @@ services:
       start_period: 30s
     mem_limit: 4g
     cpus: 2.0
+    pids_limit: 512
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
 
   frontend:
     image: insight-engine:local
     container_name: insight-frontend
     restart: unless-stopped
+    mem_limit: 1g
+    cpus: 1.0
+    pids_limit: 256
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     working_dir: /app/frontend
     command:
       - node
@@ -119,9 +138,16 @@ services:
       start_period: 30s
 
   edge:
-    image: caddy:2-alpine
+    image: caddy@sha256:77c07d5ebfa5be9fd6c820d2094ae662c9e7eeb9bf98346b7f639900263ee2a2
     container_name: insight-edge
     restart: unless-stopped
+    mem_limit: 256m
+    cpus: 0.5
+    pids_limit: 128
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     ports:
       - "127.0.0.1:8090:8090"
     volumes:
@@ -142,6 +168,11 @@ services:
     image: eceasy/cli-proxy-api:v7.2.146
     container_name: insight-cliproxy
     restart: unless-stopped
+    mem_limit: 1g
+    cpus: 1.0
+    pids_limit: 256
+    security_opt:
+      - no-new-privileges:true
     ports:
       - "127.0.0.1:8317:8317"
     volumes:
@@ -158,9 +189,16 @@ services:
       start_period: 10s
 
   redis:
-    image: redis:7-alpine
+    image: redis@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
     container_name: insight-redis
     restart: unless-stopped
+    mem_limit: 384m
+    cpus: 0.5
+    pids_limit: 128
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru --appendonly yes
     volumes:
       - insight_redis_data:/data
@@ -171,9 +209,16 @@ services:
       retries: 5
 
   media-redis:
-    image: redis:7-alpine
+    image: redis@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
     container_name: insight-media-redis
     restart: unless-stopped
+    mem_limit: 256m
+    cpus: 0.5
+    pids_limit: 128
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     command: redis-server --maxmemory 128mb --maxmemory-policy noeviction --appendonly yes
     volumes:
       - insight_media_redis_data:/data

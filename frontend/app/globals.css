@@ -67,7 +67,7 @@
   --secondary: #E8EBF1;           /* Wash — cool neutral fill */
   --secondary-foreground: #15171F;
   --muted: #E8EBF1;
-  --muted-foreground: #6A6E78;    /* ~rgba(21,23,31,0.55) flattened */
+  --muted-foreground: #4B4F59;    /* WCAG AA on paper/card/sidebar surfaces */
   --accent: #E4E9FB;              /* Faint ink-blue tint for accent surfaces */
   --accent-foreground: #2F54EB;
 
@@ -95,8 +95,8 @@
   --sidebar-border: #E0E3EB;
   --sidebar-ring: rgba(47, 84, 235, 0.35);
 
-  /* --- Fonts (unchanged) --- */
-  --font-sans: "Pretendard", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  /* 시스템 UI 글꼴 — 4MB에 가까운 외부 Pretendard weight 다운로드 제거 */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", Roboto, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
@@ -107,6 +107,11 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-sans);
+  }
+
+  /* 저대비 opacity 유틸리티를 읽기 가능한 토큰으로 정규화한다. */
+  [class*="text-muted-foreground/"] {
+    color: var(--muted-foreground);
   }
 
   /* 인터랙티브 요소에 cursor-pointer 자동 적용 */

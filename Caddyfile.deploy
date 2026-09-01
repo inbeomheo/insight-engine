@@ -1,6 +1,16 @@
 :8090 {
     encode gzip zstd
 
+    header {
+        Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self'; worker-src 'self' blob:; manifest-src 'self'; upgrade-insecure-requests"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        -Server
+    }
+
     handle /health {
         reverse_proxy backend:5001
     }
@@ -14,7 +24,7 @@
     }
 
     handle {
-        basicauth {
+        basic_auth {
             inbeom $2a$14$2eRC3ysAzH9h1uIdUx0W.uuWpfDGYU2LhAJWtsV1ylsVhqtsGroRm
         }
 

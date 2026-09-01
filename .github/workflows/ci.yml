@@ -1,18 +1,14 @@
 # Insight Engine CI/CD 파이프라인 (F9-11)
-# 트리거: main/master/develop 브랜치 푸시, PR
-#   - 이 레포의 기본 브랜치는 master이며 모든 PR이 master를 대상으로 한다.
-#     master가 빠져 있어 PR CI가 한 번도 실행되지 않던 문제를 수정.
-#   - docker-build/deploy/커버리지 잡의 refs/heads/main 게이트는 의도적으로 유지:
-#     master로 바꾸면 푸시마다 Docker Hub 푸시 + Railway 프로덕션 배포가 켜지므로
-#     자동 배포는 명시적 운영 결정 전까지 비활성 상태로 둔다 (2026-07-05 결정).
+# 운영 브랜치 deploy-master도 테스트와 Docker 재현성 검증을 반드시 통과한다.
+# 실제 배포는 서버에서 승인 후 수행하며 CI는 외부 레지스트리/철도 배포를 하지 않는다.
 
 name: CI/CD
 
 on:
   push:
-    branches: [main, master, develop]
+    branches: [main, master, develop, deploy-master]
   pull_request:
-    branches: [main, master, develop]
+    branches: [main, master, develop, deploy-master]
 
 env:
   PYTHON_VERSION: "3.11"
@@ -82,7 +78,7 @@ jobs:
             -q
 
       - name: 커버리지 업로드
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/deploy-master'
         run: |
           pip install coverage pytest-cov
           python -m pytest tests/ --ignore=tests/e2e --cov=. --cov-report=xml -q
@@ -124,10 +120,10 @@ jobs:
 
   # ── Docker 빌드 ───────────────────────────────────────────────────────────────
   docker-build:
-    name: Docker Build
+    name: Docker Build Verification
     runs-on: ubuntu-latest
     needs: [backend-test, frontend-test]
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/deploy-master'
     timeout-minutes: 20
 
     steps:
@@ -136,38 +132,14 @@ jobs:
       - name: Docker Buildx 설정
         uses: docker/setup-buildx-action@v3
 
-      - name: Docker Hub 로그인
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Docker 이미지 빌드 및 푸시
+      - name: Docker 이미지 재현성 검증
         uses: docker/build-push-action@v5
         with:
           context: .
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: |
-            ${{ secrets.DOCKER_USERNAME }}/insight-engine:latest
-            ${{ secrets.DOCKER_USERNAME }}/insight-engine:${{ github.sha }}
+          push: false
+          tags: insight-engine:${{ github.sha }}
+          labels: |
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-  # ── 프로덕션 배포 ─────────────────────────────────────────────────────────────
-  deploy:
-    name: Deploy (Railway)
-    runs-on: ubuntu-latest
-    needs: docker-build
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    environment: production
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Railway 배포
-        uses: bervProject/railway-deploy@v1
-        with:
-          railway_token: ${{ secrets.RAILWAY_TOKEN }}
-          service: insight-engine
-        continue-on-error: true
