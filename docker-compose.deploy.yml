@@ -129,7 +129,8 @@ services:
       NODE_ENV: production
       NEXT_BACKEND_URL: http://backend:5001
     ports:
-      - "127.0.0.1:3000:3000"
+      # Cloudflare는 edge만 바라봐야 하므로 Next 직접 포트는 별도 loopback으로 격리.
+      - "127.0.0.1:3002:3000"
     depends_on:
       backend:
         condition: service_healthy
@@ -155,6 +156,8 @@ services:
       AUTH_PROXY_SECRET: ${AUTH_PROXY_SECRET}
     ports:
       - "127.0.0.1:8090:8090"
+      # 기존 Cloudflare 원격 ingress(:3000)를 즉시 안전하게 Caddy로 수용하는 호환 alias.
+      - "127.0.0.1:3000:8090"
     volumes:
       - ./Caddyfile.deploy:/etc/caddy/Caddyfile:ro
     depends_on:

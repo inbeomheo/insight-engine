@@ -11,6 +11,11 @@ Cloudflare Tunnel public hostname
 Auth와 보안 헤더를 우회하므로 금지해. Cloudflare Zero Trust 대시보드에서 Public
 Hostname 설정을 바꾼 뒤 다음을 확인해.
 
+현재 deploy Compose는 이전 원격 설정을 즉시 보호하기 위해 host `3000`도 Caddy
+`8090`으로 연결하고, Next 직접 포트는 `3002`로 격리해. 대시보드 변경 후에도 이
+alias는 안전하지만, 운영 구성을 단순화하려면 검증 완료 뒤 `3000:8090` alias를
+제거할 수 있어.
+
 ```bash
 # 인증 없는 페이지/API는 challenge를 반환해야 한다.
 curl -si https://insight.fiv.co.kr/ | sed -n '1,15p'
