@@ -56,6 +56,10 @@ def _get_redis():
     global _redis_client, _redis_disabled
     if _redis_disabled:
         return None
+    if (os.getenv("METRICS_REDIS_ENABLED", "true").strip().lower()
+            not in {"1", "true", "yes", "on"}):
+        _redis_disabled = True
+        return None
     if _redis_client is not None:
         return _redis_client
     url = (os.getenv("REDIS_URL") or "").strip()
@@ -137,10 +141,10 @@ def get_error_count() -> int:
 
 def get_error_rate() -> float:
     """에러율 반환 (0.0~1.0). 요청이 없으면 0.0."""
-    total = _total_request_count
+    total = get_request_count()
     if total == 0:
         return 0.0
-    return round(_total_error_count / total, 4)
+    return round(get_error_count() / total, 4)
 
 
 def increment_active_requests():

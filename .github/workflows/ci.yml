@@ -37,6 +37,8 @@ jobs:
       # 테스트는 Flask-Limiter 레이트리밋 대상이 아니어야 한다. Redis가 있는
       # CI에선 한도 상태가 테스트 간 공유되어 순서 의존적 429가 발생하므로 끈다.
       RATE_LIMIT_ENABLED: "false"
+      # 단위 테스트는 프로세스 로컬 카운터를 직접 초기화/검증한다.
+      METRICS_REDIS_ENABLED: "false"
 
     steps:
       - uses: actions/checkout@v4
@@ -49,6 +51,9 @@ jobs:
 
       - name: 의존성 설치
         run: pip install -r requirements.txt
+
+      - name: 미디어 도구 설치
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
       - name: 린트 (flake8, 권고)
         # 레포 전역 flake8 부채(약 760건)가 정리되기 전까지는 권고(비차단)로 운영한다.
