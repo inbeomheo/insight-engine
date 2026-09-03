@@ -21,6 +21,24 @@ except ModuleNotFoundError:
     load_dotenv = lambda *args, **kwargs: False
 
 
+def _normalized_origin(url):
+    """Return a canonical HTTP(S) origin tuple or ``None`` for invalid input."""
+    if not isinstance(url, str):
+        return None
+    try:
+        parsed = urlparse(url.strip())
+        if parsed.scheme.lower() not in ('http', 'https') or not parsed.hostname:
+            return None
+        if parsed.username is not None or parsed.password is not None:
+            return None
+        port = parsed.port
+    except ValueError:
+        return None
+    if port is None:
+        port = 443 if parsed.scheme.lower() == 'https' else 80
+    return parsed.scheme.lower(), parsed.hostname.lower(), port
+
+
 def create_app(test_config=None):
     """Flask 애플리케이션 인스턴스를 생성하고 설정합니다."""
     load_dotenv()
@@ -160,23 +178,29 @@ def create_app(test_config=None):
             # Origin 또는 Referer 헤더 검증
             origin = request.headers.get('Origin')
             referer = request.headers.get('Referer')
-            host = request.host_url.rstrip('/')
+            host_origin = _normalized_origin(request.host_url)
+            allowed_origin_keys = {
+                value for value in (_normalized_origin(item) for item in allowed_origins)
+                if value is not None
+            }
 
             def is_allowed_origin(url):
                 """CORS 허용 목록에 포함된 origin인지 확인"""
-                return url.rstrip('/') in [o.rstrip('/') for o in allowed_origins]
+                candidate = _normalized_origin(url)
+                return candidate is not None and candidate in allowed_origin_keys
 
             if origin:
-                if not origin.startswith(host) and origin != 'file://':
-                    # CORS 허용 목록 또는 로컬 개발 환경이면 통과
-                    if not is_allowed_origin(origin):
-                        return api_error('CSRF 검증 실패: 잘못된 Origin', 403)
+                origin_key = _normalized_origin(origin)
+                if origin_key is None or (
+                    origin_key != host_origin and not is_allowed_origin(origin)
+                ):
+                    return api_error('CSRF 검증 실패: 잘못된 Origin', 403)
             elif referer:
-                parsed = urlparse(referer)
-                referer_origin = f"{parsed.scheme}://{parsed.netloc}"
-                if not referer_origin.startswith(host):
-                    if not is_allowed_origin(referer_origin):
-                        return api_error('CSRF 검증 실패: 잘못된 Referer', 403)
+                referer_key = _normalized_origin(referer)
+                if referer_key is None or (
+                    referer_key != host_origin and not is_allowed_origin(referer)
+                ):
+                    return api_error('CSRF 검증 실패: 잘못된 Referer', 403)
             else:
                 # Origin/Referer 모두 없는 경우: Authorization 헤더가 있으면 허용 (프로그래밍 방식 접근)
                 if request.headers.get('Authorization'):
