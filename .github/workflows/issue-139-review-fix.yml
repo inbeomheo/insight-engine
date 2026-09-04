@@ -1,0 +1,56 @@
+name: Apply issue 139 review fixes
+
+on:
+  push:
+    branches:
+      - feat/issue-139-anki-apkg-export-20260904
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-verify:
+    if: ${{ !contains(github.event.head_commit.message, '[issue-139-review-fixed]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/issue-139-anki-apkg-export-20260904
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Apply review fixes
+        run: python .github/issue-139-review-fix.py
+
+      - name: Install focused Python dependencies
+        run: python -m pip install --disable-pip-version-check pytest==8.4.2 genanki==0.13.1
+
+      - name: Verify retention boundaries and package export
+        run: |
+          python -m pytest tests/test_anki_export_service.py tests/test_anki_export_contract.py -q
+          python -m compileall -q services/export/anki_export_service.py routes/export_routes.py
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Type-check conditional frontend integration
+        working-directory: frontend
+        run: |
+          npm ci --ignore-scripts
+          npx tsc --noEmit
+
+      - name: Commit verified review fixes
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm -f --ignore-unmatch .github/issue-139-review-fix.py .github/workflows/issue-139-review-fix.yml
+          git add -A
+          git diff --cached --check
+          git commit -m 'fix(export): bound retention cards and gate Anki menu [issue-139-review-fixed]'
+          git push origin HEAD:feat/issue-139-anki-apkg-export-20260904
