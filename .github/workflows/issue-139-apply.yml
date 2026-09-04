@@ -72,9 +72,8 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git rm .github/issue-139-apply.py .github/workflows/issue-139-apply.yml
-          git rm -f .github/issue-139-test.log 2>/dev/null || true
-          git add requirements.txt routes/export_routes.py services/export/anki_export_service.py frontend/lib/api.ts frontend/components/result/ResultCard.tsx tests/test_anki_export_service.py tests/test_anki_export_contract.py
+          git rm -f --ignore-unmatch .github/issue-139-apply.py .github/workflows/issue-139-apply.yml .github/issue-139-test.log
+          git add -A
           git diff --cached --check
           git commit -m 'feat(export): add Anki apkg deck export [issue-139-applied]'
           git push origin HEAD:feat/issue-139-anki-apkg-export-20260904
