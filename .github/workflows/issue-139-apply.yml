@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   apply-and-verify:
-    if: ${{ !contains(github.event.head_commit.message, '[issue-139-applied]') }}
+    if: ${{ !contains(github.event.head_commit.message, '[issue-139-applied]') && !contains(github.event.head_commit.message, '[issue-139-diagnostic]') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -30,7 +30,18 @@ jobs:
 
       - name: Run Anki export tests
         run: |
-          python -m pytest tests/test_anki_export_service.py tests/test_anki_export_contract.py -q
+          set +e
+          python -m pytest tests/test_anki_export_service.py tests/test_anki_export_contract.py -q 2>&1 | tee .github/issue-139-test.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add .github/issue-139-test.log
+            git commit -m 'test: capture Anki export failure [issue-139-diagnostic]'
+            git push origin HEAD:feat/issue-139-anki-apkg-export-20260904
+            exit "$status"
+          fi
+          rm -f .github/issue-139-test.log
           python -m compileall -q services/export/anki_export_service.py routes/export_routes.py
 
       - uses: actions/setup-node@v4
@@ -50,6 +61,7 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git rm .github/issue-139-apply.py .github/workflows/issue-139-apply.yml
+          rm -f .github/issue-139-test.log
           git add requirements.txt routes/export_routes.py services/export/anki_export_service.py frontend/lib/api.ts frontend/components/result/ResultCard.tsx tests/test_anki_export_service.py tests/test_anki_export_contract.py
           git diff --cached --check
           git commit -m 'feat(export): add Anki apkg deck export [issue-139-applied]'
