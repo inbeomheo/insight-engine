@@ -14,13 +14,13 @@ from dataclasses import dataclass
 from hashlib import sha256
 from html import escape
 from pathlib import Path
+from typing import Any, Iterable, Sequence
+from urllib.parse import urlparse
 import io
 import os
 import re
 import tempfile
 import unicodedata
-from urllib.parse import urlparse
-from typing import Any, Iterable, Sequence
 
 import genanki
 
@@ -28,6 +28,7 @@ import genanki
 MAX_CARDS = 500
 MAX_FIELD_CHARS = 20_000
 MODEL_ID = 1_873_019_139
+SUPPORTED_ANKI_STYLES = frozenset({"quiz", "retention_cards"})
 
 
 class AnkiExportError(ValueError):
@@ -70,9 +71,10 @@ def _clean_field(value: Any) -> str:
 
 def _nearest_heading(content: str, position: int) -> str:
     heading = ""
+    ignored = {"문제", "퀴즈", "리텐션 카드", "복습 카드", "사용법", "카드 세트"}
     for match in re.finditer(r"(?m)^#{2,4}\s+(.+?)\s*$", content[:position]):
         candidate = _clean_field(match.group(1))
-        if candidate and candidate not in {"문제", "퀴즈", "리텐션 카드", "복습 카드"}:
+        if candidate and candidate not in ignored and not re.fullmatch(r"카드\s*\d+", candidate):
             heading = candidate
     return heading
 
@@ -94,7 +96,10 @@ def _parse_quiz(content: str) -> list[AnkiCard]:
     for index, match in enumerate(starts):
         block_end = starts[index + 1].start() if index + 1 < len(starts) else len(content)
         block = content[match.end():block_end]
-        answer = re.search(r"(?m)^\s*\*\*정답\*\*\s*[:：]\s*([A-Da-d])(?:[.)])?\s*(.*?)\s*$", block)
+        answer = re.search(
+            r"(?m)^\s*\*\*정답\*\*\s*[:：]\s*([A-Da-d])(?:[.)])?\s*(.*?)\s*$",
+            block,
+        )
         explanation = re.search(
             r"(?ms)^\s*\*\*해설\*\*\s*[:：]\s*(.+?)(?=^\s*#{1,6}\s|\Z)",
             block,
@@ -103,7 +108,10 @@ def _parse_quiz(content: str) -> list[AnkiCard]:
         if not answer or len(options) < 2:
             continue
         answer_label = answer.group(1).upper()
-        answer_text = next((text for label, text in options if label == answer_label), _clean_field(answer.group(2)))
+        answer_text = next(
+            (text for label, text in options if label == answer_label),
+            _clean_field(answer.group(2)),
+        )
         option_text = "\n".join(f"{label}. {text}" for label, text in options)
         explanation_text = _clean_field(explanation.group(1)) if explanation else ""
         back_parts = [option_text, f"정답: {answer_label}. {answer_text}".rstrip()]
@@ -122,61 +130,160 @@ def _parse_quiz(content: str) -> list[AnkiCard]:
     return cards
 
 
-_FRONT_LABEL = r"(?:Recall|질문|앞면|Front)"
-_BACK_LABEL = r"(?:Answer\s*Key|정답|뒷면|Back)"
+_RETENTION_SET_START_RE = re.compile(
+    r"(?im)^[ \t]*(?P<number>\d+)[.)][ \t]+(?:\*\*)?개념"
+    r"(?:\*\*)?[ \t]*[:：]"
+)
+_RETENTION_CARD_HEADING_RE = re.compile(
+    r"(?im)^[ \t]*#{2,6}[ \t]+카드(?:[ \t]+(?P<number>\d+))?[^\n]*$"
+)
 _FRONT_RE = re.compile(
-    rf"(?im)^\s*(?:[-*]\s*)?(?:\*\*)?{_FRONT_LABEL}(?:\*\*)?\s*[:：]?\s*"
+    r"(?im)^[ \t]*(?:[-*][ \t]+)?(?:\*\*)?"
+    r"(?:Recall|질문|앞면|Front)(?:\*\*)?[ \t]*[:：][ \t]*"
 )
-_BACK_RE = re.compile(
-    rf"(?im)^\s*(?:[-*]\s*)?(?:\*\*)?{_BACK_LABEL}(?:\*\*)?\s*[:：]?\s*"
+_FIELD_RE = re.compile(
+    r"(?im)^[ \t]*(?:\d+[.)][ \t]+)?(?:[-*][ \t]+)?(?:\*\*)?"
+    r"(?P<label>개념|복습[ \t]*간격|Explain|Recall|Apply|Answer[ \t]*Key|"
+    r"질문|앞면|Front|정답|뒷면|Back|Source|출처|Chapter|챕터|Tags?|태그)"
+    r"(?:\*\*)?[ \t]*[:：][ \t]*"
 )
-_META_RE = re.compile(
-    r"(?im)^\s*(?:[-*]\s*)?(?:\*\*)?(?:Source|출처|Chapter|챕터|Tags?|태그)(?:\*\*)?\s*[:：]"
-)
+_FIELD_KEYS = {
+    "개념": "concept",
+    "복습 간격": "interval",
+    "explain": "explain",
+    "recall": "front",
+    "apply": "apply",
+    "answer key": "back",
+    "질문": "front",
+    "앞면": "front",
+    "front": "front",
+    "정답": "back",
+    "뒷면": "back",
+    "back": "back",
+    "source": "source",
+    "출처": "source",
+    "chapter": "chapter",
+    "챕터": "chapter",
+    "tag": "tags",
+    "tags": "tags",
+    "태그": "tags",
+}
 
 
-def _parse_retention(content: str) -> list[AnkiCard]:
+def _field_key(label: str) -> str | None:
+    compact = re.sub(r"\s+", " ", label.strip()).casefold()
+    return _FIELD_KEYS.get(compact)
+
+
+def _extract_labeled_fields(block: str) -> dict[str, str]:
+    matches = list(_FIELD_RE.finditer(block))
+    fields: dict[str, str] = {}
+    for index, match in enumerate(matches):
+        block_end = matches[index + 1].start() if index + 1 < len(matches) else len(block)
+        key = _field_key(match.group("label"))
+        value = _clean_field(block[match.end():block_end])
+        if key and value and key not in fields:
+            fields[key] = value
+    return fields
+
+
+def _retention_card(
+    *,
+    content: str,
+    position: int,
+    fields: dict[str, str],
+    number: str = "",
+) -> AnkiCard | None:
+    front = fields.get("front", "")
+    answer = fields.get("back", "")
+    if not front or not answer:
+        return None
+
+    back_parts = [f"정답: {answer}"]
+    if fields.get("concept"):
+        back_parts.append(f"개념: {fields['concept']}")
+    if fields.get("explain"):
+        back_parts.append(f"Explain: {fields['explain']}")
+    if fields.get("apply"):
+        back_parts.append(f"Apply: {fields['apply']}")
+    if fields.get("interval"):
+        back_parts.append(f"복습 간격: {fields['interval']}")
+
+    tags = ["retention-card"]
+    if number:
+        tags.append(f"card-{number}")
+    if fields.get("interval"):
+        tags.append(f"review:{fields['interval']}")
+
+    return AnkiCard(
+        front=front,
+        back="\n\n".join(back_parts),
+        chapter=fields.get("chapter")
+        or _nearest_heading(content, position)
+        or fields.get("concept", ""),
+        tags=tuple(tags),
+    )
+
+
+def _parse_numbered_retention_sets(content: str) -> list[AnkiCard]:
+    starts = list(_RETENTION_SET_START_RE.finditer(content))
+    cards: list[AnkiCard] = []
+    for index, match in enumerate(starts):
+        block_end = starts[index + 1].start() if index + 1 < len(starts) else len(content)
+        fields = _extract_labeled_fields(content[match.start():block_end])
+        card = _retention_card(
+            content=content,
+            position=match.start(),
+            fields=fields,
+            number=match.group("number"),
+        )
+        if card:
+            cards.append(card)
+    return cards
+
+
+def _parse_heading_retention_cards(content: str) -> list[AnkiCard]:
+    starts = list(_RETENTION_CARD_HEADING_RE.finditer(content))
+    cards: list[AnkiCard] = []
+    for index, match in enumerate(starts):
+        block_end = starts[index + 1].start() if index + 1 < len(starts) else len(content)
+        fields = _extract_labeled_fields(content[match.end():block_end])
+        card = _retention_card(
+            content=content,
+            position=match.start(),
+            fields=fields,
+            number=match.group("number") or str(index + 1),
+        )
+        if card:
+            cards.append(card)
+    return cards
+
+
+def _parse_unheaded_retention_pairs(content: str) -> list[AnkiCard]:
     starts = list(_FRONT_RE.finditer(content))
     cards: list[AnkiCard] = []
     for index, match in enumerate(starts):
         block_end = starts[index + 1].start() if index + 1 < len(starts) else len(content)
-        block = content[match.end():block_end]
-        back_match = _BACK_RE.search(block)
-        if not back_match:
-            continue
-        front = _clean_field(block[:back_match.start()])
-        back_tail = block[back_match.end():]
-        meta_match = _META_RE.search(back_tail)
-        back = _clean_field(back_tail[:meta_match.start()] if meta_match else back_tail)
-        if not front or not back:
-            continue
-        cards.append(
-            AnkiCard(
-                front=front,
-                back=back,
-                chapter=_nearest_heading(content, match.start()),
-                tags=("retention-card",),
-            )
+        fields = _extract_labeled_fields(content[match.start():block_end])
+        card = _retention_card(
+            content=content,
+            position=match.start(),
+            fields=fields,
+            number=str(index + 1),
         )
+        if card:
+            cards.append(card)
     return cards
 
 
-def _parse_simple_qa(content: str) -> list[AnkiCard]:
-    pattern = re.compile(
-        r"(?ims)^\s*(?:[-*]\s*)?(?:\*\*)?Q(?:uestion)?[.:：]\s*(.+?)\s*"
-        r"^\s*(?:[-*]\s*)?(?:\*\*)?A(?:nswer)?[.:：]\s*(.+?)"
-        r"(?=^\s*(?:[-*]\s*)?(?:\*\*)?Q(?:uestion)?[.:：]|\Z)"
-    )
-    return [
-        AnkiCard(
-            front=_clean_field(match.group(1)),
-            back=_clean_field(match.group(2)),
-            chapter=_nearest_heading(content, match.start()),
-            tags=("q-and-a",),
-        )
-        for match in pattern.finditer(content)
-        if _clean_field(match.group(1)) and _clean_field(match.group(2))
-    ]
+def _parse_retention(content: str) -> list[AnkiCard]:
+    cards = _parse_numbered_retention_sets(content)
+    if cards:
+        return cards
+    cards = _parse_heading_retention_cards(content)
+    if cards:
+        return cards
+    return _parse_unheaded_retention_pairs(content)
 
 
 def _structured_cards(raw_cards: Sequence[dict[str, Any]] | None) -> list[AnkiCard]:
@@ -214,17 +321,24 @@ def parse_anki_cards(
     style: str = "",
     cards: Sequence[dict[str, Any]] | None = None,
 ) -> list[AnkiCard]:
-    """구조화 카드 또는 Markdown에서 Anki 카드를 추출합니다."""
+    """구조화 카드 또는 지원 스타일 Markdown에서 Anki 카드를 추출합니다."""
     structured = _structured_cards(cards)
     if structured:
         parsed = structured
     else:
+        if style and style not in SUPPORTED_ANKI_STYLES:
+            raise AnkiExportError(
+                "Anki 내보내기는 퀴즈와 리텐션 카드 스타일에서만 지원합니다."
+            )
         normalized = _normalize_text(content)
-        parsed = _parse_quiz(normalized) if style == "quiz" or "**정답**" in normalized else []
-        if not parsed:
+        if style == "quiz":
+            parsed = _parse_quiz(normalized)
+        elif style == "retention_cards":
             parsed = _parse_retention(normalized)
-        if not parsed:
-            parsed = _parse_simple_qa(normalized)
+        else:
+            parsed = _parse_quiz(normalized)
+            if not parsed:
+                parsed = _parse_retention(normalized)
 
     unique: list[AnkiCard] = []
     seen: set[str] = set()
@@ -239,7 +353,7 @@ def parse_anki_cards(
     if not unique:
         raise AnkiExportError(
             "Anki로 내보낼 카드를 찾지 못했습니다. 퀴즈의 질문/정답/해설 또는 "
-            "Recall/Answer Key 형식을 확인해주세요."
+            "리텐션 카드의 Recall/Answer Key 형식을 확인해주세요."
         )
     if len(unique) > MAX_CARDS:
         raise AnkiExportError(f"한 번에 최대 {MAX_CARDS}장까지 내보낼 수 있습니다.")
@@ -370,4 +484,10 @@ def build_anki_package(
     return buffer, len(parsed_cards)
 
 
-__all__ = ["AnkiCard", "AnkiExportError", "build_anki_package", "parse_anki_cards"]
+__all__ = [
+    "AnkiCard",
+    "AnkiExportError",
+    "SUPPORTED_ANKI_STYLES",
+    "build_anki_package",
+    "parse_anki_cards",
+]
