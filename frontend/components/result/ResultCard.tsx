@@ -79,6 +79,7 @@ interface ResultCardProps {
 
 const remarkPlugins = [remarkGfm];
 const NOTEBOOKLM_ENABLED = process.env.NEXT_PUBLIC_NOTEBOOKLM_ENABLED === 'true';
+const ANKI_EXPORT_STYLES = new Set(['quiz', 'retention_cards']);
 // 수식 감지 패턴: $$...$$ 또는 \(...\) 또는 \[...\]
 const MATH_PATTERN = /\$\$[\s\S]+?\$\$|\\\([\s\S]+?\\\)|\\\[[\s\S]+?\\\]/;
 
@@ -282,6 +283,7 @@ const ResultCard = memo(function ResultCard({ report, viewMode = 'full', onExpan
   const noteSource = getKnowledgeNoteSource(report);
   const notePreview = useMemo(() => (noteSource ? getKnowledgeNotePreview(report) : null), [noteSource, report]);
   const linkedNoteId = report.knowledge_note_id;
+  const canExportAnki = ANKI_EXPORT_STYLES.has(report.style);
 
   // NotebookLM 폴링 interval 추적 — 언마운트 시 정리 (메모리 누수/유령 폴링 방지)
   const pollIdsRef = useRef<Set<ReturnType<typeof setInterval>>>(new Set());
@@ -1184,10 +1186,12 @@ variant={report.share_url ? 'secondary' : 'outline'}
                 <FileText className="h-3.5 w-3.5 mr-2" />
                 마크다운 (.md)
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExportFormat('anki')}>
-                <Layers className="h-3.5 w-3.5 mr-2" />
-                Anki 덱 (.apkg)
-              </DropdownMenuItem>
+              {canExportAnki && (
+                <DropdownMenuItem onClick={() => handleExportFormat('anki')}>
+                  <Layers className="h-3.5 w-3.5 mr-2" />
+                  Anki 덱 (.apkg)
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive"
