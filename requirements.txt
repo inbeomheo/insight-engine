@@ -24,3 +24,4 @@ trafilatura>=2.0.0
 duckduckgo-search>=6.0.0,<9
 scrapling
 python-pptx>=1.0.0
+genanki==0.13.1

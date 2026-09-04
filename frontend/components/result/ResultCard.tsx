@@ -447,19 +447,23 @@ const ResultCard = memo(function ResultCard({ report, viewMode = 'full', onExpan
     void handleSaveKnowledgeNote();
   }
 
-  async function handleExportFormat(format: 'markdown') {
+  async function handleExportFormat(format: 'markdown' | 'anki') {
     try {
-      const blob = await exportFormat(format, report.title, report.content);
-      const ext = format === 'markdown' ? 'md' : format;
+      const blob = await exportFormat(format, report.title, report.content, {
+        style: report.style,
+        source_url: report.url,
+        tags: [report.style, 'generated-content'],
+      });
+      const ext = format === 'markdown' ? 'md' : 'apkg';
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = `${report.title.slice(0, 50)}.${ext}`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success(`${ext.toUpperCase()} 내보내기 완료`);
-    } catch {
-      toast.error('내보내기에 실패했습니다.');
+      toast.success(format === 'anki' ? 'Anki 덱 내보내기 완료' : 'MD 내보내기 완료');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '내보내기에 실패했습니다.');
     }
   }
 
@@ -1179,6 +1183,10 @@ variant={report.share_url ? 'secondary' : 'outline'}
               <DropdownMenuItem onClick={() => handleExportFormat('markdown')}>
                 <FileText className="h-3.5 w-3.5 mr-2" />
                 마크다운 (.md)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExportFormat('anki')}>
+                <Layers className="h-3.5 w-3.5 mr-2" />
+                Anki 덱 (.apkg)
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
