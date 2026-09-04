@@ -72,8 +72,22 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git rm -f --ignore-unmatch .github/issue-139-apply.py .github/workflows/issue-139-apply.yml .github/issue-139-test.log
-          git add -A
-          git diff --cached --check
-          git commit -m 'feat(export): add Anki apkg deck export [issue-139-applied]'
-          git push origin HEAD:feat/issue-139-anki-apkg-export-20260904
+          base_sha=$(git rev-parse HEAD)
+          set +e
+          {
+            git rm -f --ignore-unmatch .github/issue-139-apply.py .github/workflows/issue-139-apply.yml .github/issue-139-test.log .github/issue-139-final.log
+            git add -A
+            git status --short
+            git diff --cached --check
+            git commit -m 'feat(export): add Anki apkg deck export [issue-139-applied]'
+            git push origin HEAD:feat/issue-139-anki-apkg-export-20260904
+          } 2>&1 | tee /tmp/issue-139-final.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            git reset --hard "$base_sha"
+            cp /tmp/issue-139-final.log .github/issue-139-final.log
+            git add -f .github/issue-139-final.log
+            git commit -m 'test: capture Anki finalization failure [issue-139-diagnostic]'
+            git push origin HEAD:feat/issue-139-anki-apkg-export-20260904
+            exit "$status"
+          fi
