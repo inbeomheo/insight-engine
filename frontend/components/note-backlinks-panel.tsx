@@ -10,6 +10,7 @@ import { getNoteBacklinks, type NoteBacklink } from '@/lib/note-graph';
 export function NoteBacklinksPanel() {
   const pathname = usePathname();
   const noteId = useMemo(() => {
+    if (pathname === '/notes/graph') return null;
     const match = pathname.match(/^\/notes\/([^/]+)$/);
     return match ? decodeURIComponent(match[1]) : null;
   }, [pathname]);
