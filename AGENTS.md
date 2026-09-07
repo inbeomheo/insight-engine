@@ -5,6 +5,7 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 ## 작업 규칙
 
 - 모든 커뮤니케이션은 한국어로 한다
+- 사용자용 설치·설정·운영 문서는 한국어와 영어로 함께 제공한다. 루트 `README.md`는 한국어, `README.en.md`는 영어이며 명령어·환경변수·보안 경고·기능 제약은 같은 변경에서 동기화한다. 새 사용자용 안내도 언어별 상호 링크를 제공한다. 내부 작업 기록과 코드 주석의 일괄 번역은 요구하지 않는다.
 - 전문 용어 사용 시 괄호 안에 한 줄 설명 추가
 - 에러 발생 시 "왜 났는지 / 어떻게 고치는지 / 다음에 피하려면" 3단계로 설명
 - Key/Secret 하드코딩 금지
@@ -250,10 +251,11 @@ UI에 표시되는 15개 스타일: `blog_seo`, `summary`, `tutorial`, `qna`, `a
 
 | 서비스 | 모델 ID | 특이사항 |
 |--------|---------|---------|
-| CLIProxyAPI | `cliproxyapi/gpt-5.5` | 기본 모델 |
-| CLIProxyAPI | `cliproxyapi/gpt-5.3-codex-spark` | OpenAI 호환 로컬 게이트웨이 |
+| CLIProxyAPI | `cliproxyapi/gpt-5.6-luna` | 단일 기본 모델 |
 
-- 모델 추가 시 `config.py`의 `SUPPORTED_PROVIDERS['cliproxyapi']['models']`에 `price_input`, `price_output`을 함께 정의한다. 운영자 추가 모델은 `CLIPROXYAPI_MODELS`로 지정할 수 있다.
+- Luna 단일 모델 정책: 공개 허용 목록과 기본 보조 호출에 다른 모델을 추가하지 않는다. `CLIPROXYAPI_MODELS`는 사용하지 않는다.
+- 글쓰기 생성은 `services/core/content_quality_service.py`에서 원문 번호 기반 근거 선택→작성→검토→최대 2회 보정을 수행한다. 모든 호출에서 사용량 임대를 재확인하고 토큰을 합산한다. 검토 실패는 초안 성공 반환으로 숨기지 않는다.
+- 실시간 경로도 검토 완료 본문만 전송한다. 구조화 변환(`TRANSFORM_STYLE_IDS`)과 스타일 미지정 호출은 형식 보존을 위해 기존 경로를 유지한다. 언어 검사에서 기존 SEO/GEO 파서용 고정 라벨만 예외 처리한다.
 - 모든 AI 텍스트 호출은 `services/core/gateway_service.py`의 공통 연결 설정을 사용한다. `OPENAI_API_KEY`나 이전 `CHATMOCK_*` 값으로 대체하지 않는다.
 - 프로바이더 선택 상태를 다시 추가하지 않는다. UI는 CLIProxyAPI 서비스 안내와 모델 선택만 제공한다.
 ### 스타일 프롬프트 규칙 (`prompts/styles/`)

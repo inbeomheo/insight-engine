@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 # 분석에 사용할 기본 모델
 _ANALYSIS_MODEL_CHAIN = [
-    'cliproxyapi/gpt-5.5',
+    'cliproxyapi/gpt-5.6-luna',
 ]
 
 # NLP 분석 프롬프트 — 최소 토큰으로 정확한 JSON 반환 유도

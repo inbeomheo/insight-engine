@@ -1,0 +1,176 @@
+diff --git a/sdk/cliproxy/auth/codex_quota_pool.go b/sdk/cliproxy/auth/codex_quota_pool.go
+new file mode 100644
+index 0000000..ea7da9d
+--- /dev/null
++++ b/sdk/cliproxy/auth/codex_quota_pool.go
+@@ -0,0 +1,57 @@
++package auth
++
++import (
++	"strings"
++	"time"
++)
++
++// codexQuotaPool identifies only verified pool memberships. Unknown models keep
++// the conservative credential-wide behavior instead of guessing their limits.
++func codexQuotaPool(model string) string {
++	switch canonicalModelKey(model) {
++	case "gpt-5.3-codex-spark":
++		return "codex-spark"
++	case "gpt-5.5", "gpt-5.6-luna":
++		return "codex-main"
++	default:
++		return ""
++	}
++}
++
++// applyCodexQuotaPoolCooldown preserves the upstream deadline within its pool.
++// Spark has an additional allowance, independent of the standard Codex pool.
++// This function neither clears an existing limit nor suppresses upstream 429s.
++func applyCodexQuotaPoolCooldown(auth *Auth, model string, failed *ModelState, next, now time.Time) bool {
++	if auth == nil || !strings.EqualFold(strings.TrimSpace(auth.Provider), "codex") {
++		return false
++	}
++	pool := codexQuotaPool(model)
++	if pool == "" {
++		return false
++	}
++	// Materialize known siblings even if they have not been requested yet.
++	for _, sibling := range []string{"gpt-5.3-codex-spark", "gpt-5.5", "gpt-5.6-luna"} {
++		if codexQuotaPool(sibling) != pool {
++			continue
++		}
++		state := ensureModelState(auth, sibling)
++		if state == failed || state.Status == StatusDisabled {
++			continue
++		}
++		deadline := next
++		if state.Quota.Exceeded && state.Quota.NextRecoverAt.After(deadline) {
++			deadline = state.Quota.NextRecoverAt
++		}
++		state.Unavailable = true
++		state.Status = StatusError
++		state.UpdatedAt = now
++		state.NextRetryAfter = deadline
++		state.LastError = cloneError(failed.LastError)
++		state.StatusMessage = failed.StatusMessage
++		applyCooldownFields(&state.Quota, QuotaState{
++			Exceeded: true, Reason: "quota_pool", NextRecoverAt: deadline,
++			BackoffLevel: failed.Quota.BackoffLevel,
++		})
++	}
++	return true
++}
+diff --git a/sdk/cliproxy/auth/codex_quota_pool_test.go b/sdk/cliproxy/auth/codex_quota_pool_test.go
+new file mode 100644
+index 0000000..ae286ea
+--- /dev/null
++++ b/sdk/cliproxy/auth/codex_quota_pool_test.go
+@@ -0,0 +1,94 @@
++package auth
++
++import (
++	"context"
++	"net/http"
++	"testing"
++	"time"
++
++	"github.com/router-for-me/CLIProxyAPI/v7/internal/registry"
++	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/executor"
++)
++
++func TestCodexQuotaPoolIsolation(t *testing.T) {
++	withQuotaCooldownEnabled(t)
++	models := []string{"gpt-5.3-codex-spark", "gpt-5.5", "gpt-5.6-luna"}
++	for _, exhausted := range models {
++		t.Run(exhausted, func(t *testing.T) {
++			manager := NewManager(nil, &RoundRobinSelector{}, nil)
++			manager.RegisterExecutor(&customStreamMockExecutor{identifier: "codex"})
++			id := "quota-pool-" + exhausted
++			registry.GetGlobalRegistry().RegisterClient(id, "codex", []*registry.ModelInfo{
++				{ID: models[0]}, {ID: models[1]}, {ID: models[2]},
++			})
++			t.Cleanup(func() { registry.GetGlobalRegistry().UnregisterClient(id) })
++			if _, errRegister := manager.Register(context.Background(), &Auth{ID: id, Provider: "codex", Status: StatusActive}); errRegister != nil {
++				t.Fatal(errRegister)
++			}
++			retryAfter := time.Hour
++			before := time.Now()
++			manager.MarkResult(context.Background(), Result{
++				AuthID: id, Provider: "codex", Model: exhausted, CredentialScope: true,
++				Error: &Error{HTTPStatus: http.StatusTooManyRequests, Message: "usage_limit_reached"}, RetryAfter: &retryAfter,
++			})
++			auth, _ := manager.GetByID(id)
++			if auth.Quota.Reason == "credential_quota" {
++				t.Fatal("known pool exhaustion became credential-wide")
++			}
++			for _, requested := range models {
++				wantBlocked := codexQuotaPool(exhausted) == codexQuotaPool(requested)
++				blocked, _, deadline := isAuthBlockedForModel(auth, requested, before.Add(time.Minute))
++				if blocked != wantBlocked {
++					t.Fatalf("exhausted=%s requested=%s blocked=%t want=%t", exhausted, requested, blocked, wantBlocked)
++				}
++				if wantBlocked && deadline.Before(before.Add(retryAfter)) {
++					t.Fatal("upstream reset was shortened")
++				}
++				_, _, _, errSelect := manager.pickNextMixed(context.Background(), []string{"codex"}, requested, cliproxyexecutor.Options{}, nil)
++				if (errSelect != nil) != wantBlocked {
++					t.Fatalf("scheduler pool mismatch: model=%s err=%v", requested, errSelect)
++				}
++			}
++		})
++	}
++}
++
++func TestCodexQuotaPoolUnknownAndOtherProviderRemainCredentialScoped(t *testing.T) {
++	withQuotaCooldownEnabled(t)
++	for _, provider := range []string{"codex", "claude"} {
++		manager := NewManager(nil, &RoundRobinSelector{}, nil)
++		id := "unknown-pool-" + provider
++		if _, errRegister := manager.Register(context.Background(), &Auth{ID: id, Provider: provider, Status: StatusActive}); errRegister != nil {
++			t.Fatal(errRegister)
++		}
++		retryAfter := time.Hour
++		manager.MarkResult(context.Background(), Result{AuthID: id, Provider: provider, Model: "unknown-model", CredentialScope: true,
++			Error: &Error{HTTPStatus: 429, Message: "quota"}, RetryAfter: &retryAfter})
++		auth, _ := manager.GetByID(id)
++		if auth.Quota.Reason != "credential_quota" {
++			t.Fatal("unknown credential-wide quota was weakened")
++		}
++	}
++}
++
++func TestCodexQuotaPoolPreservesExistingRestrictions(t *testing.T) {
++	now := time.Now()
++	for _, disabled := range []bool{false, true} {
++		sibling := &ModelState{Status: StatusError, Unavailable: true,
++			NextRetryAfter: now.Add(2 * time.Hour),
++			Quota:          QuotaState{Exceeded: true, NextRecoverAt: now.Add(2 * time.Hour)}}
++		if disabled {
++			sibling.Status = StatusDisabled
++		}
++		auth := &Auth{Provider: "codex", ModelStates: map[string]*ModelState{"gpt-5.5": sibling}}
++		if !applyCodexQuotaPoolCooldown(auth, "gpt-5.6-luna", &ModelState{}, now.Add(time.Hour), now) {
++			t.Fatal("known pool not handled")
++		}
++		if sibling.NextRetryAfter.Before(now.Add(2 * time.Hour)) {
++			t.Fatal("existing longer cooldown shortened")
++		}
++		if disabled && sibling.Status != StatusDisabled {
++			t.Fatal("disabled model was re-enabled")
++		}
++	}
++}
+diff --git a/sdk/cliproxy/auth/conductor_cooldown.go b/sdk/cliproxy/auth/conductor_cooldown.go
+index 9b8fd94..4e9e3dc 100644
+--- a/sdk/cliproxy/auth/conductor_cooldown.go
++++ b/sdk/cliproxy/auth/conductor_cooldown.go
+@@ -864,7 +864,7 @@ func (m *Manager) MarkResult(ctx context.Context, result Result) {
+ 								NextRecoverAt: next,
+ 								BackoffLevel:  backoffLevel,
+ 							})
+-							if result.CredentialScope && !disableCooling {
++							if result.CredentialScope && !disableCooling && !applyCodexQuotaPoolCooldown(auth, modelKey, state, next, now) {
+ 								for _, otherState := range auth.ModelStates {
+ 									if otherState != nil && otherState != state {
+ 										otherState.Unavailable = true

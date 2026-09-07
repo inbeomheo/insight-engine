@@ -22,7 +22,7 @@ from services.core.gateway_service import apply_gateway_kwargs
 logger = logging.getLogger(__name__)
 
 # 품질 평가 및 쿼리 재구성에 사용할 빠른 모델
-_DEFAULT_MODEL = "cliproxyapi/gpt-5.5"
+_DEFAULT_MODEL = "cliproxyapi/gpt-5.6-luna"
 
 # 품질 결정 임계값
 _SCORE_CORRECT_THRESHOLD = 0.7    # 이상이면 correct

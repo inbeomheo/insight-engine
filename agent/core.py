@@ -137,7 +137,7 @@ class AIAgent:
 
     사용법:
         agent = AIAgent(
-            model="cliproxyapi/gpt-5.5",
+            model="cliproxyapi/gpt-5.6-luna",
             toolsets=["role_writer"],
             system_prompt="당신은 콘텐츠 작성 전문가입니다.",
         )

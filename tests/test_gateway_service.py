@@ -85,14 +85,13 @@ def test_invalid_gateway_address_fails_before_cost_or_provider(address, monkeypa
 def test_legacy_prefix_only_accepts_same_supported_model():
     from services.core.ai_service import resolve_public_model
 
-    assert resolve_public_model('chatmock/gpt-5.5') == 'cliproxyapi/gpt-5.5'
-    assert resolve_public_model('chatmock/gpt-5.3-codex-spark') == 'cliproxyapi/gpt-5.3-codex-spark'
-    for unsupported in ('chatmock/gpt-5.4-mini', 'chatmock/gpt-5.4', 'cliproxyapi/unknown', 'anthropic/claude'):
+    assert resolve_public_model('chatmock/gpt-5.6-luna') == 'cliproxyapi/gpt-5.6-luna'
+    for unsupported in ('chatmock/gpt-5.5', 'cliproxyapi/gpt-5.5', 'chatmock/gpt-5.4-mini', 'chatmock/gpt-5.4', 'cliproxyapi/unknown', 'anthropic/claude'):
         with pytest.raises(ValueError, match='지원하지 않는 AI 모델'):
             resolve_public_model(unsupported)
 
 
-def test_configured_extra_models_are_advertised_and_allowed():
+def test_extra_model_environment_cannot_expand_spark_only_policy():
     result = subprocess.run(
         [sys.executable, '-c',
          'import json; from config import SUPPORTED_PROVIDERS; '
@@ -104,8 +103,7 @@ def test_configured_extra_models_are_advertised_and_allowed():
         check=True, capture_output=True, text=True,
     )
     assert json.loads(result.stdout) == [
-        'cliproxyapi/gpt-5.5', 'cliproxyapi/gpt-5.3-codex-spark',
-        'cliproxyapi/claude-sonnet-4-6', 'cliproxyapi/gemini-3.1-pro-preview',
+        'cliproxyapi/gpt-5.6-luna',
     ]
 
 
@@ -128,7 +126,7 @@ def test_missing_key_stops_each_call_before_usage_and_provider(module, function,
         'services.usage.usage_decorator.mark_usage_charge_committed'
     ) as charge:
         with pytest.raises(GatewayConfigurationError, match='CLIPROXYAPI_API_KEY'):
-            invoke(*args, model='cliproxyapi/gpt-5.5', on_cost_start=on_cost_start, **extra)
+            invoke(*args, model='cliproxyapi/gpt-5.6-luna', on_cost_start=on_cost_start, **extra)
     on_cost_start.assert_not_called()
     charge.assert_not_called()
     provider.assert_not_called()
@@ -190,8 +188,8 @@ def test_generation_missing_key_does_not_start_optional_paid_contexts(monkeypatc
 
 
 @pytest.mark.parametrize('payload,expected', [
-    ({'data': [{'id': 'gpt-5.5'}]}, True),
-    ({'data': [{'id': 'gpt-5.3-codex-spark'}]}, True),
+    ({'data': [{'id': 'gpt-5.5'}]}, False),
+    ({'data': [{'id': 'gpt-5.6-luna'}]}, True),
     ({'data': []}, False),
     ({'data': [{'id': 'unsupported-model'}]}, False),
     ({'data': [{'id': None}, None]}, False),
@@ -228,6 +226,6 @@ def test_provider_response_does_not_expose_the_gateway_key():
     assert response.status_code == 200
     assert 'test-gateway-key' not in response.get_data(as_text=True)
     provider = response.get_json()['providers']['cliproxyapi']
-    assert provider['default_model'] == 'cliproxyapi/gpt-5.5'
+    assert provider['default_model'] == 'cliproxyapi/gpt-5.6-luna'
     assert 'api_key' not in provider
     assert 'api_base' not in provider

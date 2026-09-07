@@ -42,7 +42,7 @@ class TestGeneratePodcastEpisode(unittest.TestCase):
         result = generate_podcast_episode(
             'test content',
             'Test',
-            'cliproxyapi/gpt-5.5',
+            'cliproxyapi/gpt-5.6-luna',
         )
 
         self.assertIn('script', result)

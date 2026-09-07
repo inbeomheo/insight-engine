@@ -41,7 +41,7 @@ MAX_HISTORY_MESSAGES = 10  # 대화 히스토리 최대 보관 수
 VIDEO_COLLECTION_PREFIX = "video_qa_"
 
 # LiteLLM 기본 모델 (답변 생성용) — CLIProxyAPI GPT-5.5
-DEFAULT_QA_MODEL = "cliproxyapi/gpt-5.5"
+DEFAULT_QA_MODEL = "cliproxyapi/gpt-5.6-luna"
 
 
 def _get_chroma_client() -> Optional[Any]:

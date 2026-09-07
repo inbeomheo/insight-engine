@@ -36,9 +36,13 @@ ARG CLIPROXYAPI_COMMIT=c76dfd4e0edabab9000628b1560ab8ab379eadb8
 WORKDIR /src
 RUN git clone --depth 1 --branch "v${CLIPROXYAPI_VERSION}" \
         https://github.com/router-for-me/CLIProxyAPI.git . \
-    && test "$(git rev-parse HEAD)" = "$CLIPROXYAPI_COMMIT" \
+    && test "$(git rev-parse HEAD)" = "$CLIPROXYAPI_COMMIT"
+COPY patches/cliproxyapi-quota-pools.patch /tmp/cliproxyapi-quota-pools.patch
+RUN git apply --check /tmp/cliproxyapi-quota-pools.patch \
+    && git apply /tmp/cliproxyapi-quota-pools.patch \
+    && go test ./sdk/cliproxy/auth -run TestCodexQuotaPool -count=1 \
     && CGO_ENABLED=1 GOOS=linux go build -buildvcs=false \
-        -ldflags="-s -w -X main.Version=${CLIPROXYAPI_VERSION} -X main.Commit=${CLIPROXYAPI_COMMIT}" \
+        -ldflags="-s -w -X main.Version=${CLIPROXYAPI_VERSION}-poolfix -X main.Commit=${CLIPROXYAPI_COMMIT}" \
         -o /out/CLIProxyAPI ./cmd/server/
 
 FROM python:3.11-slim-bookworm AS cliproxyapi

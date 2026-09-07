@@ -17,7 +17,7 @@ _local = threading.local()
 # v1 keys did not include the authenticated account, custom/style prompt, or
 # several output-affecting options.  Keeping the version in the one-way key
 # makes every legacy entry unreachable without destructively deleting the DB.
-CACHE_KEY_VERSION = 'ai-cache-v2-20260827'
+CACHE_KEY_VERSION = 'ai-cache-v4-luna-quality-20260907'
 _PRIVATE_RESULT_FIELDS = frozenset({'prompt', 'prompt_length'})
 
 

@@ -24,7 +24,7 @@ _GRADE_ORDER = {'D': 0, 'C': 1, 'B': 2, 'A': 3}
 
 # 기본 평가 모델
 _EVAL_MODEL_CANDIDATES = [
-    'cliproxyapi/gpt-5.5',
+    'cliproxyapi/gpt-5.6-luna',
 ]
 
 

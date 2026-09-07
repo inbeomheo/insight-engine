@@ -329,7 +329,7 @@ class TestConvertErrorMessageExtended(unittest.TestCase):
         from services.core.ai_service import _convert_error_message
         result = _convert_error_message('Error code: 1113')
         self.assertIn('AI 오류', result)
-        self.assertIn('1113', result)
+        self.assertNotIn('1113', result)
 
     def test_model_info_included(self):
         from services.core.ai_service import _convert_error_message
@@ -341,10 +341,10 @@ class TestPublicModelAllowlist(unittest.TestCase):
     def test_default_and_configured_model_are_allowed(self):
         from services.core.ai_service import resolve_public_model
 
-        self.assertEqual(resolve_public_model(None), 'cliproxyapi/gpt-5.5')
+        self.assertEqual(resolve_public_model(None), 'cliproxyapi/gpt-5.6-luna')
         self.assertEqual(
-            resolve_public_model(' cliproxyapi/gpt-5.5 '),
-            'cliproxyapi/gpt-5.5',
+            resolve_public_model(' cliproxyapi/gpt-5.6-luna '),
+            'cliproxyapi/gpt-5.6-luna',
         )
 
     def test_arbitrary_provider_model_is_rejected(self):
@@ -362,7 +362,7 @@ class TestPublicModelAllowlist(unittest.TestCase):
         )
         self.assertEqual(
             resolve_public_model('auto', allow_auto=False),
-            'cliproxyapi/gpt-5.5',
+            'cliproxyapi/gpt-5.6-luna',
         )
 
 

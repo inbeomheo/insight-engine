@@ -14,7 +14,7 @@ from flask import current_app
 from services.usage.usage_lock import UsageLockUnavailable
 from services.core.gateway_service import (
     DEFAULT_GATEWAY_MODEL, apply_gateway_kwargs, canonical_gateway_model,
-    require_gateway_connection,
+    require_gateway_connection, GatewayConfigurationError,
 )
 
 # SEO/GEO/FAQ/CTA 메타데이터 추출은 별도 모듈로 분리됨.
@@ -322,7 +322,7 @@ def _convert_error_message(error_msg, model=None):
         return f"[컨텐츠 차단] 요청이 컨텐츠 정책에 의해 차단되었습니다{model_info}."
 
     # 기타 - 원본 메시지 포함
-    return f"[AI 오류] 콘텐츠 생성 실패{model_info}: {error_msg}"
+    return f"[AI 오류] 콘텐츠 생성에 실패했습니다{model_info}. 잠시 후 다시 시도해주세요."
 
 
 def create_content(content: str, model: str, style_prompt: Optional[str] = None, return_prompt: bool = False,
@@ -369,13 +369,22 @@ def create_content(content: str, model: str, style_prompt: Optional[str] = None,
                                memory_context=memory_context)
         completion_kwargs = _build_completion_kwargs(model, prompt, style_id, modifiers,
                                                      detail_level=detail_level)
-        response = _call_completion_with_model_retry(
-            model,
-            completion_kwargs,
-            on_cost_start=on_cost_start,
-        )
-
-        markdown_content = response.choices[0].message.content
+        from services.core.content_quality_service import enabled, generate_verified
+        verified_usage = None
+        if enabled(model, style_id):
+            evidence_source = '\n\n'.join(part for part in (content, rag_context, web_context) if part)
+            markdown_content, verified_usage = generate_verified(
+                evidence_source, prompt, model, completion_kwargs, modifiers, style_id,
+                on_cost_start=on_cost_start,
+            )
+            response = None
+        else:
+            response = _call_completion_with_model_retry(
+                model,
+                completion_kwargs,
+                on_cost_start=on_cost_start,
+            )
+            markdown_content = response.choices[0].message.content
         title, body = _extract_title_and_content(markdown_content)
 
         # 토큰 사용량 정보 추출 (기본값 설정으로 None 방지)
@@ -387,6 +396,8 @@ def create_content(content: str, model: str, style_prompt: Optional[str] = None,
                 'completion_tokens': getattr(usage, 'completion_tokens', 0),
                 'total_tokens': getattr(usage, 'total_tokens', 0)
             }
+        if verified_usage is not None:
+            token_usage = verified_usage
 
         # P3 버그 #11: 마크다운 렌더링 폴백
         try:
@@ -414,10 +425,13 @@ def create_content(content: str, model: str, style_prompt: Optional[str] = None,
             return result, prompt
         return result
 
-    except UsageLockUnavailable:
+    except (UsageLockUnavailable, GatewayConfigurationError):
         raise
     except Exception as e:
         current_app.logger.error(f"AI content generation failed: model={model}, error={e}")
+        from services.core.content_quality_service import ContentQualityError
+        if isinstance(e, ContentQualityError):
+            raise ContentQualityError(f'[생성 실패] {e}') from e
         raise Exception(_convert_error_message(str(e), model)) from e
 
 
@@ -427,7 +441,8 @@ def create_content_stream(content: str, model: str, style_prompt: Optional[str] 
                           user_id: Optional[str] = None,
                           segments: Optional[List[Dict[str, Any]]] = None,
                           web_search: bool = False,
-                          on_cost_start: Optional[Callable[[], None]] = None) -> Generator[str, None, Dict[str, Any]]:
+                          on_cost_start: Optional[Callable[[], None]] = None,
+                          report_progress: bool = False) -> Generator[Union[str, dict], None, Dict[str, Any]]:
     """LiteLLM 스트리밍 콘텐츠 생성 래퍼. 실제 구현은 ai_streaming 모듈에 위임합니다."""
     from services.core.ai_streaming import create_content_stream as _create_content_stream
 
@@ -436,6 +451,8 @@ def create_content_stream(content: str, model: str, style_prompt: Optional[str] 
         modifiers=modifiers, style_id=style_id, detail_level=detail_level,
         user_id=user_id, segments=segments, web_search=web_search,
         on_cost_start=on_cost_start,
+        report_progress=report_progress,
+        worker_context=current_app._get_current_object().app_context if report_progress else None,
     )
 
 def create_chat_response(

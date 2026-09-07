@@ -41,7 +41,7 @@ class TestConstants(unittest.TestCase):
 
     def test_qa_model(self):
         """기본 QA 모델"""
-        self.assertEqual(DEFAULT_QA_MODEL, 'cliproxyapi/gpt-5.5')
+        self.assertEqual(DEFAULT_QA_MODEL, 'cliproxyapi/gpt-5.6-luna')
 
 
 class TestGetVideoCollection(unittest.TestCase):

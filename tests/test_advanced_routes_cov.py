@@ -78,13 +78,13 @@ class TestGenerateFusion(_Base):
 
     def test_fusion_too_few_urls(self, _):
         resp = self.client.post('/api/generate-fusion',
-                                json={'urls': ['http://a.com'], 'model': 'cliproxyapi/gpt-5.5'},
+                                json={'urls': ['http://a.com'], 'model': 'cliproxyapi/gpt-5.6-luna'},
                                 headers=_H)
         self.assertIn(resp.status_code, [400, 429])
 
     def test_fusion_too_many_urls(self, _):
         resp = self.client.post('/api/generate-fusion',
-                                json={'urls': [f'http://{i}.com' for i in range(6)], 'model': 'cliproxyapi/gpt-5.5'},
+                                json={'urls': [f'http://{i}.com' for i in range(6)], 'model': 'cliproxyapi/gpt-5.6-luna'},
                                 headers=_H)
         self.assertIn(resp.status_code, [400, 429])
 
@@ -100,7 +100,7 @@ class TestGenerateFusion(_Base):
         resp = self.client.post('/api/generate-fusion',
                                 json={
                                     'urls': ['https://youtube.com/watch?v=a', 'https://youtube.com/watch?v=b'],
-                                    'model': 'cliproxyapi/gpt-5.5',
+                                    'model': 'cliproxyapi/gpt-5.6-luna',
                                     'style': 'blog_seo'
                                 },
                                 headers=_H)
@@ -112,7 +112,7 @@ class TestGenerateFusion(_Base):
         resp = self.client.post('/api/generate-fusion',
                                 json={
                                     'urls': ['http://a.com', 'http://b.com'],
-                                    'model': 'cliproxyapi/gpt-5.5'
+                                    'model': 'cliproxyapi/gpt-5.6-luna'
                                 },
                                 headers=_H)
         self.assertIn(resp.status_code, [400, 429, 500])
@@ -123,7 +123,7 @@ class TestGenerateFusion(_Base):
         resp = self.client.post('/api/generate-fusion',
                                 json={
                                     'urls': ['http://a.com', 'http://b.com'],
-                                    'model': 'cliproxyapi/gpt-5.5'
+                                    'model': 'cliproxyapi/gpt-5.6-luna'
                                 },
                                 headers=_H)
         self.assertIn(resp.status_code, [429, 500])

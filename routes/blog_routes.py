@@ -54,7 +54,7 @@ from services.usage.usage_lock import (
 
 blog_bp = Blueprint('blog', __name__)
 
-DEFAULT_MODEL = 'cliproxyapi/gpt-5.5'
+DEFAULT_MODEL = 'cliproxyapi/gpt-5.6-luna'
 DEFAULT_STYLE = 'summary'
 MAX_BATCH_URLS = 10
 MAX_BATCH_WORKERS = 5
@@ -777,10 +777,14 @@ def generate():
         truncated_content = content_service.truncate_text(main_content, max_tokens)
 
         # 짧은 콘텐츠 바이패스
-        bypass_resp = _handle_short_content_bypass(
-            transcript_text, params['style'], youtube_title,
-            raw_transcript, transcript_source, start_time
-        )
+        # 다른 언어 요청을 원문 그대로 반환하면 번역/품질 검사를 건너뛴다.
+        bypass_resp = None
+        if ((params.get('modifiers') or {}).get('language', 'ko') == 'ko'
+                and any('가' <= char <= '힣' for char in transcript_text)):
+            bypass_resp = _handle_short_content_bypass(
+                transcript_text, params['style'], youtube_title,
+                raw_transcript, transcript_source, start_time
+            )
         if bypass_resp:
             return bypass_resp
 
@@ -1492,7 +1496,7 @@ def generate_stream():
             return f"data: {data}\n\n"
 
         sse_headers = {
-            'Cache-Control': 'no-cache',
+            'Cache-Control': 'no-cache, no-transform',
             'X-Accel-Buffering': 'no',
         }
 
@@ -1610,6 +1614,7 @@ def generate_stream():
         def generate_sse():
             with app.app_context():
                 comment_future = None
+                stream_iter = None
                 try:
                     # meta 이벤트
                     meta_event = {
@@ -1651,6 +1656,7 @@ def generate_stream():
                         user_id=user_id,
                         web_search=web_search,
                         on_cost_start=_start_stream_cost,
+                        report_progress=True,
                     ))
                     while True:
                         _ensure_usage_lease_valid(usage_lease)
@@ -1665,6 +1671,9 @@ def generate_stream():
                             break
 
                         _ensure_usage_lease_valid(usage_lease)
+                        if isinstance(token, dict) and token.get('type') == 'status':
+                            yield _sse(token)
+                            continue
                         full_content += token
                         yield _sse({
                             'type': 'delta',
@@ -1811,6 +1820,8 @@ def generate_stream():
                         'message': safe_message,
                     })
                 finally:
+                    if stream_iter is not None and hasattr(stream_iter, 'close'):
+                        stream_iter.close()
                     if comment_future is not None and not comment_future.done():
                         comment_future.cancel()
                     if not stream_state['settled']:
@@ -2071,7 +2082,7 @@ def extract_events_endpoint():
     요청 형식:
         {"url": "https://youtube.com/..."} — URL 제공 시 자막 자동 추출
         {"transcript": "자막 텍스트"} — 자막 직접 제공
-        {"model": "cliproxyapi/gpt-5.5"} — 서버 허용 목록 내 선택
+        {"model": "cliproxyapi/gpt-5.6-luna"} — 서버 허용 목록 내 선택
 
     응답 형식:
         {"events": [...], "summary": {...}, "categorized": {...}}

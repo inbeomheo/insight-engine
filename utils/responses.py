@@ -7,6 +7,7 @@ HTTP 응답 헬퍼 — routes 전체에서 공통 사용
   - handle_error(error_msg, log_detail): 에러 접두사 기반 HTTP 상태 코드 자동 결정
 """
 import logging
+import re
 
 from flask import jsonify, current_app
 
@@ -60,7 +61,10 @@ def error_response(message, status_code=400):
 def sanitize_error_for_client(error_msg: str) -> str:
     """에러 메시지에서 내부 정보를 제거하여 클라이언트에 안전한 메시지를 반환합니다."""
     is_safe = any(error_msg.startswith(prefix) for prefix in _SAFE_ERROR_PREFIXES)
-    has_internal_info = any(kw in error_msg.lower() for kw in _INTERNAL_KEYWORDS)
+    has_internal_info = (
+        any(kw in error_msg.lower() for kw in _INTERNAL_KEYWORDS)
+        or re.search(r'(?i)(?:[a-z]:[\\/]|/(?:users|private|var|tmp|opt|etc|volumes)/)', error_msg) is not None
+    )
 
     if not is_safe or has_internal_info:
         current_app.logger.error(f'Internal error hidden from user: {error_msg}')
