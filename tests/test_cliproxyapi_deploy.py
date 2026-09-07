@@ -78,13 +78,14 @@ def test_exec_never_passes_key_in_argv(monkeypatch, tmp_path, mode, expected):
     monkeypatch.setenv("CLIPROXYAPI_API_KEY", key)
     monkeypatch.setattr(runtime.tempfile, "tempdir", str(tmp_path))
     calls = []
-    monkeypatch.setattr(runtime.os, "execv", lambda *args: calls.append(args))
+    monkeypatch.setattr(runtime.os, "execve", lambda *args: calls.append(args))
     assert runtime.main([mode]) == 0
-    binary, command = calls[0]
+    binary, command, environment = calls[0]
     assert binary == "/usr/local/bin/CLIProxyAPI"
     assert command[1] == "-config"
     assert command[3:] == expected
     assert key not in " ".join(command)
+    assert environment["CLIPROXYAPI_API_KEY"] == key
     assert Path.cwd() == Path(command[2]).parent.resolve()
 
 
@@ -97,10 +98,28 @@ def test_local_binary_and_explicit_container_bind_can_be_configured(monkeypatch,
     monkeypatch.setenv("CLIPROXYAPI_BIND_HOST", "0.0.0.0")
     monkeypatch.setattr(runtime.tempfile, "tempdir", str(tmp_path))
     calls = []
-    monkeypatch.setattr(runtime.os, "execv", lambda *args: calls.append(args))
+    monkeypatch.setattr(runtime.os, "execve", lambda *args: calls.append(args))
     assert runtime.main(["serve"]) == 0
     assert calls[0][0] == calls[0][1][0] == binary
     assert json.loads(Path(calls[0][1][2]).read_text())["host"] == "0.0.0.0"
+
+
+def test_runtime_ignores_inherited_management_and_remote_auth_storage(monkeypatch, tmp_path):
+    runtime = _load("cliproxyapi_runtime.py")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("CLIPROXYAPI_API_KEY", secrets.token_urlsafe(32))
+    blocked = ["MANAGEMENT_PASSWORD", "HOME_JWT", "home_jwt", "DEPLOY",
+               "PGSTORE_DSN", "pgstore_dsn", "GITSTORE_GIT_URL", "gitstore_git_token",
+               "OBJECTSTORE_ENDPOINT", "objectstore_secret_key"]
+    for name in blocked:
+        monkeypatch.setenv(name, "test-unrelated-setting")
+    monkeypatch.setattr(runtime.tempfile, "tempdir", str(tmp_path))
+    calls = []
+    monkeypatch.setattr(runtime.os, "execve", lambda *args: calls.append(args))
+    runtime.main(["serve"])
+    assert all(name not in calls[0][2] for name in blocked)
+    # 부모 환경과 파일을 바꾸는 대신 자식 실행 환경만 격리한다.
+    assert all(runtime.os.environ[name] == "test-unrelated-setting" for name in blocked)
 
 
 @pytest.mark.parametrize("unauthorized_status", [200, 401, 403, 500])
@@ -115,6 +134,8 @@ def test_healthcheck_requires_authenticated_models_and_rejects_anonymous(monkeyp
         requests.append(request)
         assert timeout == 3
         if isinstance(request, str):
+            if not request.endswith("/v1/models"):
+                raise HTTPError(request, 404, "disabled", {}, None)
             if unauthorized_status != 200:
                 raise HTTPError(request, unauthorized_status, "denied", {}, None)
         else:
@@ -129,7 +150,27 @@ def test_healthcheck_requires_authenticated_models_and_rejects_anonymous(monkeyp
     else:
         with pytest.raises(ValueError):
             runtime.healthcheck()
-    assert len(requests) == 2
+    assert len(requests) == (4 if unauthorized_status == 401 else 2)
+
+
+@pytest.mark.parametrize("management_status", [200, 401, 403])
+def test_healthcheck_rejects_enabled_management_even_when_password_protected(monkeypatch, management_status):
+    runtime = _load("cliproxyapi_runtime.py")
+    monkeypatch.setenv("CLIPROXYAPI_API_KEY", secrets.token_urlsafe(32))
+
+    @contextmanager
+    def fake_urlopen(request, *, timeout):
+        if isinstance(request, str):
+            status = 401 if request.endswith("/v1/models") else management_status
+            if status != 200:
+                raise HTTPError(request, status, "test", {}, None)
+        response = io.BytesIO(b'{"data": []}')
+        response.status = 200
+        yield response
+
+    monkeypatch.setattr(runtime, "urlopen", fake_urlopen)
+    with pytest.raises(ValueError, match="관리 기능"):
+        runtime.healthcheck()
 
 
 def test_docker_smoke_uses_ephemeral_env_key_and_no_existing_volume(monkeypatch):

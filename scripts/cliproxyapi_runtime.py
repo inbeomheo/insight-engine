@@ -14,6 +14,15 @@ DEFAULT_AUTH_DIR = "/data/cliproxyapi/auth"
 DEFAULT_BINARY = "/usr/local/bin/CLIProxyAPI"
 
 
+def isolated_environment() -> dict[str, str]:
+    """다른 게이트웨이의 관리·원격 인증 저장소 설정을 상속하지 않는다."""
+    return {
+        name: value for name, value in os.environ.items()
+        if name.upper() not in {"MANAGEMENT_PASSWORD", "HOME_JWT", "DEPLOY"}
+        and not name.upper().startswith(("PGSTORE_", "GITSTORE_", "OBJECTSTORE_"))
+    }
+
+
 def _api_key() -> str:
     key = os.environ.get("CLIPROXYAPI_API_KEY", "").strip()
     if not key or key.lower() in {"dummy", "changeme", "your-api-key", "your-api-key-1"}:
@@ -71,9 +80,18 @@ def healthcheck() -> None:
         with urlopen(request.full_url, timeout=3):
             pass
     except HTTPError as exc:
-        if exc.code == 401:
-            return
-    raise ValueError("CLIProxyAPI가 인증 없는 요청을 차단하지 않았습니다.")
+        if exc.code != 401:
+            raise ValueError("CLIProxyAPI가 인증 없는 요청을 차단하지 않았습니다.") from None
+    else:
+        raise ValueError("CLIProxyAPI가 인증 없는 요청을 차단하지 않았습니다.")
+    for path in ("/v0/management/config", "/management.html"):
+        try:
+            with urlopen("http://127.0.0.1:8317" + path, timeout=3):
+                pass
+        except HTTPError as exc:
+            if exc.code == 404:
+                continue
+        raise ValueError("CLIProxyAPI 관리 기능이 비활성화되어 있지 않습니다.")
 
 
 def main(arguments: list[str] | None = None) -> int:
@@ -93,7 +111,7 @@ def main(arguments: list[str] | None = None) -> int:
         command.extend(["-codex-login", "-no-browser"])
     # 공식 바이너리가 현재 디렉터리의 .env를 자동으로 읽으므로 새 임시 경로에서 시작한다.
     os.chdir(config_path.parent)
-    os.execv(binary, command)
+    os.execve(binary, command, isolated_environment())
     return 0
 
 
