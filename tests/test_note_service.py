@@ -55,9 +55,12 @@ def test_find_notes_by_source_url_ignores_text_source_without_url(tmp_path, monk
     monkeypatch.setattr(note_service, "NOTES_DIR", tmp_path)
     note = _note("text-note")
     note["source"] = {"type": "text", "url": "", "title": "직접 입력 텍스트"}
-    note_service.save_note(note)
+    note_service.save_note(note, owner_id=None)
 
-    duplicates = note_service.find_notes_by_source_url({"type": "text", "url": "", "title": "새 텍스트"})
+    duplicates = note_service.find_notes_by_source_url(
+        {"type": "text", "url": "", "title": "새 텍스트"},
+        owner_id=None,
+    )
 
     assert duplicates == []
 
@@ -66,10 +69,11 @@ def test_save_load_round_trip_utf8(tmp_path, monkeypatch):
     monkeypatch.setattr(note_service, "NOTES_DIR", tmp_path)
     note = _note()
 
-    note_service.save_note(note)
+    note_service.save_note(note, owner_id=None)
 
-    assert note_service.load_note("note-1") == note
-    raw = (tmp_path / "note-1.json").read_text(encoding="utf-8")
+    assert note_service.load_note("note-1", owner_id=None) == note
+    path = tmp_path / "scopes" / "anonymous" / "note-1.json"
+    raw = path.read_text(encoding="utf-8")
     assert "요약입니다." in raw
     assert "\\uc694" not in raw
 
@@ -79,15 +83,15 @@ def test_save_note_invalid_id_raises_value_error(tmp_path, monkeypatch):
     note = _note("../x")
 
     with pytest.raises(ValueError):
-        note_service.save_note(note)
+        note_service.save_note(note, owner_id=None)
 
 
 def test_list_notes_newest_first(tmp_path, monkeypatch):
     monkeypatch.setattr(note_service, "NOTES_DIR", tmp_path)
-    note_service.save_note(_note("old", "2026-07-03T12:00:00Z"))
-    note_service.save_note(_note("new", "2026-07-04T12:00:00Z"))
+    note_service.save_note(_note("old", "2026-07-03T12:00:00Z"), owner_id=None)
+    note_service.save_note(_note("new", "2026-07-04T12:00:00Z"), owner_id=None)
 
-    notes = note_service.list_notes()
+    notes = note_service.list_notes(owner_id=None)
 
     assert [item["id"] for item in notes] == ["new", "old"]
     assert notes[0] == {
@@ -102,6 +106,51 @@ def test_list_notes_newest_first(tmp_path, monkeypatch):
         "created_at": "2026-07-04T12:00:00Z",
         "source": {"type": "article", "url": "https://example.com/a", "title": "테스트 글"},
     }
+
+
+def test_user_scoped_storage_isolated_and_path_safe(tmp_path, monkeypatch):
+    monkeypatch.setattr(note_service, "NOTES_DIR", tmp_path)
+    note_a = _note("shared-id")
+    note_b = _note("shared-id")
+    note_a["summary"] = "사용자 A 요약"
+    note_b["summary"] = "사용자 B 요약"
+
+    note_service.save_note(note_a, owner_id="user-a")
+    note_service.save_note(note_b, owner_id="../../user-b")
+
+    assert note_service.load_note("shared-id", owner_id="user-a") == note_a
+    assert note_service.load_note("shared-id", owner_id="../../user-b") == note_b
+    assert note_service.load_note("shared-id", owner_id="user-c") is None
+    assert [item["summary"] for item in note_service.list_notes(owner_id="user-a")] == [
+        "사용자 A 요약"
+    ]
+    assert not (tmp_path.parent / "user-b").exists()
+    assert all(path.parent.parent == tmp_path / "scopes" for path in (tmp_path / "scopes").glob("*/*.json"))
+
+
+def test_authenticated_user_cannot_read_legacy_unowned_note(tmp_path, monkeypatch):
+    monkeypatch.setattr(note_service, "NOTES_DIR", tmp_path)
+    legacy = _note("legacy")
+    (tmp_path / "legacy.json").write_text(
+        json.dumps(legacy, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+    assert note_service.load_note("legacy", owner_id=None) == legacy
+    assert note_service.load_note("legacy", owner_id="user-a") is None
+    assert note_service.list_notes(owner_id="user-a") == []
+
+
+def test_owner_scope_metadata_mismatch_fails_closed(tmp_path, monkeypatch):
+    monkeypatch.setattr(note_service, "NOTES_DIR", tmp_path)
+    note = _note("tampered")
+    note_service.save_note(note, owner_id="user-a")
+    path = next((tmp_path / "scopes").glob("*/tampered.json"))
+    stored = json.loads(path.read_text(encoding="utf-8"))
+    stored[note_service.OWNER_SCOPE_FIELD] = note_service.owner_scope_for("user-b")
+    path.write_text(json.dumps(stored, ensure_ascii=False), encoding="utf-8")
+
+    assert note_service.load_note("tampered", owner_id="user-a") is None
 
 
 def test_parse_note_response_prefers_fenced_json_and_tolerates_trailing_commas():

@@ -3,6 +3,7 @@ import unittest
 from unittest.mock import patch, MagicMock
 
 from services.export.repurpose_service import RepurposeService, REPURPOSE_PROMPTS
+from services.usage.usage_lock import UsageLockUnavailable
 
 
 class TestRepurposePrompts(unittest.TestCase):
@@ -79,6 +80,36 @@ class TestRepurpose(unittest.TestCase):
         formats = RepurposeService.get_available_formats()
         for f in formats:
             self.assertIn(f['format'], REPURPOSE_PROMPTS)
+
+    @patch('services.core.ai_service.call_litellm')
+    def test_trusted_callback_is_forwarded_to_shared_provider_boundary(
+        self,
+        mock_call,
+    ):
+        callback = MagicMock()
+        response = MagicMock()
+        response.choices[0].message.content = '변환 결과'
+        mock_call.return_value = response
+
+        result = self.svc.repurpose(
+            '원본',
+            'twitter_thread',
+            on_cost_start=callback,
+        )
+
+        self.assertEqual(result['content'], '변환 결과')
+        self.assertIs(mock_call.call_args.kwargs['on_cost_start'], callback)
+
+    @patch('services.core.ai_service.call_litellm')
+    def test_usage_lock_loss_is_not_wrapped(self, mock_call):
+        mock_call.side_effect = UsageLockUnavailable('lease lost')
+
+        with self.assertRaises(UsageLockUnavailable):
+            self.svc.repurpose(
+                '원본',
+                'twitter_thread',
+                on_cost_start=MagicMock(),
+            )
 
 
 class TestRepurposeAll(unittest.TestCase):

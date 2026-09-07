@@ -53,6 +53,36 @@ class TestGetLatestVideo(unittest.TestCase):
         result = get_latest_video('UC_fail')
         self.assertIsNone(result)
 
+    @patch.dict('os.environ', {'YOUTUBE_API_KEY': 'test-key'}, clear=False)
+    @patch('requests.get')
+    def test_cost_callback_runs_immediately_before_request(self, mock_get):
+        events = []
+        response = MagicMock()
+        response.json.return_value = {'items': []}
+        mock_get.side_effect = lambda *_args, **_kwargs: (
+            events.append('provider') or response
+        )
+
+        get_latest_video(
+            'UC_test',
+            on_cost_start=lambda: events.append('cost'),
+        )
+
+        self.assertEqual(events, ['cost', 'provider'])
+
+    @patch.dict('os.environ', {'YOUTUBE_API_KEY': 'test-key'}, clear=False)
+    @patch('requests.get')
+    def test_usage_lock_loss_prevents_request(self, mock_get):
+        from services.usage.usage_lock import UsageLockUnavailable
+
+        def reject_cost():
+            raise UsageLockUnavailable('lease lost')
+
+        with self.assertRaises(UsageLockUnavailable):
+            get_latest_video('UC_test', on_cost_start=reject_cost)
+
+        mock_get.assert_not_called()
+
 
 class TestCheckMonitors(unittest.TestCase):
 

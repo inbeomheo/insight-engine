@@ -3,7 +3,10 @@ import uuid
 
 from flask import request, jsonify, current_app, g
 
+from extensions import limiter
 from routes.blog_routes import blog_bp
+from services.usage import capture_usage_charge_callback, require_usage
+from services.usage.usage_lock import UsageLockUnavailable
 from src.contexts.identity.interface.auth_decorators import require_auth
 from utils.responses import api_error, handle_error
 
@@ -11,9 +14,11 @@ from utils.responses import api_error, handle_error
 # ── 지식 베이스 (RAG) ──────────────────────────────────────
 
 MAX_UPLOAD_SIZE = 10 * 1024 * 1024  # 10MB
+MAX_GRAPH_INGEST_CHARS = 200_000
 
 
 @blog_bp.route('/api/knowledge/upload', methods=['POST'])
+@limiter.limit("10/minute")
 @require_auth
 def knowledge_upload():
     """참고 문서 업로드 → 벡터 DB에 저장"""
@@ -106,19 +111,35 @@ def knowledge_delete(doc_id):
 
 
 @blog_bp.route('/api/rag/graph/ingest', methods=['POST'])
+@limiter.limit("5/minute")
 @require_auth
+@require_usage
 def graph_rag_ingest():
     """텍스트에서 엔티티/관계를 자동 추출하여 그래프에 추가합니다."""
     from services.rag.graph_rag_engine import GraphRAGEngine
 
     data = request.get_json(silent=True) or {}
-    text = data.get('text', '').strip()
+    raw_text = data.get('text', '')
+    if not isinstance(raw_text, str):
+        return api_error('text는 문자열이어야 합니다.', 400)
+    text = raw_text.strip()
     if not text:
         return api_error('text는 필수입니다.', 400)
+    if len(text) > MAX_GRAPH_INGEST_CHARS:
+        return api_error(
+            f'text는 최대 {MAX_GRAPH_INGEST_CHARS:,}자까지 허용됩니다.',
+            400,
+        )
 
     try:
         engine = GraphRAGEngine()
-        result = engine.ingest(g.user_id, text)
+        result = engine.ingest(
+            g.user_id,
+            text,
+            on_cost_start=capture_usage_charge_callback(),
+        )
         return jsonify(result)
+    except UsageLockUnavailable:
+        raise
     except Exception as e:
         return handle_error(e, 'GraphRAG 인제스트')

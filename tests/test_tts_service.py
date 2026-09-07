@@ -1,7 +1,9 @@
 """tts_service 단위 테스트 (내부 함수 위주)"""
 import unittest
+from unittest.mock import Mock, patch
 
 from services.media.tts_service import (
+    TTSService,
     preprocess_for_tts,
     _split_text,
     OPENAI_VOICES,
@@ -128,6 +130,79 @@ class TestSplitText(unittest.TestCase):
         text = '가' * 100
         result = _split_text(text, 30)
         self.assertGreater(len(result), 1)
+
+
+class TestCostStartCallback(unittest.TestCase):
+
+    def test_validation_failure_does_not_start_cost(self):
+        callback = Mock()
+
+        with self.assertRaisesRegex(ValueError, '텍스트를 입력'):
+            TTSService.synthesize('   ', on_cost_start=callback)
+
+        callback.assert_not_called()
+
+    def test_callback_runs_immediately_before_backend(self):
+        events = []
+
+        def synthesize_edge(*_args):
+            events.append('edge')
+            return b'audio'
+
+        with patch(
+            'services.media.tts_service._select_backend', return_value='edge'
+        ), patch(
+            'services.media.tts_service._validate_tts_backend'
+        ), patch(
+            'services.media.tts_service._synthesize_edge', side_effect=synthesize_edge
+        ):
+            result = TTSService.synthesize(
+                '안녕하세요',
+                on_cost_start=lambda: events.append('cost'),
+            )
+
+        self.assertEqual(result, b'audio')
+        self.assertEqual(events, ['cost', 'edge'])
+
+    def test_fallback_marks_each_real_backend_attempt(self):
+        events = []
+
+        def synthesize_openai(*_args):
+            events.append('openai')
+            raise RuntimeError('provider failed')
+
+        def synthesize_edge(*_args):
+            events.append('edge')
+            return b'fallback'
+
+        with patch(
+            'services.media.tts_service._select_backend', return_value='openai'
+        ), patch(
+            'services.media.tts_service._validate_tts_backend'
+        ), patch(
+            'services.media.tts_service._synthesize_openai', side_effect=synthesize_openai
+        ), patch(
+            'services.media.tts_service._synthesize_edge', side_effect=synthesize_edge
+        ):
+            result = TTSService.synthesize(
+                '안녕하세요',
+                on_cost_start=lambda: events.append('cost'),
+            )
+
+        self.assertEqual(result, b'fallback')
+        self.assertEqual(events, ['cost', 'openai', 'cost', 'edge'])
+
+    def test_backend_validation_failure_does_not_start_cost(self):
+        callback = Mock()
+
+        with patch(
+            'services.media.tts_service._select_backend', return_value='openai'
+        ), patch(
+            'services.media.tts_service.os.getenv', return_value=''
+        ), self.assertRaisesRegex(RuntimeError, 'OPENAI_API_KEY'):
+            TTSService.synthesize('안녕하세요', on_cost_start=callback)
+
+        callback.assert_not_called()
 
 
 if __name__ == '__main__':

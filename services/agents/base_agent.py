@@ -5,8 +5,10 @@
 Flask는 동기 방식이므로 execute()는 동기 메서드로 구현.
 """
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Callable, Optional
 import logging
+
+from services.usage.usage_lock import UsageLockUnavailable
 
 logger = logging.getLogger(__name__)
 
@@ -19,8 +21,13 @@ class BaseAgent(ABC):
                None이면 기본 모델 자동 선택.
     """
 
-    def __init__(self, model: str = None):
+    def __init__(
+        self,
+        model: str = None,
+        on_cost_start: Optional[Callable[[], None]] = None,
+    ):
         self.model = model
+        self._on_cost_start = on_cost_start
         self._logger = logging.getLogger(self.__class__.__name__)
 
     @abstractmethod
@@ -93,9 +100,18 @@ class BaseAgent(ABC):
             kwargs.pop('temperature', None)
 
         try:
+            if callable(self._on_cost_start):
+                self._on_cost_start()
+            else:
+                from services.usage.usage_decorator import mark_usage_charge_committed
+                mark_usage_charge_committed()
             resp = completion(**kwargs)
-
+            if getattr(resp.choices[0], 'finish_reason', None) == 'length':
+                # 교정 단계는 이 실패를 받아 온전한 초안을 보존한다.
+                raise RuntimeError('AI 응답이 출력 길이 제한으로 중단되었습니다.')
             return resp.choices[0].message.content or ''
+        except UsageLockUnavailable:
+            raise
         except Exception as e:
             self._logger.error(f"[{self.name}] AI 호출 실패: {e}")
             raise

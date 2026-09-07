@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef, type Dispatch, type SetStateAction } from 'react';
+import { useState, useCallback, useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { generate, generateStream, generateBatch, generateMerged, generateFusion } from '@/lib/api';
 import { useSettingsStore } from '@/stores/settingsStore';
@@ -8,11 +8,17 @@ import { useResultStore } from '@/stores/resultStore';
 import { toast } from 'sonner';
 import type { Report, StreamEvent } from '@/lib/types';
 import { createReport, responseToReport } from '@/lib/report-factory';
+import { getAuthSession } from '@/lib/auth-session';
+import { useAuthUserId } from '@/hooks/useAuthUserId';
 
 interface GenerateState {
   activeCount: number;
   isLoading: boolean;
   error: string | null;
+}
+
+export interface BatchGenerationOutcome {
+  succeededUrls: string[];
 }
 
 const LOADING_TITLE = '생성 중...';
@@ -34,6 +40,28 @@ interface StreamRunnerOptions {
   abortRef: { current: AbortController | null };
   buildMetaPatch: (event: StreamEvent) => Partial<Report>;
   buildResultReport: (event: StreamEvent, tempId: string, content: string) => Report;
+  requestUserId: string | null;
+}
+
+function currentAuthUserId(): string | null {
+  return getAuthSession()?.user.id ?? null;
+}
+
+function isCurrentAuthUser(requestUserId: string | null): boolean {
+  return currentAuthUserId() === requestUserId;
+}
+
+function settleGeneration(
+  setState: Dispatch<SetStateAction<GenerateState>>,
+  requestUserId: string | null,
+  error: string | null,
+): boolean {
+  if (!isCurrentAuthUser(requestUserId)) return false;
+  setState((state) => {
+    const activeCount = Math.max(0, state.activeCount - 1);
+    return { ...state, activeCount, isLoading: activeCount > 0, error };
+  });
+  return true;
 }
 
 async function runGenerateStream({
@@ -47,10 +75,12 @@ async function runGenerateStream({
   abortRef,
   buildMetaPatch,
   buildResultReport,
+  requestUserId,
 }: StreamRunnerOptions): Promise<boolean> {
   const tempId = crypto.randomUUID();
   addReport(createReport({
     id: tempId,
+    is_streaming: true,
     url,
     title: LOADING_TITLE,
     content: '',
@@ -68,6 +98,7 @@ async function runGenerateStream({
   const finish = (errorMessage?: string) => {
     if (finished) return;
     finished = true;
+    if (!isCurrentAuthUser(requestUserId)) return;
     setState((s) => {
       const c = Math.max(0, s.activeCount - 1);
       return { ...s, activeCount: c, isLoading: c > 0, error: errorMessage || null };
@@ -84,11 +115,12 @@ async function runGenerateStream({
   const scheduleContentUpdate = () => {
     if (rafId !== null) return;
     if (typeof requestAnimationFrame === 'undefined') {
-      updateReport(tempId, { content });
+      if (isCurrentAuthUser(requestUserId)) updateReport(tempId, { content });
       return;
     }
     rafId = requestAnimationFrame(() => {
       rafId = null;
+      if (!isCurrentAuthUser(requestUserId)) return;
       updateReport(tempId, { content });
     });
   };
@@ -98,8 +130,10 @@ async function runGenerateStream({
   const fail = (message: string): false => {
     if (finished) return false;
     clearScheduledContentUpdate();
-    if (hasMeaningfulContent()) {
-      updateReport(tempId, { title: FAILED_TITLE, content });
+    if (!isCurrentAuthUser(requestUserId)) {
+      finish();
+    } else if (hasMeaningfulContent()) {
+      updateReport(tempId, { title: FAILED_TITLE, content, is_streaming: false });
     } else {
       removeReport(tempId);
     }
@@ -110,8 +144,10 @@ async function runGenerateStream({
   const cancel = (): boolean => {
     if (finished) return succeeded;
     clearScheduledContentUpdate();
-    if (hasMeaningfulContent()) {
-      updateReport(tempId, { content });
+    if (!isCurrentAuthUser(requestUserId)) {
+      finish();
+    } else if (hasMeaningfulContent()) {
+      updateReport(tempId, { content, is_streaming: false });
     } else {
       removeReport(tempId);
     }
@@ -131,6 +167,11 @@ async function runGenerateStream({
       req,
       (event: StreamEvent) => {
         if (finished) return;
+        if (!isCurrentAuthUser(requestUserId)) {
+          controller.abort();
+          finish();
+          return;
+        }
 
         if (event.type === 'meta') {
           updateReport(tempId, buildMetaPatch(event));
@@ -140,7 +181,10 @@ async function runGenerateStream({
         } else if (event.type === 'result') {
           content = event.content || content;
           clearScheduledContentUpdate();
-          updateReport(tempId, buildResultReport(event, tempId, content));
+          updateReport(tempId, {
+            ...buildResultReport(event, tempId, content),
+            is_streaming: false,
+          });
           succeed();
         } else if (event.type === 'done') {
           content = event.content || content;
@@ -149,6 +193,7 @@ async function runGenerateStream({
             title: event.title || '생성 완료',
             content,
             html: event.html || event.data || '',
+            is_streaming: false,
             usage: event.usage || { total_tokens: 0 },
             elapsed_time: event.elapsed_time || 0,
             prompt: event.prompt || '',
@@ -167,6 +212,10 @@ async function runGenerateStream({
     );
 
     if (!finished) {
+      if (!isCurrentAuthUser(requestUserId)) {
+        finish();
+        return false;
+      }
       if (controller.signal.aborted) return cancel();
       return fail(NO_RESULT_MESSAGE);
     }
@@ -189,6 +238,14 @@ export function useGenerate() {
     error: null,
   });
   const abortRef = useRef<AbortController | null>(null);
+  const authUserId = useAuthUserId();
+
+  useEffect(() => {
+    abortRef.current?.abort();
+    // 이전 계정의 진행 상태를 새 계정 UI에 넘기지 않는다.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setState({ activeCount: 0, isLoading: false, error: null });
+  }, [authUserId]);
   // 셀렉터 구독 — 스토어의 무관한 변경(테마, 사이드바 등)에 의한 리렌더 방지
   const { selectedModel, selectedStyle, modifiers, enableWebSearch, enableAgentMode, detailLevel, transcriptLanguage } = useSettingsStore(
     useShallow((s) => ({
@@ -206,13 +263,14 @@ export function useGenerate() {
   const removeReport = useResultStore((s) => s.removeReport);
 
   const generateSingle = useCallback(
-    async (url: string, useStreaming = false) => {
+    async (url: string, useStreaming = false): Promise<boolean> => {
       if (!selectedModel) {
         setState((s) => ({ ...s, error: 'AI 모델을 선택해주세요.' }));
-        return;
+        return false;
       }
 
       const streaming = useStreaming;
+      const requestUserId = currentAuthUserId();
 
       setState((s) => ({ ...s, activeCount: s.activeCount + 1, isLoading: true, error: null }));
 
@@ -220,7 +278,7 @@ export function useGenerate() {
 
       try {
         if (streaming) {
-          await runGenerateStream({
+          return await runGenerateStream({
             req,
             url,
             style: selectedStyle,
@@ -229,6 +287,7 @@ export function useGenerate() {
             removeReport,
             setState,
             abortRef,
+            requestUserId,
             buildMetaPatch: (event) => ({
               title: event.youtube_title || event.title || LOADING_TITLE,
               youtube_title: event.youtube_title || '',
@@ -244,66 +303,81 @@ export function useGenerate() {
         } else {
           // 비스트리밍 모드
           const res = await generate(req);
+          if (!isCurrentAuthUser(requestUserId)) return false;
           const report = responseToReport(res, url, selectedStyle);
           addReport(report);
-          setState((s) => { const c = s.activeCount - 1; return { ...s, activeCount: c, isLoading: c > 0, error: null }; });
+          settleGeneration(setState, requestUserId, null);
+          return true;
         }
       } catch (err) {
+        if (!isCurrentAuthUser(requestUserId)) return false;
         const message = err instanceof Error ? err.message : '알 수 없는 오류';
-        setState((s) => { const c = Math.max(0, s.activeCount - 1); return { ...s, activeCount: c, isLoading: c > 0, error: message }; });
+        settleGeneration(setState, requestUserId, message);
+        return false;
       }
     },
     [selectedModel, selectedStyle, modifiers, detailLevel, enableWebSearch, enableAgentMode, transcriptLanguage, addReport, updateReport, removeReport]
   );
 
   const generateBatchUrls = useCallback(
-    async (urls: string[]): Promise<boolean> => {
+    async (urls: string[]): Promise<BatchGenerationOutcome> => {
       if (!selectedModel) {
         setState((s) => ({ ...s, error: 'AI 모델을 선택해주세요.' }));
-        return false;
+        return { succeededUrls: [] };
       }
-      if (urls.length === 0) return false;
+      if (urls.length === 0) return { succeededUrls: [] };
 
       // 단일 URL이면 일반 생성
       if (urls.length === 1) {
-        await generateSingle(urls[0], false);
-        return true;
+        const succeeded = await generateSingle(urls[0], false);
+        return { succeededUrls: succeeded ? [urls[0]] : [] };
       }
 
+      const requestUserId = currentAuthUserId();
       setState((s) => ({ ...s, activeCount: s.activeCount + 1, isLoading: true, error: null }));
 
       try {
-        const res = await generateBatch(urls, selectedModel, selectedStyle, modifiers);
+        const res = await generateBatch(urls, selectedModel, selectedStyle, modifiers, undefined, {
+          detail_level: detailLevel,
+          transcript_language: transcriptLanguage,
+          enable_web_search: enableWebSearch,
+          enable_agent_mode: enableAgentMode,
+        });
+        if (!isCurrentAuthUser(requestUserId)) return { succeededUrls: [] };
         let ts = Date.now();
-        const failedUrls: string[] = [];
+        const succeededUrls: string[] = [];
+        const failures: string[] = [];
 
-        for (const item of res.results) {
-          if (item.success) {
+        for (const url of urls) {
+          const item = res.results.find((result) => result.url === url);
+          if (item?.success) {
             const report = responseToReport(item, item.url, selectedStyle, { createdAt: ts++ });
             addReport(report);
+            succeededUrls.push(url);
           } else {
-            failedUrls.push(item.url);
+            failures.push(`${url}: ${item?.error || NO_RESULT_MESSAGE}`);
           }
         }
 
-        if (failedUrls.length > 0 && failedUrls.length < urls.length) {
-          toast.warning(`${failedUrls.length}개 URL 처리 실패`, {
-            description: failedUrls.map((u) => u.slice(0, 60)).join('\n'),
+        if (failures.length > 0 && succeededUrls.length > 0) {
+          toast.warning(`${failures.length}개 URL 처리 실패`, {
+            description: failures.join('\n'),
           });
-        } else if (failedUrls.length === urls.length) {
-          setState((s) => { const c = Math.max(0, s.activeCount - 1); return { ...s, activeCount: c, isLoading: c > 0, error: '모든 URL 처리에 실패했습니다.' }; });
-          return false;
+        } else if (succeededUrls.length === 0) {
+          settleGeneration(setState, requestUserId, `모든 URL 처리에 실패했습니다.\n${failures.join('\n')}`);
+          return { succeededUrls: [] };
         }
 
-        setState((s) => { const c = s.activeCount - 1; return { ...s, activeCount: c, isLoading: c > 0, error: null }; });
-        return true;
+        settleGeneration(setState, requestUserId, null);
+        return { succeededUrls };
       } catch (err) {
+        if (!isCurrentAuthUser(requestUserId)) return { succeededUrls: [] };
         const message = err instanceof Error ? err.message : '배치 생성 실패';
-        setState((s) => { const c = Math.max(0, s.activeCount - 1); return { ...s, activeCount: c, isLoading: c > 0, error: message }; });
-        return false;
+        settleGeneration(setState, requestUserId, message);
+        return { succeededUrls: [] };
       }
     },
-    [selectedModel, selectedStyle, modifiers, addReport, generateSingle]
+    [selectedModel, selectedStyle, modifiers, detailLevel, transcriptLanguage, enableWebSearch, enableAgentMode, addReport, generateSingle]
   );
 
   const generateMergedUrls = useCallback(
@@ -317,10 +391,12 @@ export function useGenerate() {
         return false;
       }
 
+      const requestUserId = currentAuthUserId();
       setState((s) => ({ ...s, activeCount: s.activeCount + 1, isLoading: true, error: null }));
 
       try {
-        const res = await generateMerged(urls, selectedModel, selectedStyle, modifiers);
+        const res = await generateMerged(urls, selectedModel, selectedStyle, modifiers, undefined, transcriptLanguage);
+        if (!isCurrentAuthUser(requestUserId)) return false;
         const report = responseToReport(res, urls[0], selectedStyle, {
           id: res.id || crypto.randomUUID(),
           youtube_title: res.source_videos?.[0]?.title || '',
@@ -329,15 +405,16 @@ export function useGenerate() {
           source_videos: res.source_videos,
         });
         addReport(report);
-        setState((s) => { const c = s.activeCount - 1; return { ...s, activeCount: c, isLoading: c > 0, error: null }; });
+        settleGeneration(setState, requestUserId, null);
         return true;
       } catch (err) {
+        if (!isCurrentAuthUser(requestUserId)) return false;
         const message = err instanceof Error ? err.message : '합쳐서 생성 실패';
-        setState((s) => { const c = Math.max(0, s.activeCount - 1); return { ...s, activeCount: c, isLoading: c > 0, error: message }; });
+        settleGeneration(setState, requestUserId, message);
         return false;
       }
     },
-    [selectedModel, selectedStyle, modifiers, addReport]
+    [selectedModel, selectedStyle, modifiers, transcriptLanguage, addReport]
   );
 
   const generateFusionUrls = useCallback(
@@ -351,6 +428,7 @@ export function useGenerate() {
         return false;
       }
 
+      const requestUserId = currentAuthUserId();
       setState((s) => ({ ...s, activeCount: s.activeCount + 1, isLoading: true, error: null }));
 
       try {
@@ -363,6 +441,7 @@ export function useGenerate() {
           enable_web_research: enableWebResearch,
           enable_deep_comments: enableDeepComments,
         });
+        if (!isCurrentAuthUser(requestUserId)) return false;
 
         const report = createReport({
           url: urls[0],
@@ -377,11 +456,12 @@ export function useGenerate() {
           sections: result.sections,
         });
         addReport(report);
-        setState((s) => { const c = s.activeCount - 1; return { ...s, activeCount: c, isLoading: c > 0, error: null }; });
+        settleGeneration(setState, requestUserId, null);
         return true;
       } catch (err) {
+        if (!isCurrentAuthUser(requestUserId)) return false;
         const message = err instanceof Error ? err.message : '퓨전 분석 실패';
-        setState((s) => { const c = Math.max(0, s.activeCount - 1); return { ...s, activeCount: c, isLoading: c > 0, error: message }; });
+        settleGeneration(setState, requestUserId, message);
         return false;
       }
     },
@@ -396,6 +476,7 @@ export function useGenerate() {
       }
 
       const streaming = useStreaming;
+      const requestUserId = currentAuthUserId();
       setState((s) => ({ ...s, activeCount: s.activeCount + 1, isLoading: true, error: null }));
       const req = {
         url: '',
@@ -417,6 +498,7 @@ export function useGenerate() {
             removeReport,
             setState,
             abortRef,
+            requestUserId,
             buildMetaPatch: (event) => ({
               title: event.source_title || event.title || LOADING_TITLE,
               transcript_source: event.transcript_source || '',
@@ -431,13 +513,15 @@ export function useGenerate() {
         }
 
         const res = await generate(req);
+        if (!isCurrentAuthUser(requestUserId)) return false;
         const report = responseToReport(res, '', selectedStyle);
         addReport(report);
-        setState((s) => { const c = s.activeCount - 1; return { ...s, activeCount: c, isLoading: c > 0, error: null }; });
+        settleGeneration(setState, requestUserId, null);
         return true;
       } catch (err) {
+        if (!isCurrentAuthUser(requestUserId)) return false;
         const message = err instanceof Error ? err.message : '알 수 없는 오류';
-        setState((s) => { const c = Math.max(0, s.activeCount - 1); return { ...s, activeCount: c, isLoading: c > 0, error: message }; });
+        settleGeneration(setState, requestUserId, message);
         return false;
       }
     },

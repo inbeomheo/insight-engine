@@ -7,7 +7,9 @@ YouTube 영상 자막에서 액션 아이템, 핵심 포인트, 결정 사항, �
 import json
 import logging
 import re
-from typing import Dict, List, Optional
+from typing import Callable, Dict, List, Optional
+
+from services.usage.usage_lock import UsageLockUnavailable
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +25,11 @@ EVENT_TYPES = {
 DEFAULT_MODEL = 'chatmock/gpt-5.4-mini'
 
 
-def extract_events(transcript: str, model: Optional[str] = None) -> List[Dict]:
+def extract_events(
+    transcript: str,
+    model: Optional[str] = None,
+    on_cost_start: Optional[Callable[[], None]] = None,
+) -> List[Dict]:
     """자막에서 구조화된 이벤트를 추출합니다.
 
     Args:
@@ -40,7 +46,7 @@ def extract_events(transcript: str, model: Optional[str] = None) -> List[Dict]:
         raise ValueError("자막이 비어있습니다. 이벤트를 추출할 수 없습니다.")
 
     from prompts.event_extraction import EVENT_EXTRACTION_PROMPT
-    from services.core.ai_service import _build_completion_kwargs
+    from services.core.ai_service import _build_completion_kwargs, resolve_public_model
 
     # 자막이 너무 길면 앞부분만 사용 (토큰 절약)
     max_transcript_len = 8000
@@ -50,7 +56,7 @@ def extract_events(transcript: str, model: Optional[str] = None) -> List[Dict]:
 
     prompt = EVENT_EXTRACTION_PROMPT + truncated_transcript
 
-    used_model = model or DEFAULT_MODEL
+    used_model = resolve_public_model(model, DEFAULT_MODEL)
 
     try:
         kwargs = _build_completion_kwargs(
@@ -62,6 +68,11 @@ def extract_events(transcript: str, model: Optional[str] = None) -> List[Dict]:
         kwargs['max_tokens'] = 4000
 
         from litellm import completion
+        from services.usage.usage_decorator import mark_usage_charge_committed
+        if callable(on_cost_start):
+            on_cost_start()
+        else:
+            mark_usage_charge_committed()
         response = completion(**kwargs)
         raw_text = response.choices[0].message.content or ''
 
@@ -71,6 +82,8 @@ def extract_events(transcript: str, model: Optional[str] = None) -> List[Dict]:
         return validated
 
     except ValueError:
+        raise
+    except UsageLockUnavailable:
         raise
     except Exception as e:
         logger.error("이벤트 추출 실패: %s", str(e), exc_info=True)

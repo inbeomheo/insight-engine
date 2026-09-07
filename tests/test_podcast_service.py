@@ -39,12 +39,28 @@ class TestGeneratePodcastEpisode(unittest.TestCase):
         mock_synth.return_value = b'\x00' * 100
 
         from services.media.podcast_service import generate_podcast_episode
-        result = generate_podcast_episode('test content', 'Test', 'gemini/test')
+        result = generate_podcast_episode(
+            'test content',
+            'Test',
+            'chatmock/gpt-5.4-mini',
+        )
 
         self.assertIn('script', result)
         self.assertIn('audio_base64', result)
         self.assertIn('duration_estimate', result)
         self.assertGreater(result['duration_estimate'], 0)
+
+    @patch('services.media.podcast_service._generate_script')
+    def test_rejects_unsupported_model_before_provider(self, mock_generate):
+        from services.media.podcast_service import generate_podcast_episode
+
+        with self.assertRaisesRegex(ValueError, '지원하지 않는 AI 모델'):
+            generate_podcast_episode(
+                'test content',
+                'Test',
+                'openai/arbitrary-paid-model',
+            )
+        mock_generate.assert_not_called()
 
 
 if __name__ == '__main__':

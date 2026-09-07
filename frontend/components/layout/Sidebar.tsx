@@ -194,7 +194,7 @@ export default function Sidebar() {
               <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-sm border border-sidebar-border bg-sidebar-accent">
                 <Sparkles className="h-5 w-5 text-primary/40" />
               </div>
-              <p className="signal-meta text-[10px] text-muted-foreground/60">
+              <p className="signal-meta text-[10px] text-foreground/75">
                 {reports.length === 0 ? t('sidebar.noHistory') : t('sidebar.noSearchResults')}
               </p>
             </div>
@@ -261,7 +261,7 @@ export default function Sidebar() {
 
         {/* 하단 브랜딩 */}
         <div className="p-3 border-t border-sidebar-border">
-          <p className="signal-meta text-[10px] text-muted-foreground/50 text-center">
+          <p className="signal-meta text-[10px] text-foreground/75 text-center">
             {t('sidebar.poweredBy')}
           </p>
         </div>

@@ -51,6 +51,20 @@ class TestMask:
 
 
 class TestVaultWithoutSupabase:
+    def test_enabled_vault_uses_request_scoped_rls_client(self, monkeypatch):
+        monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
+        monkeypatch.setenv("SUPABASE_ANON_KEY", "anon-key")
+        scoped_client = MagicMock()
+        vault = SupabaseApiKeyVault()
+
+        with patch(
+            "src.shared.infrastructure.supabase_client.get_user_supabase",
+            return_value=scoped_client,
+        ) as get_user_client:
+            assert vault._get_client() is scoped_client
+
+        get_user_client.assert_called_once_with()
+
     def test_store_returns_masked_api_key_when_supabase_disabled(self, account_id):
         """Supabase 비활성: 저장 없이 마스킹된 ApiKey VO만 반환."""
         vault = SupabaseApiKeyVault()
@@ -149,6 +163,30 @@ class TestVaultWithMockedSupabase:
             result = vault.reveal(account_id, "gemini", "default")
         assert result == "plain-key"
         dec.assert_called_once_with("ENC(plain)")
+        update_payload = table.update.call_args.args[0]
+        assert update_payload["last_used_at"].endswith("+00:00")
+
+    def test_reveal_returns_key_when_last_used_audit_update_fails(
+        self, account_id, caplog
+    ):
+        """감사 시각 기록 장애는 이미 검증된 키의 사용을 막지 않는다."""
+        vault = SupabaseApiKeyVault()
+        client, table = self._make_client()
+        chain = (
+            table.select.return_value.eq.return_value.eq.return_value
+            .eq.return_value.limit.return_value
+        )
+        chain.execute.return_value = MagicMock(
+            data=[{"encrypted_key": "ENC(plain)", "is_active": True}]
+        )
+        table.update.side_effect = RuntimeError("audit backend unavailable")
+
+        with patch.object(vault, "_get_client", return_value=client), \
+             patch.object(vault, "_decrypt", return_value="plain-key"):
+            result = vault.reveal(account_id, "gemini", "default")
+
+        assert result == "plain-key"
+        assert "last_used_at 갱신 실패" in caplog.text
 
     def test_reveal_raises_when_no_active_row(self, account_id):
         """행이 없거나 is_active=False면 InvalidApiKey."""

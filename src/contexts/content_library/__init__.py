@@ -10,12 +10,18 @@ SupabaseHistoryRepository를 통해 기존 supabase_service 함수를 그대로 
 from __future__ import annotations
 
 
-def save_history_entry(user_id: str, data: dict) -> dict | None:
+def save_history_entry(
+    user_id: str,
+    data: dict,
+    *,
+    validated_access_token: str | None = None,
+) -> dict | None:
     """편의 함수 — SaveHistoryEntryUseCase 단축 호출.
 
     Args:
         user_id: Identity BC AccountId 값
         data: 생성 결과 dict (id, url, title, style, content 등)
+        validated_access_token: 요청 밖 작업에 명시 전달하는 검증 완료 JWT
 
     Returns:
         저장된 entry dict 또는 None (Supabase 비활성/user_id None인 경우)
@@ -25,7 +31,9 @@ def save_history_entry(user_id: str, data: dict) -> dict | None:
         SupabaseHistoryRepository,
     )
     return SaveHistoryEntryUseCase(SupabaseHistoryRepository()).execute(
-        user_id, data
+        user_id,
+        data,
+        validated_access_token=validated_access_token,
     )
 
 

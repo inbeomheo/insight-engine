@@ -5,6 +5,8 @@ import { User, Mail, Calendar, BarChart3, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useTranslation } from '@/hooks/useTranslation';
+import { useAuthUserId } from '@/hooks/useAuthUserId';
+import { getAccountStorageKey, getStorageAccountNamespace } from '@/lib/storage';
 import Link from 'next/link';
 
 interface ProfileData {
@@ -16,20 +18,29 @@ interface ProfileData {
   memberSince: string;
 }
 
+export const PROFILE_STORAGE_KEY = 'ie_profile';
+
 export default function ProfilePage() {
+  const authUserId = useAuthUserId();
+  const accountKey = getStorageAccountNamespace(authUserId);
+  return <AccountProfilePage key={accountKey} accountKey={accountKey} />;
+}
+
+function AccountProfilePage({ accountKey }: { accountKey: string }) {
   const { t } = useTranslation();
   const [profile, setProfile] = useState<ProfileData | null>(null);
 
   useEffect(() => {
-    // localStorage에서 프로필 로드 (Supabase 연동 시 API 호출로 교체)
-    const saved = localStorage.getItem('ie_profile');
+    const storageKey = getAccountStorageKey(PROFILE_STORAGE_KEY, accountKey);
+    // 현재 계정에 바인딩된 프로필만 로드한다.
+    const saved = localStorage.getItem(storageKey);
     if (saved) {
       try {
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setProfile(JSON.parse(saved));
         return;
       } catch {
-        localStorage.removeItem('ie_profile');
+        localStorage.removeItem(storageKey);
       }
     }
     // 기본 프로필
@@ -41,7 +52,7 @@ export default function ProfilePage() {
       usageTotal: 30,
       memberSince: new Date().toISOString().split('T')[0],
     });
-  }, []);
+  }, [accountKey]);
 
   if (!profile) return null;
 

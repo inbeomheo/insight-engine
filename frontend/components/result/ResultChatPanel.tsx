@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Bot, ChevronDown, ChevronUp, Copy, Loader2, Send, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import {
   buildResultChatStudyCard,
   saveResultChatStudyCard,
 } from '@/lib/result-chat-study-card';
+import { useAuthUserId } from '@/hooks/useAuthUserId';
 
 interface ResultChatPanelProps {
   context: string;
@@ -30,7 +31,17 @@ interface ChatMessage extends ResultChatMessage {
 
 const MAX_CONTEXT_CHARS = 50_000;
 
-export default function ResultChatPanel({
+export default function ResultChatPanel(props: ResultChatPanelProps) {
+  const authUserId = useAuthUserId();
+  return (
+    <AccountResultChatPanel
+      key={authUserId ? `user:${authUserId}` : 'anonymous'}
+      {...props}
+    />
+  );
+}
+
+function AccountResultChatPanel({
   context,
   model,
   language = 'ko',
@@ -46,6 +57,7 @@ export default function ResultChatPanel({
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const mountedRef = useRef(false);
   const {
     status: studyCardCopyStatus,
     activeKey: studyCardCopyKey,
@@ -60,6 +72,13 @@ export default function ResultChatPanel({
       isContextSliced: trimmed.length > MAX_CONTEXT_CHARS,
     };
   }, [context]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     setMessages([]);
@@ -146,6 +165,7 @@ export default function ResultChatPanel({
         model,
         language,
       });
+      if (!mountedRef.current) return;
       setMessages((prev) => [
         ...prev,
         {
@@ -158,11 +178,12 @@ export default function ResultChatPanel({
         },
       ]);
     } catch (err) {
+      if (!mountedRef.current) return;
       const message = err instanceof Error ? err.message : '채팅 요청에 실패했습니다.';
       setError(message);
       toast.error(message);
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
   }
 

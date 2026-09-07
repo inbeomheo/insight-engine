@@ -59,17 +59,20 @@ class HistoryEntry:
         )
 
     def to_row(self) -> dict:
-        """Supabase INSERT용 dict로 직렬화."""
+        """현재 ``ie_histories`` 스키마의 INSERT 행으로 직렬화."""
         return {
             "user_id": str(self.owner_id),
             "report_id": str(self.report_id),
-            "url": self.url,
-            "title": self.title,
-            "style": self.style,
+            "url": self.url or "",
+            "title": self.title or "",
+            "style": self.style or "unknown",
             "content": self.content,
             "html": self.html,
-            "transcript": self.transcript,
-            "transcript_source": self.transcript_source,
+            "transcript_preview": (
+                self.transcript[:500]
+                if isinstance(self.transcript, str)
+                else None
+            ),
             "mindmap_markdown": self.mindmap_markdown,
             "keywords": self.keywords,
             "usage": self.usage,

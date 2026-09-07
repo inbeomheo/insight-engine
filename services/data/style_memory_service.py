@@ -3,7 +3,10 @@
 사용자의 과거 콘텐츠 생성 패턴을 분석하여 개인화된 스타일 프로필을 학습하고,
 AI 프롬프트에 자동 주입하는 기능을 담당합니다.
 """
-from services.data.supabase_service import get_supabase, is_supabase_enabled
+from src.shared.infrastructure.supabase_client import (
+    get_user_supabase,
+    is_supabase_enabled,
+)
 from services.core.logging_config import supabase_logger as logger
 import logging
 
@@ -66,7 +69,11 @@ def _db_op(name: str, default, fn):
         return default
 
 
-def get_profile(user_id: str) -> dict:
+def get_profile(
+    user_id: str,
+    *,
+    validated_access_token: str | None = None,
+) -> dict:
     """사용자의 스타일 프로필을 조회합니다.
 
     Supabase 비활성화 또는 프로필 없음 시 기본값을 반환합니다.
@@ -81,7 +88,9 @@ def get_profile(user_id: str) -> dict:
         return dict(DEFAULT_PROFILE)
 
     try:
-        supabase = get_supabase()
+        supabase = get_user_supabase(
+            validated_access_token=validated_access_token,
+        )
         if not supabase:
             return dict(DEFAULT_PROFILE)
 
@@ -142,7 +151,12 @@ def _build_new_profile_data(user_id: str, style_id: str, length: str, writing_st
     }
 
 
-def update_profile(user_id: str, generation_params: dict) -> None:
+def update_profile(
+    user_id: str,
+    generation_params: dict,
+    *,
+    validated_access_token: str | None = None,
+) -> None:
     """생성 완료 시 사용자 스타일 프로필을 업데이트합니다.
 
     Args:
@@ -153,7 +167,9 @@ def update_profile(user_id: str, generation_params: dict) -> None:
         if not is_supabase_enabled():
             return
 
-        supabase = get_supabase()
+        supabase = get_user_supabase(
+            validated_access_token=validated_access_token,
+        )
         if not supabase:
             return
 
@@ -211,7 +227,7 @@ def save_user_preferences(user_id: str, preferences: dict) -> bool:
         return False
 
     try:
-        supabase = get_supabase()
+        supabase = get_user_supabase()
         if not supabase:
             return False
 
@@ -251,7 +267,7 @@ def reset_profile(user_id: str) -> bool:
         return False
 
     try:
-        supabase = get_supabase()
+        supabase = get_user_supabase()
         if not supabase:
             return False
 

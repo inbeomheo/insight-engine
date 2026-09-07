@@ -1,3 +1,5 @@
+import { getAccountStorageKey } from './storage';
+
 export type NoteStudyKind = 'learning' | 'review';
 
 export interface NoteStudyCounts {
@@ -56,8 +58,8 @@ export interface NextNoteStudyTargetMarkdownInput {
 
 type NoteStudyStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 
-export function getNoteStudyProgressKey(noteId: string): string {
-  return `ie_note_study_progress:${noteId}`;
+export function getNoteStudyProgressKey(noteId: string, namespace?: string): string {
+  return getAccountStorageKey(`ie_note_study_progress:${noteId}`, namespace);
 }
 
 function sanitizeIndexes(value: unknown, max: number): number[] {

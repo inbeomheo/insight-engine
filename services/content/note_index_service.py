@@ -5,6 +5,7 @@ import re
 from typing import Any
 
 from config import CHROMA_DB_PATH
+from services.content.note_service import owner_scope_for
 from services.core.logging_config import get_logger
 from services.rag.chroma_client_factory import get_chroma_client
 
@@ -19,47 +20,61 @@ _QUERY_TOKEN_PATTERN = re.compile(r"[^\W_]+", re.UNICODE)
 logger = get_logger(__name__)
 
 
-def index_note(note: dict[str, Any]) -> None:
+def index_note(note: dict[str, Any], *, owner_id: str | None) -> None:
     """Upsert one knowledge note into the dedicated notes collection."""
     note_id = _required_note_id(note)
+    owner_scope = owner_scope_for(owner_id)
     document = _build_searchable_text(note)
     if not document:
         raise ValueError("[노트 인덱싱 실패] 검색 가능한 내용이 없습니다.")
 
     _get_collection().upsert(
-        ids=[note_id],
+        ids=[_scoped_index_id(note_id, owner_scope)],
         documents=[document],
-        metadatas=[_build_metadata(note)],
+        metadatas=[_build_metadata(note, owner_scope=owner_scope)],
     )
     logger.info("Knowledge note indexed: %s", note_id)
 
 
-def remove_note(note_id: str) -> None:
+def remove_note(note_id: str, *, owner_id: str | None) -> None:
     """Remove a note from the notes collection."""
     note_id = str(note_id or "").strip()
     if not note_id:
         raise ValueError("[노트 인덱싱 실패] 노트 ID가 필요합니다.")
-    _get_collection().delete(ids=[note_id])
+    owner_scope = owner_scope_for(owner_id)
+    _get_collection().delete(ids=[_scoped_index_id(note_id, owner_scope)])
 
 
-def search_notes(query: str, limit: int = DEFAULT_SEARCH_LIMIT) -> list[dict[str, Any]]:
+def search_notes(
+    query: str,
+    *,
+    owner_id: str | None,
+    limit: int = DEFAULT_SEARCH_LIMIT,
+) -> list[dict[str, Any]]:
     """Search similar notes by ChromaDB text query."""
     query = _normalize_whitespace(query)
     if not query:
         return []
 
     collection = _get_collection()
+    owner_scope = owner_scope_for(owner_id)
     count = collection.count()
     if count == 0:
         return []
 
     n_results = min(_normalize_limit(limit), count)
-    results = collection.query(query_texts=[query], n_results=n_results)
-    return _map_results(results, query=query)
+    results = collection.query(
+        query_texts=[query],
+        n_results=n_results,
+        where={"owner_scope": owner_scope},
+    )
+    return _map_results(results, query=query, expected_owner_scope=owner_scope)
 
 
 def get_related_notes(
     note: dict[str, Any],
+    *,
+    owner_id: str | None,
     limit: int = DEFAULT_RELATED_LIMIT,
 ) -> list[dict[str, Any]]:
     """Return similar notes, excluding the note itself."""
@@ -69,16 +84,21 @@ def get_related_notes(
         return []
 
     collection = _get_collection()
+    owner_scope = owner_scope_for(owner_id)
     count = collection.count()
     if count == 0:
         return []
 
     normalized_limit = _normalize_related_limit(limit)
     n_results = min(normalized_limit + 1, count, MAX_SEARCH_LIMIT)
-    results = collection.query(query_texts=[query], n_results=n_results)
+    results = collection.query(
+        query_texts=[query],
+        n_results=n_results,
+        where={"owner_scope": owner_scope},
+    )
     related = [
         result
-        for result in _map_results(results)
+        for result in _map_results(results, expected_owner_scope=owner_scope)
         if result.get("id") and result.get("id") != note_id
     ]
     return related[:normalized_limit]
@@ -126,13 +146,19 @@ def _build_searchable_text(note: dict[str, Any]) -> str:
     return "\n".join(parts).strip()
 
 
-def _build_metadata(note: dict[str, Any]) -> dict[str, str]:
+def _build_metadata(note: dict[str, Any], *, owner_scope: str) -> dict[str, str]:
     source = note.get("source") if isinstance(note.get("source"), dict) else {}
     return {
         "title": str(source.get("title", "")).strip(),
         "source_url": str(source.get("url", "")).strip(),
         "created_at": str(note.get("created_at", "")).strip(),
+        "note_id": _required_note_id(note),
+        "owner_scope": owner_scope,
     }
+
+
+def _scoped_index_id(note_id: str, owner_scope: str) -> str:
+    return f"{owner_scope}:{note_id}"
 
 
 def _str_list(value: Any) -> list[str]:
@@ -190,6 +216,7 @@ def _map_results(
     results: dict[str, Any] | None,
     *,
     query: Any = None,
+    expected_owner_scope: str | None = None,
 ) -> list[dict[str, Any]]:
     ids = _first_result_list(results, "ids")
     documents = _first_result_list(results, "documents")
@@ -199,7 +226,14 @@ def _map_results(
     mapped: list[dict[str, Any]] = []
     for idx, document in enumerate(documents):
         metadata = metadatas[idx] if idx < len(metadatas) and isinstance(metadatas[idx], dict) else {}
-        note_id = str(ids[idx]) if idx < len(ids) else ""
+        if expected_owner_scope is not None and metadata.get("owner_scope") != expected_owner_scope:
+            continue
+        if expected_owner_scope is not None:
+            note_id = str(metadata.get("note_id") or "").strip()
+            if not note_id:
+                continue
+        else:
+            note_id = str(metadata.get("note_id") or (ids[idx] if idx < len(ids) else ""))
         distance = distances[idx] if idx < len(distances) else None
         snippet, highlight_ranges = _snippet_with_highlights(document, query)
         mapped.append({

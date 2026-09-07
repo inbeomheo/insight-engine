@@ -6,9 +6,11 @@ Google Docs 텍스트 추출 서비스
 """
 import logging
 import re
-from typing import Dict
+from typing import Callable, Dict, Optional
 
 import requests
+
+from services.usage.usage_lock import UsageLockUnavailable
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +31,12 @@ def _extract_doc_id(url: str) -> str:
     return m.group(1)
 
 
-def extract_google_doc(url: str, api_key: str = None) -> Dict:
+def extract_google_doc(
+    url: str,
+    api_key: str = None,
+    *,
+    on_cost_start: Optional[Callable[[], None]] = None,
+) -> Dict:
     """Google Docs에서 텍스트를 추출합니다.
 
     공개 문서는 export URL로 직접 다운로드하고,
@@ -67,7 +74,12 @@ def extract_google_doc(url: str, api_key: str = None) -> Dict:
 
     # 2차: Google Docs API (api_key 필요)
     if api_key:
-        return _extract_via_api(doc_id, api_key, url)
+        return _extract_via_api(
+            doc_id,
+            api_key,
+            url,
+            on_cost_start=on_cost_start,
+        )
 
     raise ValueError(
         'Google Docs에 접근할 수 없습니다. '
@@ -75,9 +87,23 @@ def extract_google_doc(url: str, api_key: str = None) -> Dict:
     )
 
 
-def _extract_via_api(doc_id: str, api_key: str, original_url: str) -> Dict:
+def _extract_via_api(
+    doc_id: str,
+    api_key: str,
+    original_url: str,
+    *,
+    on_cost_start: Optional[Callable[[], None]] = None,
+) -> Dict:
     """Google Docs API로 문서 텍스트를 추출합니다."""
     api_url = f'https://docs.googleapis.com/v1/documents/{doc_id}'
+    try:
+        if callable(on_cost_start):
+            on_cost_start()
+        else:
+            from services.usage.usage_decorator import mark_usage_charge_committed
+            mark_usage_charge_committed()
+    except UsageLockUnavailable:
+        raise
     resp = requests.get(
         api_url,
         params={'key': api_key},

@@ -190,14 +190,14 @@ export default function SupportAssistant() {
       <Button
         type="button"
         className={cn(
-          'fixed bottom-24 right-5 z-[70] h-12 rounded-full border border-foreground bg-primary px-4 text-sm font-black text-primary-foreground shadow-[4px_4px_0_var(--foreground)]',
-          'hover:bg-primary/95 xl:bottom-6 xl:right-6',
+          'fixed bottom-24 right-4 z-[70] h-11 w-11 rounded-full border border-foreground bg-primary p-0 text-sm font-black text-primary-foreground shadow-[3px_3px_0_var(--foreground)]',
+          'hover:bg-primary/95 xl:bottom-6 xl:right-6 xl:h-12 xl:w-auto xl:px-4 xl:shadow-[4px_4px_0_var(--foreground)]',
         )}
         onClick={() => setOpen(true)}
         aria-label="도움말/피드백 열기"
       >
         <Bot className="h-4 w-4" />
-        도움말/피드백
+        <span className="hidden xl:inline">도움말/피드백</span>
       </Button>
 
       {open && (

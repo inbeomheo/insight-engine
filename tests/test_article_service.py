@@ -1,11 +1,26 @@
 """article_service 단위 테스트."""
 from __future__ import annotations
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
-from services.content.article_service import MAX_ARTICLE_BYTES, fetch_article
+from services.content.article_service import (
+    MAX_ARTICLE_BYTES,
+    _get_from_resolved_url,
+    fetch_article,
+)
+from utils.url_safety import ResolvedPublicURL
+
+
+_PUBLIC_TARGET = ResolvedPublicURL(
+    scheme='https',
+    hostname='example.com',
+    port=443,
+    ip='93.184.216.34',
+    request_target='/news',
+    host_header='example.com',
+)
 
 
 class _FakeResponse:
@@ -49,8 +64,9 @@ def test_fetch_article_extracts_article_tag():
 
     with (
         patch("services.content.article_service.is_safe_public_url", return_value=True),
+        patch("services.content.article_service.resolve_public_url", return_value=_PUBLIC_TARGET),
         patch(
-            "services.content.article_service.requests.get",
+            "services.content.article_service._get_from_resolved_url",
             return_value=_FakeResponse(html),
         ),
     ):
@@ -81,8 +97,9 @@ def test_fetch_article_rejects_oversized_response():
 
     with (
         patch("services.content.article_service.is_safe_public_url", return_value=True),
+        patch("services.content.article_service.resolve_public_url", return_value=_PUBLIC_TARGET),
         patch(
-            "services.content.article_service.requests.get",
+            "services.content.article_service._get_from_resolved_url",
             return_value=_FakeResponse(b"", headers=headers),
         ),
     ):
@@ -107,8 +124,9 @@ def test_fetch_article_detects_euc_kr_meta_charset_without_header_charset():
 
     with (
         patch("services.content.article_service.is_safe_public_url", return_value=True),
+        patch("services.content.article_service.resolve_public_url", return_value=_PUBLIC_TARGET),
         patch(
-            "services.content.article_service.requests.get",
+            "services.content.article_service._get_from_resolved_url",
             return_value=_FakeResponse(
                 html,
                 headers={"Content-Type": "text/html"},
@@ -125,8 +143,9 @@ def test_fetch_article_detects_euc_kr_meta_charset_without_header_charset():
 def test_fetch_article_rejects_non_html_content_type():
     with (
         patch("services.content.article_service.is_safe_public_url", return_value=True),
+        patch("services.content.article_service.resolve_public_url", return_value=_PUBLIC_TARGET),
         patch(
-            "services.content.article_service.requests.get",
+            "services.content.article_service._get_from_resolved_url",
             return_value=_FakeResponse(
                 b'{"ok": true}',
                 headers={"Content-Type": "application/json"},
@@ -135,3 +154,69 @@ def test_fetch_article_rejects_non_html_content_type():
     ):
         with pytest.raises(ValueError, match="HTML 문서만 가져올 수 있습니다"):
             fetch_article("https://example.com/data.json")
+
+
+def test_fetch_article_connects_to_the_ip_returned_by_final_dns_validation():
+    html = (
+        b'<html><body><article><p>'
+        + b'public article body ' * 5
+        + b'</p></article></body></html>'
+    )
+    rebound_safe_target = ResolvedPublicURL(
+        scheme='http',
+        hostname='rebind.example',
+        port=80,
+        ip='203.0.113.10',
+        request_target='/article',
+        host_header='rebind.example',
+    )
+
+    with (
+        patch("services.content.article_service.is_safe_public_url", return_value=True),
+        patch(
+            "services.content.article_service.resolve_public_url",
+            return_value=rebound_safe_target,
+        ),
+        patch(
+            "services.content.article_service._get_from_resolved_url",
+            return_value=_FakeResponse(html),
+        ) as get_resolved,
+    ):
+        fetch_article('http://rebind.example/article')
+
+    assert get_resolved.call_args.args[0].ip == '203.0.113.10'
+
+
+def test_synthetic_requests_response_iter_content_uses_buffered_body():
+    """실제 requests.Response가 raw=None이어도 iter_content가 동작합니다."""
+    target = ResolvedPublicURL(
+        scheme='http',
+        hostname='example.com',
+        port=80,
+        ip='93.184.216.34',
+        request_target='/article',
+        host_header='example.com',
+    )
+    body = b'<html><body>buffered article</body></html>'
+    raw_response = MagicMock(
+        status=200,
+        reason='OK',
+        getheaders=MagicMock(return_value=[('Content-Type', 'text/html')]),
+        read=MagicMock(return_value=body),
+    )
+    connection = MagicMock()
+    connection.getresponse.return_value = raw_response
+    sock = MagicMock()
+
+    with (
+        patch('services.content.article_service._connect_to_ip', return_value=sock),
+        patch(
+            'services.content.article_service.http.client.HTTPConnection',
+            return_value=connection,
+        ),
+    ):
+        response = _get_from_resolved_url(target, {}, (1, 2))
+
+    assert response.raw is None
+    assert b''.join(response.iter_content(chunk_size=7)) == body
+    assert response._content_consumed is True

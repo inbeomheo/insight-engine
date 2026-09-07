@@ -1,8 +1,16 @@
 'use client';
 
 // I18nProvider — 전역 로케일 상태를 React Context로 관리
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
-import { type Locale, getStoredLocale, storeLocale, translate, loadLocale } from './index';
+import { createContext, useContext, useState, useCallback, useEffect, useRef, type ReactNode } from 'react';
+import {
+  type Locale,
+  type TranslationDict,
+  getStoredLocale,
+  storeLocale,
+  translateWithMessages,
+  loadLocale,
+  translations,
+} from './index';
 
 interface I18nContextValue {
   locale: Locale;
@@ -14,22 +22,37 @@ const I18nContext = createContext<I18nContextValue | null>(null);
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(() => getStoredLocale());
+  const [messages, setMessages] = useState<TranslationDict>(() => translations[locale]);
+  const localeRequestRef = useRef(0);
 
   const setLocale = useCallback(async (newLocale: Locale) => {
-    await loadLocale(newLocale);
+    const requestId = ++localeRequestRef.current;
+    const loadedMessages = await loadLocale(newLocale);
+    if (requestId !== localeRequestRef.current) return;
+    setMessages(loadedMessages);
     setLocaleState(newLocale);
     storeLocale(newLocale);
   }, []);
 
-  // 초기 로케일이 ko가 아닌 경우 동적 로드
+  // 저장된 초기 로케일을 동적으로 로드하고, 언마운트/전환 후의 늦은 응답은 무시한다.
   useEffect(() => {
-    if (locale !== 'ko') loadLocale(locale).then(() => setLocaleState(l => l));
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    const requestId = ++localeRequestRef.current;
+    void loadLocale(locale).then((loadedMessages) => {
+      if (requestId === localeRequestRef.current) setMessages(loadedMessages);
+    });
+    return () => {
+      if (requestId === localeRequestRef.current) localeRequestRef.current += 1;
+    };
+  }, [locale]);
+
+  useEffect(() => {
+    document.documentElement.lang = locale;
+  }, [locale]);
 
   const t = useCallback(
     (key: string, params?: Record<string, string | number>) =>
-      translate(locale, key, params),
-    [locale]
+      translateWithMessages(locale, key, messages, params),
+    [locale, messages]
   );
 
   return (

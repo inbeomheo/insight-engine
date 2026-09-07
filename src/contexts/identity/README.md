@@ -1,13 +1,14 @@
 # Identity & Access BC
 
 ## 책임
-인증·계정·API 키·사용량·크레딧·RBAC를 단일 권위로 관리하는 Bounded Context.
+인증·계정·API 키·사용량·RBAC를 단일 권위로 관리하며, 미래 Billing 경계를 위한
+크레딧 값 객체만 보유하는 Bounded Context.
 
 ## 유비쿼터스 언어
 - **UserAccount**: 인증 가능한 사용자 단위 (auth.users.id를 AccountId로)
 - **ApiKey**: BYO(Bring Your Own) 또는 공유 키. 평문은 Vault에만 존재
 - **UsageQuota**: 일일 사용량 카운터 (기본 20회, decrement_usage_safe RPC로 원자적 차감)
-- **CreditBalance**: 결제 기반 크레딧 잔액 (Billing BC와 연동)
+- **CreditBalance**: 미래 Billing BC 연동용 값 객체. 현재 영속 원장은 없으며 항상 0으로 조립
 - **RbacRole**: admin/owner/editor/viewer 역할
 
 ## Aggregate
@@ -24,6 +25,7 @@
 - Identity → Infrastructure: Supabase 클라이언트는 `_get_client()`로 lazy
 
 ## 현재 진척
-- Phase 2-a/b/c: 기반 구조 완료 (이 디렉토리)
-- Phase 2-d/e/f: NotImplementedError 영역 — 다음 PR
-- Phase 2-g: 50개 호출처 점진 마이그레이션
+- 계정 조회·저장, API 키 Vault, 단일 사용량 차감 구현 완료
+- 비용 작업용 멱등 예약·소유권 검증·환불 원장 구현 완료
+- 결제 크레딧은 미구현 상태를 명시하며, 존재하지 않는 `ie_credits` 테이블로 폴백하지 않음
+- 기존 `services/data/*` 직접 호출처는 ACL 뒤로 점진 마이그레이션 중

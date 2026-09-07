@@ -389,6 +389,41 @@ class TestPersistGenerationResult(unittest.TestCase):
             cached_payload = current_app.ai_cache.put.call_args.args[6]
             self.assertEqual(cached_payload['source_receipts'], result['source_receipts'])
             self.assertEqual(cached_payload['citations'], result['citations'])
+            self.assertNotIn('prompt', cached_payload)
+            self.assertNotIn('prompt_length', cached_payload)
+
+    def test_authenticated_personal_context_is_not_written_to_shared_cache(self):
+        from app import create_app
+        from routes.generation_helpers import _persist_generation_result
+
+        class ImmediateThread:
+            def __init__(self, target, args=(), kwargs=None, daemon=None):
+                self.target = target
+                self.args = args
+                self.kwargs = kwargs or {}
+
+            def start(self):
+                self.target(*self.args, **self.kwargs)
+
+        app = create_app()
+        app.config['TESTING'] = True
+        with app.test_request_context():
+            from flask import current_app, g
+            g.user_id = 'private-user'
+            current_app.ai_cache = MagicMock()
+            with patch('threading.Thread', ImmediateThread), patch(
+                'routes.generation_helpers.save_history'
+            ) as mock_history:
+                _persist_generation_result(
+                    'private-key', 'video',
+                    {'model': 'chatmock/gpt-5.4-mini', 'style': 'summary', 'modifiers': {}},
+                    'https://youtu.be/video', 'YT',
+                    {'title': 'private', 'content': 'RAG secret', 'html': '<p>RAG secret</p>'},
+                    'private prompt', None, 'transcript', 'api', [], 1.0, 'report-id',
+                )
+
+            current_app.ai_cache.put.assert_not_called()
+            mock_history.assert_called_once()
 
 
 if __name__ == '__main__':

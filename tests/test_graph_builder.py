@@ -23,6 +23,28 @@ def _mock_llm_response(content: str):
 
 class TestCallLLM(unittest.TestCase):
 
+    @patch('services.usage.usage_decorator.mark_usage_charge_committed')
+    @patch('services.rag.graph_builder.litellm')
+    def test_explicit_callback_runs_at_provider_boundary(
+        self,
+        mock_litellm,
+        mock_mark,
+    ):
+        events = []
+        mock_litellm.completion.side_effect = lambda **_kwargs: (
+            events.append('provider')
+            or _mock_llm_response('{"entities": [], "relations": []}')
+        )
+
+        _call_llm(
+            'text',
+            'model',
+            on_cost_start=lambda: events.append('cost'),
+        )
+
+        self.assertEqual(events, ['cost', 'provider'])
+        mock_mark.assert_not_called()
+
     @patch('services.rag.graph_builder.litellm')
     def test_successful_extraction(self, mock_litellm):
         resp_json = '{"entities": [{"name": "Python", "type": "technology"}], "relations": []}'
@@ -45,11 +67,28 @@ class TestCallLLM(unittest.TestCase):
         self.assertEqual(result["entities"], [])
         self.assertEqual(result["relations"], [])
 
+    @patch('services.usage.usage_decorator.mark_usage_charge_committed')
     @patch('services.rag.graph_builder.litellm')
-    def test_llm_exception(self, mock_litellm):
-        mock_litellm.completion.side_effect = Exception("API 에러")
+    def test_llm_exception_keeps_charge_committed(self, mock_litellm, mock_mark):
+        def fail_after_provider_start(**_kwargs):
+            self.assertTrue(mock_mark.called)
+            raise Exception("API 에러")
+
+        mock_litellm.completion.side_effect = fail_after_provider_start
         result = _call_llm("text", "model")
         self.assertEqual(result["entities"], [])
+        mock_mark.assert_called_once_with()
+
+    @patch('services.usage.usage_decorator.mark_usage_charge_committed')
+    @patch('services.rag.graph_builder.litellm')
+    def test_usage_lock_loss_is_not_swallowed(self, mock_litellm, mock_mark):
+        from services.usage.usage_lock import UsageLockUnavailable
+
+        mock_mark.side_effect = UsageLockUnavailable('lease lost')
+        with self.assertRaises(UsageLockUnavailable):
+            _call_llm("text", "model")
+
+        mock_litellm.completion.assert_not_called()
 
 
 class TestExtractEntities(unittest.TestCase):
@@ -169,7 +208,11 @@ class TestExtractGraphFromChunks(unittest.TestCase):
     def test_skips_empty_chunks(self, mock_extract):
         mock_extract.return_value = {"entities": [{"name": "X"}], "relations": []}
         result = extract_graph_from_chunks(["", "  ", "valid"])
-        mock_extract.assert_called_once_with("valid", model=unittest.mock.ANY)
+        mock_extract.assert_called_once_with(
+            "valid",
+            model=unittest.mock.ANY,
+            on_cost_start=None,
+        )
 
 
 if __name__ == "__main__":

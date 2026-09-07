@@ -6,6 +6,8 @@ import json
 import logging
 import os
 from typing import Any, Dict, List
+from urllib.parse import urlsplit, urlunsplit
+from uuid import uuid4
 
 logger = logging.getLogger(__name__)
 
@@ -22,87 +24,88 @@ except ImportError:
 
 # ── MCP 도구 정의 ─────────────────────────────────────────────────────────────
 
-MCP_TOOLS = [
-    {
-        "name": "generate_content",
-        "description": "YouTube URL에서 AI 콘텐츠 생성 (블로그, 요약, 튜토리얼 등)",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "url": {"type": "string", "description": "YouTube URL"},
-                "style_id": {
-                    "type": "string",
-                    "description": "콘텐츠 스타일",
-                    "enum": ["blog_seo", "summary", "tutorial", "qna", "sns_post"]
-                },
-                "language": {
-                    "type": "string",
-                    "description": "출력 언어",
-                    "enum": ["ko", "en", "ja"],
-                    "default": "ko"
-                },
-                "length": {
-                    "type": "string",
-                    "enum": ["short", "medium", "long"],
-                    "default": "medium"
-                }
-            },
-            "required": ["url"]
-        }
+_ANALYZE_COMPLEXITY_TOOL = {
+    "name": "analyze_complexity",
+    "description": "콘텐츠 복잡도 및 가독성 분석",
+    "inputSchema": {
+        "type": "object",
+        "properties": {
+            "content": {
+                "type": "string",
+                "description": "분석할 콘텐츠",
+                "maxLength": 100000,
+            }
+        },
+        "required": ["content"],
+        "additionalProperties": False,
     },
-    {
-        "name": "search_knowledge",
-        "description": "RAG 지식베이스에서 관련 정보 검색",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "query": {"type": "string", "description": "검색 쿼리"},
-                "user_id": {"type": "string", "description": "검색할 사용자 ID"},
-                "top_k": {"type": "integer", "description": "결과 수", "default": 5}
+}
+
+_GENERATE_CONTENT_TOOL = {
+    "name": "generate_content",
+    "description": "YouTube URL에서 AI 콘텐츠 생성 (블로그, 요약, 튜토리얼 등)",
+    "inputSchema": {
+        "type": "object",
+        "properties": {
+            "url": {
+                "type": "string",
+                "description": "YouTube URL",
+                "maxLength": 2048,
             },
-            "required": ["query", "user_id"]
-        }
+            "style_id": {
+                "type": "string",
+                "description": "콘텐츠 스타일",
+                "enum": ["blog_seo", "summary", "tutorial", "qna", "sns_post"],
+            },
+            "language": {
+                "type": "string",
+                "description": "출력 언어",
+                "enum": ["ko", "en", "ja"],
+                "default": "ko",
+            },
+            "length": {
+                "type": "string",
+                "enum": ["short", "medium", "long"],
+                "default": "medium",
+            },
+        },
+        "required": ["url"],
+        "additionalProperties": False,
     },
-    {
-        "name": "analyze_complexity",
-        "description": "콘텐츠 복잡도 및 가독성 분석",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "content": {"type": "string", "description": "분석할 콘텐츠"}
-            },
-            "required": ["content"]
-        }
-    },
-    {
-        "name": "repurpose_content",
-        "description": "콘텐츠를 다양한 포맷으로 재활용 변환",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "content": {"type": "string"},
-                "target_format": {
-                    "type": "string",
-                    "enum": ["twitter_thread", "linkedin_post", "youtube_shorts_script",
-                             "email_newsletter", "infographic_points"]
-                }
-            },
-            "required": ["content", "target_format"]
-        }
-    },
-    {
-        "name": "translate_content",
-        "description": "콘텐츠 번역 (ko/en/ja)",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "text": {"type": "string"},
-                "target_lang": {"type": "string", "enum": ["ko", "en", "ja"]}
-            },
-            "required": ["text", "target_lang"]
-        }
-    }
-]
+}
+
+# Backwards-compatible constant containing only tools that are always safe.
+# Config-dependent tools are returned by get_mcp_tools_schema().
+MCP_TOOLS = [_ANALYZE_COMPLEXITY_TOOL]
+
+
+class MCPToolUnavailable(RuntimeError):
+    """Raised when an MCP tool is not safely configured on the server."""
+
+
+def _get_api_token() -> str:
+    token = os.getenv("INSIGHT_ENGINE_API_TOKEN", "").strip()
+    if "\r" in token or "\n" in token:
+        return ""
+    return token
+
+
+def _get_generate_endpoint() -> str:
+    """Return a validated server-controlled /generate endpoint."""
+    raw_base = os.getenv("INSIGHT_ENGINE_URL", "http://localhost:5001").strip()
+    parsed = urlsplit(raw_base)
+    if (
+        parsed.scheme not in {"http", "https"}
+        or not parsed.netloc
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise MCPToolUnavailable("MCP 콘텐츠 생성 서버 설정이 올바르지 않습니다.")
+
+    base_path = parsed.path.rstrip("/")
+    return urlunsplit((parsed.scheme, parsed.netloc, f"{base_path}/generate", "", ""))
 
 
 # ── 도구 실행 핸들러 ──────────────────────────────────────────────────────────
@@ -111,68 +114,75 @@ async def handle_generate_content(args: Dict[str, Any]) -> str:
     """generate_content 도구 핸들러"""
     import httpx
 
-    base_url = os.getenv('INSIGHT_ENGINE_URL', 'http://localhost:5001')
-    async with httpx.AsyncClient(timeout=120) as client:
-        resp = await client.post(f"{base_url}/generate", json={
-            'url': args['url'],
-            'style_id': args.get('style_id', 'blog_seo'),
-            'language': args.get('language', 'ko'),
-            'length': args.get('length', 'medium'),
-        })
-    resp.raise_for_status()
-    data = resp.json()
-    return data.get('content', data.get('error', '생성 실패'))
+    api_token = _get_api_token()
+    if not api_token:
+        raise MCPToolUnavailable("MCP 콘텐츠 생성이 구성되지 않았습니다.")
 
+    url = args.get("url")
+    if not isinstance(url, str) or not url.strip() or len(url) > 2048:
+        return "콘텐츠 생성 요청이 올바르지 않습니다."
 
-async def handle_search_knowledge(args: Dict[str, Any]) -> str:
-    """search_knowledge 도구 핸들러"""
-    user_id = args.get('user_id')
-    if not user_id:
-        return "검색 실패: 사용자 ID(user_id)가 필요합니다."
+    style_id = args.get("style_id", "blog_seo")
+    language = args.get("language", "ko")
+    length = args.get("length", "medium")
+    if style_id not in {"blog_seo", "summary", "tutorial", "qna", "sns_post"}:
+        return "콘텐츠 생성 요청이 올바르지 않습니다."
+    if language not in {"ko", "en", "ja"} or length not in {"short", "medium", "long"}:
+        return "콘텐츠 생성 요청이 올바르지 않습니다."
 
     try:
-        from services.rag import context_builder
-        context = context_builder.build_context(
-            user_id,
-            args['query'],
-            top_k=args.get('top_k', 5),
+        endpoint = _get_generate_endpoint()
+        headers = {
+            "Authorization": f"Bearer {api_token}",
+            "Idempotency-Key": f"mcp-{uuid4().hex}",
+        }
+        async with httpx.AsyncClient(timeout=120) as client:
+            resp = await client.post(
+                endpoint,
+                headers=headers,
+                json={
+                    "url": url.strip(),
+                    "style": style_id,
+                    "modifiers": {
+                        "language": language,
+                        "length": length,
+                    },
+                },
+            )
+        if not 200 <= resp.status_code < 300:
+            logger.warning("MCP content generation failed (status=%s)", resp.status_code)
+            return "콘텐츠 생성에 실패했습니다. 잠시 후 다시 시도해 주세요."
+        data = resp.json()
+        content = data.get("content") if isinstance(data, dict) else None
+        if not isinstance(content, str) or not content:
+            return "콘텐츠 생성에 실패했습니다. 잠시 후 다시 시도해 주세요."
+        return content
+    except MCPToolUnavailable:
+        raise
+    except Exception as exc:
+        logger.warning(
+            "MCP content generation failed (%s)",
+            type(exc).__name__,
         )
-        return context or '검색 결과 없음'
-    except Exception as e:
-        return f"검색 실패: {e}"
+        return "콘텐츠 생성에 실패했습니다. 잠시 후 다시 시도해 주세요."
 
 
 async def handle_analyze_complexity(args: Dict[str, Any]) -> str:
     """analyze_complexity 도구 핸들러"""
     from services.analysis.complexity_service import ComplexityService
+
+    content = args.get("content")
+    if not isinstance(content, str) or not content or len(content) > 100000:
+        return "복잡도 분석 요청이 올바르지 않습니다."
     svc = ComplexityService()
-    report = svc.analyze(args['content'])
+    report = svc.analyze(content)
     result = report.to_dict()
     return json.dumps(result, ensure_ascii=False, indent=2)
 
 
-async def handle_repurpose_content(args: Dict[str, Any]) -> str:
-    """repurpose_content 도구 핸들러"""
-    from services.export.repurpose_service import RepurposeService
-    svc = RepurposeService()
-    result = svc.repurpose(args['content'], args['target_format'])
-    return result.get('content', '변환 실패')
-
-
-async def handle_translate_content(args: Dict[str, Any]) -> str:
-    """translate_content 도구 핸들러"""
-    from services.transcript.realtime_translate_service import RealtimeTranslateService
-    svc = RealtimeTranslateService()
-    result = svc.translate(args['text'], args['target_lang'])
-    return result.get('translated', '번역 실패')
-
-
 TOOL_HANDLERS = {
     'generate_content': handle_generate_content,
-    'search_knowledge': handle_search_knowledge,
     'analyze_complexity': handle_analyze_complexity,
-    'repurpose_content': handle_repurpose_content,
-    'translate_content': handle_translate_content,
 }
 
 
@@ -193,14 +203,17 @@ def create_mcp_server():
                 description=tool['description'],
                 inputSchema=tool['inputSchema'],
             )
-            for tool in MCP_TOOLS
+            for tool in get_mcp_tools_schema()
         ]
 
     @server.call_tool()
     async def call_tool(name: str, arguments: Dict[str, Any]):
+        enabled_names = {tool["name"] for tool in get_mcp_tools_schema()}
+        if name not in enabled_names:
+            raise MCPToolUnavailable("요청한 MCP 도구를 사용할 수 없습니다.")
         handler = TOOL_HANDLERS.get(name)
         if not handler:
-            raise ValueError(f"알 수 없는 도구: {name}")
+            raise MCPToolUnavailable("요청한 MCP 도구를 사용할 수 없습니다.")
 
         result = await handler(arguments)
         return [mcp_types.TextContent(type="text", text=str(result))]
@@ -234,7 +247,15 @@ async def run_mcp_server():
 
 def get_mcp_tools_schema() -> List[Dict]:
     """도구 스키마 반환 (REST API용)"""
-    return MCP_TOOLS
+    tools = list(MCP_TOOLS)
+    if _get_api_token():
+        try:
+            _get_generate_endpoint()
+        except MCPToolUnavailable:
+            logger.warning("MCP content generation is disabled by invalid server URL")
+        else:
+            tools.append(_GENERATE_CONTENT_TOOL)
+    return tools
 
 
 if __name__ == "__main__":

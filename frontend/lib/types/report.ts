@@ -152,6 +152,11 @@ export interface NlpAnalysis {
 
 export interface Report {
   id: string;
+  /**
+   * 현재 SSE 스트림이 이 임시 보고서를 갱신 중인지 여부.
+   * 기존 localStorage 보고서에는 없을 수 있으며, 없으면 false로 해석한다.
+   */
+  is_streaming?: boolean;
   url: string;
   youtube_title: string;
   source_type?: 'text' | 'document' | 'voice' | 'article' | string;

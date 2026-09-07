@@ -58,25 +58,20 @@ test.describe('페이지 로드 성능 @parallel @no-auth @performance', () => {
     expect(renderTime).toBeLessThan(2000);
   });
 
-  test('메모리 누수 없이 반복 로드 가능', async ({ page }) => {
-    // 여러 번 페이지 로드
+  test('반복 로드 후 회수된 힙 사용량이 16MB 이상 증가하지 않는다', async ({ page }) => {
+    const client = await page.context().newCDPSession(page);
+    await client.send('Performance.enable');
+    const heapSizes: number[] = [];
     for (let i = 0; i < 3; i++) {
       await page.goto('/');
       await page.waitForLoadState('networkidle');
+      await client.send('HeapProfiler.collectGarbage');
+      const { metrics } = await client.send('Performance.getMetrics');
+      const heap = metrics.find((metric) => metric.name === 'JSHeapUsedSize');
+      expect(heap).toBeDefined();
+      heapSizes.push(heap!.value);
     }
-
-    // 마지막 로드 후 메모리 체크 (가능한 경우)
-    const metrics = await page.evaluate(() => {
-      if ('memory' in performance) {
-        return (performance as any).memory;
-      }
-      return null;
-    });
-
-    if (metrics) {
-      console.log(`Used JS Heap: ${Math.round(metrics.usedJSHeapSize / 1024 / 1024)}MB`);
-    }
-
-    expect(true).toBeTruthy();
+    expect(heapSizes[2] - heapSizes[0]).toBeLessThan(16 * 1024 * 1024);
+    await client.detach();
   });
 });

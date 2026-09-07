@@ -4,12 +4,14 @@ from __future__ import annotations
 import math
 from typing import Any
 
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, current_app, g, jsonify, request
 
 from extensions import limiter
 from routes.blog_routes import DEFAULT_MODEL
 from services.content import note_index_service
 from services.core import ai_service
+from services.usage import require_usage
+from services.usage.usage_lock import UsageLockUnavailable
 from src.contexts.identity.interface.auth_decorators import require_auth
 from utils.responses import api_error, handle_error
 
@@ -27,6 +29,7 @@ MIN_RAG_SOURCE_SCORE = 0.25
 @chat_bp.route("/api/chat", methods=["POST"])
 @limiter.limit("20/minute")
 @require_auth
+@require_usage
 def chat():
     data = request.get_json(silent=True) or {}
     validation_error, payload = _validate_payload(data)
@@ -39,8 +42,12 @@ def chat():
     model = payload["model"]
     language = payload["language"]
 
-    notes = _filter_supported_notes(_search_related_notes(question))
+    notes = _filter_supported_notes(
+        _search_related_notes(question, owner_id=g.get("user_id"))
+    )
     if notes is None:
+        # 유사도 기준을 통과한 근거가 없어 AI 호출 비용이 발생하지 않았다.
+        g.skip_usage_decrement = True
         return jsonify({
             "answer": "[근거 부족] 관련 지식 노트의 유사도가 낮아 답변을 생성하지 않았습니다.",
             "notes": [],
@@ -63,16 +70,25 @@ def chat():
             "rag_sources": _build_rag_sources(notes),
             "usage": result.get("usage", {}),
         })
+    except UsageLockUnavailable:
+        raise
     except Exception as exc:
         current_app.logger.error("Chat answer generation failed: %s", exc, exc_info=True)
         return handle_error(str(exc))
 
 
 def _validate_payload(data: dict[str, Any]) -> tuple[str | None, dict[str, Any]]:
+    from services.core.ai_service import resolve_public_model
+
     question = data.get("question", "")
     context = data.get("context", "")
     history = data.get("history") or []
-    model = data.get("model") if isinstance(data.get("model"), str) else DEFAULT_MODEL
+    try:
+        model = resolve_public_model(
+            data.get("model"), DEFAULT_MODEL, allow_auto=False
+        )
+    except ValueError as exc:
+        return str(exc), {}
     language = data.get("language") if isinstance(data.get("language"), str) else "ko"
     language = language.strip().lower()
     if language not in ALLOWED_LANGUAGES:
@@ -112,14 +128,22 @@ def _validate_payload(data: dict[str, Any]) -> tuple[str | None, dict[str, Any]]
         "question": question,
         "context": context,
         "history": normalized_history,
-        "model": model.strip() or DEFAULT_MODEL,
+        "model": model,
         "language": language,
     }
 
 
-def _search_related_notes(question: str) -> list[dict[str, Any]]:
+def _search_related_notes(
+    question: str,
+    *,
+    owner_id: str | None,
+) -> list[dict[str, Any]]:
     try:
-        return note_index_service.search_notes(question, limit=3)
+        return note_index_service.search_notes(
+            question,
+            owner_id=owner_id,
+            limit=3,
+        )
     except Exception as exc:
         current_app.logger.warning("Chat note search failed (ignored): %s", exc)
         return []

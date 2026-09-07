@@ -4,7 +4,7 @@ graph_store(저장소)와 graph_builder(추출기)를 활용하여
 텍스트에서 지식 그래프를 자동 구축하고 검색합니다.
 """
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from services.rag.graph_store import graph_store, GraphStore
 from services.rag.graph_builder import extract_graph
@@ -23,7 +23,13 @@ class GraphRAGEngine:
         self.store = store or graph_store
         self.model = model  # LLM 모델 ID (None이면 graph_builder 기본 모델 사용)
 
-    def ingest(self, user_id: str, text: str) -> Dict[str, int]:
+    def ingest(
+        self,
+        user_id: str,
+        text: str,
+        *,
+        on_cost_start: Optional[Callable[[], None]] = None,
+    ) -> Dict[str, int]:
         """텍스트에서 엔티티/관계를 자동 추출하여 그래프에 추가합니다.
 
         Args:
@@ -36,6 +42,8 @@ class GraphRAGEngine:
         kwargs = {}
         if self.model:
             kwargs["model"] = self.model
+        if callable(on_cost_start):
+            kwargs["on_cost_start"] = on_cost_start
 
         result = extract_graph(text, **kwargs)
         entities = result.get("entities", [])

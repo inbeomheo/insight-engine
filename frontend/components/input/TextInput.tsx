@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import type { ChangeEvent } from 'react';
 import { ArrowUp, FileText, Loader2, Type } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import InputWrapper from '@/components/ui/InputWrapper';
 import { extractAudio, extractDocument } from '@/lib/api';
+import { getAuthSession } from '@/lib/auth-session';
+import { useAuthUserId } from '@/hooks/useAuthUserId';
 
 // 최소/최대 길이는 서버 config.DIRECT_TEXT_MIN_CHARS / DIRECT_TEXT_MAX_CHARS와 맞춘다.
 const MIN_CHARS = 50;
@@ -25,12 +27,68 @@ interface TextInputProps {
   isLoading: boolean;
 }
 
-export default function TextInput({ value, onChange, onGenerate, isLoading }: TextInputProps) {
+function createAbortError(): DOMException {
+  return new DOMException('파일 추출 작업이 중단됐습니다.', 'AbortError');
+}
+
+function waitForAbortable<T>(operation: Promise<T>, signal: AbortSignal): Promise<T> {
+  if (signal.aborted) return Promise.reject(createAbortError());
+
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => {
+      signal.removeEventListener('abort', onAbort);
+      reject(createAbortError());
+    };
+    signal.addEventListener('abort', onAbort, { once: true });
+    operation.then(
+      (value) => {
+        signal.removeEventListener('abort', onAbort);
+        resolve(value);
+      },
+      (error) => {
+        signal.removeEventListener('abort', onAbort);
+        reject(error);
+      },
+    );
+  });
+}
+
+export default function TextInput(props: TextInputProps) {
+  const authUserId = useAuthUserId();
+  return (
+    <AccountTextInput
+      key={`text-input:${authUserId ?? 'anonymous'}`}
+      {...props}
+      ownerId={authUserId}
+    />
+  );
+}
+
+function AccountTextInput({
+  value,
+  onChange,
+  onGenerate,
+  isLoading,
+  ownerId,
+}: TextInputProps & { ownerId: string | null }) {
   const [focused, setFocused] = useState(false);
   const [isExtractingFile, setIsExtractingFile] = useState(false);
   const [fileNotice, setFileNotice] = useState<string | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const extractionEpochRef = useRef(0);
+  const extractionAbortRef = useRef<AbortController | null>(null);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      extractionEpochRef.current += 1;
+      extractionAbortRef.current?.abort();
+      extractionAbortRef.current = null;
+    };
+  }, []);
 
   const charCount = value.length;
   const isValid = charCount >= MIN_CHARS && charCount <= MAX_CHARS;
@@ -61,22 +119,43 @@ export default function TextInput({ value, onChange, onGenerate, isLoading }: Te
       return;
     }
 
+    extractionAbortRef.current?.abort();
+    const controller = new AbortController();
+    const extractionEpoch = extractionEpochRef.current + 1;
+    extractionEpochRef.current = extractionEpoch;
+    extractionAbortRef.current = controller;
+
+    const ownsExtraction = () =>
+      mountedRef.current
+      && extractionEpochRef.current === extractionEpoch
+      && extractionAbortRef.current === controller
+      && (getAuthSession()?.user.id ?? null) === ownerId;
+    const canApplyExtraction = () => ownsExtraction() && !controller.signal.aborted;
+
     setIsExtractingFile(true);
     setFileError(null);
     setFileNotice(null);
     try {
       const isAudio = AUDIO_EXTENSIONS.has(getFileExtension(file));
-      const result = isAudio ? await extractAudio(file) : await extractDocument(file);
+      const result = await waitForAbortable(
+        isAudio ? extractAudio(file) : extractDocument(file),
+        controller.signal,
+      );
+      if (!canApplyExtraction()) return;
       onChange(result.text.slice(0, MAX_CHARS));
-      if (result.truncated) {
+      if (canApplyExtraction() && result.truncated) {
         setFileNotice(`${isAudio ? '음성 전사' : '문서'} 내용이 최대 길이에 맞춰 일부 잘렸습니다.`);
       }
     } catch (err) {
+      if ((err as DOMException)?.name === 'AbortError' || !canApplyExtraction()) return;
       setFileError(err instanceof Error ? err.message : '파일을 불러오지 못했습니다.');
     } finally {
-      setIsExtractingFile(false);
+      if (ownsExtraction()) {
+        setIsExtractingFile(false);
+        extractionAbortRef.current = null;
+      }
     }
-  }, [onChange, value]);
+  }, [onChange, ownerId, value]);
 
   return (
     <div>

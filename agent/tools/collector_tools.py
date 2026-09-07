@@ -9,7 +9,8 @@ from __future__ import annotations
 import json
 import logging
 
-from agent.registry import registry
+from agent.registry import TOOL_EXECUTION_ERROR_MESSAGE, registry
+from services.usage.usage_lock import UsageLockUnavailable
 
 logger = logging.getLogger(__name__)
 
@@ -25,15 +26,25 @@ def _handle_collect_content(args: dict, **kwargs) -> str:
         return json.dumps({"error": "url이 필요합니다."})
 
     try:
-        result = collect_content(url, source_type=source_type)
+        result = collect_content(
+            url,
+            source_type=source_type,
+            on_cost_start=(
+                kwargs.get("on_cost_start")
+                if callable(kwargs.get("on_cost_start"))
+                else None
+            ),
+        )
         # 콘텐츠가 너무 길면 자르기 (LLM 컨텍스트 보호)
         content = result.get("content", "")
         if len(content) > 50000:
             result["content"] = content[:50000] + f"\n\n... [콘텐츠 축약: {len(content)}자 → 50000자]"
             result["truncated"] = True
         return json.dumps(result, ensure_ascii=False, default=str)
-    except Exception as e:
-        return json.dumps({"error": f"콘텐츠 수집 실패: {e}"}, ensure_ascii=False)
+    except UsageLockUnavailable:
+        raise
+    except Exception:
+        return json.dumps({"error": TOOL_EXECUTION_ERROR_MESSAGE}, ensure_ascii=False)
 
 
 def _handle_detect_source(args: dict, **kwargs) -> str:

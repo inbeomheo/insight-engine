@@ -2,6 +2,9 @@ from unittest.mock import MagicMock, patch
 
 from services.content import note_index_service
 
+_OWNER_ID = "user-a"
+_OWNER_SCOPE = note_index_service.owner_scope_for(_OWNER_ID)
+
 
 def _note():
     return {
@@ -30,7 +33,7 @@ def _mock_collection(mock_get_client):
 def test_index_note_upserts_searchable_text_and_metadata(mock_get_client):
     collection, client = _mock_collection(mock_get_client)
 
-    note_index_service.index_note(_note())
+    note_index_service.index_note(_note(), owner_id=_OWNER_ID)
 
     client.get_or_create_collection.assert_called_once_with(
         name=note_index_service.NOTES_COLLECTION_NAME,
@@ -38,7 +41,7 @@ def test_index_note_upserts_searchable_text_and_metadata(mock_get_client):
     )
     collection.upsert.assert_called_once()
     kwargs = collection.upsert.call_args.kwargs
-    assert kwargs["ids"] == ["note-1"]
+    assert kwargs["ids"] == [f"{_OWNER_SCOPE}:note-1"]
     assert "개념 A" in kwargs["documents"][0]
     assert "핵심 요약입니다." in kwargs["documents"][0]
     assert "학습 포인트" in kwargs["documents"][0]
@@ -49,6 +52,8 @@ def test_index_note_upserts_searchable_text_and_metadata(mock_get_client):
         "title": "테스트 글",
         "source_url": "https://example.com/a",
         "created_at": "2026-07-04T12:00:00Z",
+        "note_id": "note-1",
+        "owner_scope": _OWNER_SCOPE,
     }]
 
 
@@ -59,13 +64,20 @@ def test_search_notes_returns_mapped_results(mock_get_client):
     collection.query.return_value = {
         "ids": [["note-1", "note-2"]],
         "documents": [["AI 요약 A", "요약 B"]],
-        "metadatas": [[{"title": "글 A"}, {"title": "글 B"}]],
+        "metadatas": [[
+            {"title": "글 A", "note_id": "note-1", "owner_scope": _OWNER_SCOPE},
+            {"title": "글 B", "note_id": "note-2", "owner_scope": _OWNER_SCOPE},
+        ]],
         "distances": [[0.2, 0.8]],
     }
 
-    results = note_index_service.search_notes("AI", limit=5)
+    results = note_index_service.search_notes("AI", owner_id=_OWNER_ID, limit=5)
 
-    collection.query.assert_called_once_with(query_texts=["AI"], n_results=2)
+    collection.query.assert_called_once_with(
+        query_texts=["AI"],
+        n_results=2,
+        where={"owner_scope": _OWNER_SCOPE},
+    )
     assert results == [
         {"id": "note-1", "title": "글 A", "score": 0.8, "snippet": "AI 요약 A", "highlight_ranges": [[0, 2]]},
         {"id": "note-2", "title": "글 B", "score": 0.2, "snippet": "요약 B", "highlight_ranges": []},
@@ -77,7 +89,7 @@ def test_search_notes_empty_collection_returns_empty_list(mock_get_client):
     collection, _ = _mock_collection(mock_get_client)
     collection.count.return_value = 0
 
-    assert note_index_service.search_notes("AI") == []
+    assert note_index_service.search_notes("AI", owner_id=_OWNER_ID) == []
     collection.query.assert_not_called()
 
 
@@ -89,18 +101,18 @@ def test_get_related_notes_excludes_self_and_limits(mock_get_client):
         "ids": [["note-1", "note-2", "note-3"]],
         "documents": [["요약 self", "요약 B", "요약 C"]],
         "metadatas": [[
-            {"title": "현재 글"},
-            {"title": "관련 글 B"},
-            {"title": "관련 글 C"},
+            {"title": "현재 글", "note_id": "note-1", "owner_scope": _OWNER_SCOPE},
+            {"title": "관련 글 B", "note_id": "note-2", "owner_scope": _OWNER_SCOPE},
+            {"title": "관련 글 C", "note_id": "note-3", "owner_scope": _OWNER_SCOPE},
         ]],
         "distances": [[0.0, 0.1, 0.3]],
     }
 
-    results = note_index_service.get_related_notes(_note(), limit=2)
+    results = note_index_service.get_related_notes(_note(), owner_id=_OWNER_ID, limit=2)
 
     collection.query.assert_called_once_with(query_texts=[
         "핵심 개념: 개념 A, 개념 B\n요약: 핵심 요약입니다.\n학습 포인트: 핵심 요약을 실무에 적용한다.\n복습 질문: 무엇을 적용하나? 핵심 요약입니다.\n근거 인용: 근거 문장 p1\n태그: AI, 학습"
-    ], n_results=3)
+    ], n_results=3, where={"owner_scope": _OWNER_SCOPE})
     assert [item["id"] for item in results] == ["note-2", "note-3"]
     assert results[0]["title"] == "관련 글 B"
     assert all(item["highlight_ranges"] == [] for item in results)
@@ -113,15 +125,19 @@ def test_get_related_notes_searches_single_other_note_when_self_missing(mock_get
     collection.query.return_value = {
         "ids": [["note-2"]],
         "documents": [["요약 B"]],
-        "metadatas": [[{"title": "관련 글 B"}]],
+        "metadatas": [[{
+            "title": "관련 글 B",
+            "note_id": "note-2",
+            "owner_scope": _OWNER_SCOPE,
+        }]],
         "distances": [[0.1]],
     }
 
-    results = note_index_service.get_related_notes(_note(), limit=3)
+    results = note_index_service.get_related_notes(_note(), owner_id=_OWNER_ID, limit=3)
 
     collection.query.assert_called_once_with(query_texts=[
         "핵심 개념: 개념 A, 개념 B\n요약: 핵심 요약입니다.\n학습 포인트: 핵심 요약을 실무에 적용한다.\n복습 질문: 무엇을 적용하나? 핵심 요약입니다.\n근거 인용: 근거 문장 p1\n태그: AI, 학습"
-    ], n_results=1)
+    ], n_results=1, where={"owner_scope": _OWNER_SCOPE})
     assert [item["id"] for item in results] == ["note-2"]
 
 
@@ -132,20 +148,27 @@ def test_get_related_notes_uses_related_default_and_caps_query_limit(mock_get_cl
     collection.query.return_value = {
         "ids": [[f"note-{idx}" for idx in range(1, 21)]],
         "documents": [["요약"] * 20],
-        "metadatas": [[{}] * 20],
+        "metadatas": [[{
+            "note_id": f"note-{idx}",
+            "owner_scope": _OWNER_SCOPE,
+        } for idx in range(1, 21)]],
         "distances": [[0.1] * 20],
     }
 
-    note_index_service.get_related_notes(_note(), limit=None)
+    note_index_service.get_related_notes(_note(), owner_id=_OWNER_ID, limit=None)
     collection.query.assert_called_once_with(query_texts=[
         "핵심 개념: 개념 A, 개념 B\n요약: 핵심 요약입니다.\n학습 포인트: 핵심 요약을 실무에 적용한다.\n복습 질문: 무엇을 적용하나? 핵심 요약입니다.\n근거 인용: 근거 문장 p1\n태그: AI, 학습"
-    ], n_results=4)
+    ], n_results=4, where={"owner_scope": _OWNER_SCOPE})
 
     collection.query.reset_mock()
-    capped_results = note_index_service.get_related_notes(_note(), limit=20)
+    capped_results = note_index_service.get_related_notes(
+        _note(),
+        owner_id=_OWNER_ID,
+        limit=20,
+    )
     collection.query.assert_called_once_with(query_texts=[
         "핵심 개념: 개념 A, 개념 B\n요약: 핵심 요약입니다.\n학습 포인트: 핵심 요약을 실무에 적용한다.\n복습 질문: 무엇을 적용하나? 핵심 요약입니다.\n근거 인용: 근거 문장 p1\n태그: AI, 학습"
-    ], n_results=20)
+    ], n_results=20, where={"owner_scope": _OWNER_SCOPE})
     assert len(capped_results) == 19
 
 
@@ -153,9 +176,9 @@ def test_get_related_notes_uses_related_default_and_caps_query_limit(mock_get_cl
 def test_remove_note_deletes_id(mock_get_client):
     collection, _ = _mock_collection(mock_get_client)
 
-    note_index_service.remove_note("note-1")
+    note_index_service.remove_note("note-1", owner_id=_OWNER_ID)
 
-    collection.delete.assert_called_once_with(ids=["note-1"])
+    collection.delete.assert_called_once_with(ids=[f"{_OWNER_SCOPE}:note-1"])
 
 
 def test_snippet_centers_late_exact_phrase_with_prefix_ellipsis():
@@ -348,10 +371,18 @@ def test_search_notes_passes_normalized_query_to_result_mapping(mock_get_client,
     mock_map_results.return_value = []
     query = "  target" + chr(10) + " phrase  "
 
-    note_index_service.search_notes(query)
+    note_index_service.search_notes(query, owner_id=_OWNER_ID)
 
-    collection.query.assert_called_once_with(query_texts=["target phrase"], n_results=1)
-    mock_map_results.assert_called_once_with(collection.query.return_value, query="target phrase")
+    collection.query.assert_called_once_with(
+        query_texts=["target phrase"],
+        n_results=1,
+        where={"owner_scope": _OWNER_SCOPE},
+    )
+    mock_map_results.assert_called_once_with(
+        collection.query.return_value,
+        query="target phrase",
+        expected_owner_scope=_OWNER_SCOPE,
+    )
 
 
 @patch("services.content.note_index_service._map_results")
@@ -362,9 +393,37 @@ def test_get_related_notes_keeps_leading_snippet_mapping(mock_get_client, mock_m
     collection.query.return_value = {"documents": [["document"]]}
     mock_map_results.return_value = []
 
-    note_index_service.get_related_notes(_note())
+    note_index_service.get_related_notes(_note(), owner_id=_OWNER_ID)
 
-    mock_map_results.assert_called_once_with(collection.query.return_value)
+    mock_map_results.assert_called_once_with(
+        collection.query.return_value,
+        expected_owner_scope=_OWNER_SCOPE,
+    )
+
+
+@patch("services.content.note_index_service.get_chroma_client")
+def test_search_notes_filters_and_rejects_cross_owner_results(mock_get_client):
+    collection, _ = _mock_collection(mock_get_client)
+    collection.count.return_value = 2
+    collection.query.return_value = {
+        "ids": [[f"{_OWNER_SCOPE}:mine", "other-scope:theirs"]],
+        "documents": [["내 근거", "다른 사용자 비밀"]],
+        "metadatas": [[
+            {"title": "내 노트", "note_id": "mine", "owner_scope": _OWNER_SCOPE},
+            {"title": "타인 노트", "note_id": "theirs", "owner_scope": "other-scope"},
+        ]],
+        "distances": [[0.1, 0.1]],
+    }
+
+    results = note_index_service.search_notes("근거", owner_id=_OWNER_ID)
+
+    assert [item["id"] for item in results] == ["mine"]
+    assert all("비밀" not in item["snippet"] for item in results)
+    collection.query.assert_called_once_with(
+        query_texts=["근거"],
+        n_results=2,
+        where={"owner_scope": _OWNER_SCOPE},
+    )
 
 
 def test_map_results_uses_query_context_for_search_snippet():

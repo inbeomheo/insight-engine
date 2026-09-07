@@ -8,8 +8,14 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import ChatMessage from './components/ChatMessage';
 import { useAgentChat } from './hooks/useAgentChat';
 import { cn } from '@/lib/utils';
+import { useAuthUserId } from '@/hooks/useAuthUserId';
 
 export default function AgentPage() {
+  const authUserId = useAuthUserId();
+  return <AccountAgentPage key={`agent:${authUserId ?? 'anonymous'}`} />;
+}
+
+function AccountAgentPage() {
   const { messages, isStreaming, sessionId, progress, sendMessage, stopStreaming, newSession } =
     useAgentChat();
 

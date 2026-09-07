@@ -2,13 +2,19 @@
 
 utility_routes.py에서 분리됨. playlist 캐시는 utility_routes에서 가져와 공유.
 """
-import time
+from flask import Response, current_app, g, jsonify, request
 
-from flask import Response, current_app, jsonify, request
-
+from extensions import limiter
 from routes.blog_routes import blog_bp
-from routes.utility._state import _PLAYLIST_CACHE, _PLAYLIST_CACHE_TTL
+from routes.utility._state import (
+    PlaylistCacheUnavailable,
+    PlaylistLoadError,
+    get_or_load_playlist_cache,
+)
 from services.core import content_service
+from services.usage import require_usage
+from services.usage.usage_decorator import capture_usage_charge_callback
+from services.usage.usage_lock import UsageLockUnavailable
 from src.contexts.identity.interface.auth_decorators import require_auth
 from services.platform.webhook_service import WebhookService
 from utils.responses import api_error, sanitize_error_for_client
@@ -43,43 +49,87 @@ def webhook_test():
 
 
 @blog_bp.route('/api/playlist-videos', methods=['POST'])
+@limiter.limit("20/minute")
 @require_auth
+@require_usage
 def playlist_videos():
     """채널 또는 재생목록 URL에서 영상 목록을 추출합니다."""
     try:
         data = request.get_json(silent=True) or {}
         url = data.get('url', '')
-        max_results = min(int(data.get('maxResults', 10)), 50)
+        if not isinstance(url, str):
+            return api_error('URL은 문자열이어야 합니다.', 400)
+        url = url.strip()
+        if len(url) > 2_048:
+            return api_error('URL이 너무 깁니다.', 400)
+        try:
+            max_results = int(data.get('maxResults', 10))
+        except (TypeError, ValueError):
+            return api_error('maxResults는 정수여야 합니다.', 400)
+        max_results = max(1, min(max_results, 50))
 
         if not url:
             return api_error('URL이 필요합니다.', 400)
 
-        # 캐시 키: URL + max_results
-        cache_key = f"{url}|{max_results}"
-        now = time.time()
-
-        # 캐시 히트 확인 (TTL 5분)
-        cached = _PLAYLIST_CACHE.get(cache_key)
-        if cached and (now - cached['ts']) < _PLAYLIST_CACHE_TTL:
-            result = cached['data']
-            result['cached'] = True
-            return jsonify(result)
-
         if content_service.is_playlist_url(url):
-            result = content_service.get_playlist_videos(url, max_results)
+            playlist_id = content_service._get_playlist_id(url)
+            if not playlist_id:
+                return api_error('유효한 재생목록 URL이 아닙니다.', 400)
+            source_kind = 'playlist'
+            source_id = playlist_id
         elif content_service.is_channel_url(url):
-            result = content_service.get_channel_videos(url, max_results)
+            channel = content_service._get_channel_identifier(url)
+            if not channel:
+                return api_error('유효한 채널 URL이 아닙니다.', 400)
+            source_kind = f"channel:{channel['type']}"
+            source_id = channel['value'].lower()
         else:
             return api_error('유효한 채널 또는 재생목록 URL이 아닙니다.', 400)
 
-        if 'error' in result:
-            return jsonify(result), 400
+        # 쿼리 문자열 변형으로 캐시와 YouTube 쿼터를 우회할 수 없게 식별자만 사용합니다.
+        cache_key = f"{source_kind}:{source_id}:{max_results}"
+        on_cost_start = capture_usage_charge_callback()
 
-        # 성공 결과를 캐시에 저장
-        _PLAYLIST_CACHE[cache_key] = {'data': dict(result), 'ts': now}
+        def _load_videos():
+            if source_kind == 'playlist':
+                loaded = content_service.get_playlist_videos(
+                    url,
+                    max_results,
+                    on_cost_start=on_cost_start,
+                )
+            else:
+                loaded = content_service.get_channel_videos(
+                    url,
+                    max_results,
+                    on_cost_start=on_cost_start,
+                )
+            if not isinstance(loaded, dict):
+                raise RuntimeError('invalid playlist provider response')
+            # 오류 응답은 캐시하지 않습니다.
+            if 'error' in loaded:
+                raise PlaylistLoadError(
+                    str(loaded.get('error') or '재생목록 조회 실패')
+                )
+            return loaded
+
+        try:
+            result, cached = get_or_load_playlist_cache(cache_key, _load_videos)
+        except PlaylistCacheUnavailable:
+            return api_error('재생목록 조회가 일시적으로 혼잡합니다.', 503)
+        except PlaylistLoadError as exc:
+            return api_error(str(exc), 400)
+
+        if cached:
+            result = {**result, 'cached': True}
+
+        charge_state = getattr(g, 'usage_charge_state', None)
+        if charge_state is not None and not charge_state.committed:
+            g.skip_usage_decrement = True
 
         return jsonify(result)
 
+    except UsageLockUnavailable:
+        raise
     except Exception as e:
         current_app.logger.error(f"Playlist videos failed: {e}")
         return api_error('영상 목록을 가져올 수 없습니다.', 500)

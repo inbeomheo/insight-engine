@@ -86,6 +86,21 @@ class TestEditorAgent(unittest.TestCase):
 
     # --- _extract_title ---
 
+    @patch('litellm.completion')
+    def test_deep_long_edit_preserves_full_draft_when_provider_truncates(self, mock_llm):
+        draft = '# 긴 초안\n' + ('본문 문장입니다.\n' * 15000) + '\n마지막 결론 문단'
+        truncated = self._mock_completion('# 긴 초안\n중간에서 잘린 교정본')
+        truncated.choices[0].finish_reason = 'length'
+        quality = self._mock_completion('{"grade": "B"}')
+        quality.choices[0].finish_reason = 'stop'
+        mock_llm.side_effect = [truncated, quality]
+        result = self._make_agent().execute({
+            'draft': draft, 'detail_level': 'deep', 'modifiers': {'length': 'long'},
+        })
+        self.assertEqual(mock_llm.call_args_list[0].kwargs['max_tokens'], 32000)
+        self.assertEqual(result['edited_content'], draft)
+        self.assertTrue(result['edited_content'].endswith('마지막 결론 문단'))
+
     @patch('services.agents.base_agent.BaseAgent._get_default_model',
            return_value='gemini/gemini-3-flash-preview')
     def test_extract_title_from_h1(self, _):

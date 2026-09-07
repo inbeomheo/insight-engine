@@ -72,3 +72,19 @@ class TestToRow:
             {"id": "r-1", "mindmapMarkdown": "# Map"}, owner_id="u"
         )
         assert entry.to_row()["mindmap_markdown"] == "# Map"
+
+    def test_row_uses_bounded_schema_transcript_preview(self):
+        entry = HistoryEntry.from_dict(
+            {
+                "id": "r-1",
+                "transcript": "x" * 600,
+                "transcript_source": "api",
+            },
+            owner_id="u",
+        )
+
+        row = entry.to_row()
+
+        assert row["transcript_preview"] == "x" * 500
+        assert "transcript" not in row
+        assert "transcript_source" not in row

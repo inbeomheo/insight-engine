@@ -73,11 +73,15 @@ def main() -> int:
     env = os.environ.copy()
     env.update({
         'BROWSERSLIST_IGNORE_OLD_DATA': 'true',
+        'FLASK_ENV': 'testing',
         'NEXT_BACKEND_URL': BACKEND_URL,
         'NEXT_TELEMETRY_DISABLED': '1',
         'PLAYWRIGHT_MANAGED_SERVERS': '1',
         'SCHEDULER_ENABLED': 'false',
+        'SUPABASE_PUBLISHABLE_KEY': '',
+        'SUPABASE_SECRET_KEY': '',
         'SUPABASE_ANON_KEY': '',
+        'SUPABASE_SERVICE_ROLE_KEY': '',
         'SUPABASE_URL': '',
     })
 
@@ -99,10 +103,12 @@ def main() -> int:
         result = subprocess.run(
             [
                 npx,
+                '--no-install',
                 'playwright',
                 'test',
                 'main-page/ci-smoke.spec.ts',
                 '--project=no-auth-chromium',
+                '--workers=1',
             ],
             cwd=ROOT / 'tests' / 'e2e',
             env=env,

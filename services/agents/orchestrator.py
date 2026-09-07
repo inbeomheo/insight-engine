@@ -9,8 +9,11 @@ Flask는 동기 방식이므로 ThreadPoolExecutor를 사용합니다.
 import html as html_lib
 import logging
 import time
+from typing import Callable, Optional
 
 import markdown
+
+from services.usage.usage_lock import UsageLockUnavailable
 
 from .research_agent import ResearchAgent
 from .writer_agent import WriterAgent
@@ -30,19 +33,24 @@ class Orchestrator:
     Research 완료 후 순차 실행합니다.
     """
 
-    def __init__(self, model: str = None):
+    def __init__(
+        self,
+        model: str = None,
+        on_cost_start: Optional[Callable[[], None]] = None,
+    ):
         """
         Args:
             model: 모든 에이전트가 공유할 모델 ID. None이면 자동 선택.
         """
         self.model = model
-        self._research = ResearchAgent(model=model)
-        self._writer = WriterAgent(model=model)
-        self._editor = EditorAgent(model=model)
-        self._seo = SEOAgent(model=model)
+        self._research = ResearchAgent(model=model, on_cost_start=on_cost_start)
+        self._writer = WriterAgent(model=model, on_cost_start=on_cost_start)
+        self._editor = EditorAgent(model=model, on_cost_start=on_cost_start)
+        self._seo = SEOAgent(model=model, on_cost_start=on_cost_start)
 
     def run(self, transcript: str, style: str, style_prompt: str,
-            url: str = '', modifiers: dict = None, user_id: str = None) -> dict:
+            url: str = '', modifiers: dict = None, user_id: str = None,
+            detail_level: str = None, web_search: bool = False) -> dict:
         """전체 파이프라인을 실행합니다.
 
         Args:
@@ -52,6 +60,8 @@ class Orchestrator:
             url: YouTube 영상 URL (SEO 스키마 생성용, 옵션)
             modifiers: 모디파이어 dict (length, writing_style 등)
             user_id: 사용자 ID (로깅용, 옵션)
+            detail_level: 생성 상세도 (brief/standard/deep)
+            web_search: 사용자가 웹 검색 보강을 활성화했는지 여부
 
         Returns:
             {
@@ -78,6 +88,8 @@ class Orchestrator:
             'url': url,
             'modifiers': modifiers,
             'user_id': user_id,
+            'detail_level': detail_level,
+            'web_search': web_search,
         }
 
         agent_results = {}
@@ -89,6 +101,8 @@ class Orchestrator:
             agent_results['research'] = research_result
             context.update(research_result)
             logger.info(f'[Orchestrator] 1단계: Research 완료 — topic={research_result.get("main_topic", "")}')
+        except UsageLockUnavailable:
+            raise
         except Exception as e:
             logger.error(f'[Orchestrator] Research 실패: {e}')
             # Research 실패 시 빈 결과로 계속 진행
@@ -104,6 +118,8 @@ class Orchestrator:
             agent_results['writer'] = writer_result
             context.update(writer_result)
             logger.info('[Orchestrator] 2단계: Writer 완료')
+        except UsageLockUnavailable:
+            raise
         except Exception as e:
             logger.error(f'[Orchestrator] Writer 실패: {e}')
             raise RuntimeError(f'콘텐츠 작성 실패: {e}') from e
@@ -116,6 +132,8 @@ class Orchestrator:
             agent_results['editor'] = editor_result
             context.update(editor_result)
             logger.info(f'[Orchestrator] 3단계: Editor 완료 — grade={editor_result.get("quality", {}).get("grade", "?")}')
+        except UsageLockUnavailable:
+            raise
         except Exception as e:
             logger.error(f'[Orchestrator] Editor 실패: {e}')
             # Editor 실패 시 원본 초안 사용
@@ -133,6 +151,8 @@ class Orchestrator:
             agent_results['seo'] = seo_result
             context.update(seo_result)
             logger.info('[Orchestrator] 4단계: SEO 완료')
+        except UsageLockUnavailable:
+            raise
         except Exception as e:
             logger.error(f'[Orchestrator] SEO 실패 (무시): {e}')
             seo_result = {'agent': 'seo', 'meta_title': '', 'meta_description': '', 'keywords': [], 'faq': [], 'json_ld': {}}

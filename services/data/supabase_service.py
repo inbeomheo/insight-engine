@@ -24,7 +24,10 @@ from src.shared.infrastructure.supabase_client import (  # noqa: F401
     _lazy_create_client,
     decrypt_api_key,
     encrypt_api_key,
+    get_service_supabase,
     get_supabase,
+    get_user_supabase,
+    get_validated_request_access_token,
     is_supabase_enabled,
 )
 
@@ -48,28 +51,43 @@ def _db_operation(operation_name: str, default_return, operation_func):
         return default_return
 
 
-def save_history(user_id: str, data: dict) -> dict:
+def save_history(
+    user_id: str,
+    data: dict,
+    *,
+    validated_access_token: str | None = None,
+) -> dict | None:
     """분석 히스토리 저장
 
     P3 버그 #12: user_id가 None이면 저장하지 않고 None 반환 (의도된 동작)
     - 비로그인 사용자는 클라우드 저장 생략
     - 로컬 스토리지에서 별도 관리됨
     """
-    supabase = get_supabase()
-    if not supabase or not user_id:
+    if not user_id:
+        return None
+
+    supabase = get_user_supabase(
+        validated_access_token=validated_access_token,
+    )
+    if not supabase:
         return None
 
     def operation():
+        transcript = data.get('transcript')
+        transcript_preview = (
+            transcript[:500]
+            if isinstance(transcript, str)
+            else None
+        )
         result = supabase.table('ie_histories').insert({
             'user_id': user_id,
             'report_id': data.get('id'),
-            'url': data.get('url'),
-            'title': data.get('title'),
-            'style': data.get('style'),
+            'url': data.get('url') or '',
+            'title': data.get('title') or '',
+            'style': data.get('style') or 'unknown',
             'content': data.get('content'),
             'html': data.get('html'),
-            'transcript': data.get('transcript'),
-            'transcript_source': data.get('transcript_source'),
+            'transcript_preview': transcript_preview,
             'mindmap_markdown': data.get('mindmapMarkdown'),
             'keywords': data.get('keywords', []),
             'usage': data.get('usage'),
@@ -87,105 +105,72 @@ def save_history(user_id: str, data: dict) -> dict:
 MAX_USAGE_COUNT = 20  # 기본 최대 사용 횟수 (하루 20회)
 
 
-def get_usage(user_id: str) -> dict:
-    """사용자 사용량 조회. 없으면 새로 생성."""
-    supabase = get_supabase()
-    if not supabase or not user_id:
+def get_usage(
+    user_id: str,
+    *,
+    validated_access_token: str | None = None,
+) -> dict:
+    """사용자 사용량 조회. 없으면 새로 생성.
+
+    사용자 소유 RLS 테이블이므로 익명 클라이언트로 폴백하지 않는다. 일반 HTTP
+    요청에서는 ``require_auth``가 검증해 ``g``에 저장한 JWT를 사용하고, 요청
+    컨텍스트 밖에서는 호출자가 검증된 토큰을 명시적으로 넘겨야 한다.
+    """
+    if not user_id:
         return {'usage_count': 0, 'max_usage': MAX_USAGE_COUNT, 'can_use': False}
 
     def operation():
-        from datetime import date
-
-        # 사용량 조회 (.single() 대신 .limit(1) 사용하여 에러 방지)
-        result = supabase.table('ie_usage') \
-            .select('*') \
-            .eq('user_id', user_id) \
-            .limit(1) \
-            .execute()
-
-        if result.data and len(result.data) > 0:
-            data = result.data[0]
-            # 날짜가 바뀌면 사용량 리셋
-            last_reset = data.get('last_reset_date')
-            today = date.today().isoformat()
-
-            if last_reset != today:
-                # 사용량 리셋
-                supabase.table('ie_usage') \
-                    .update({
-                        'usage_count': MAX_USAGE_COUNT,
-                        'last_reset_date': today,
-                        'updated_at': 'now()'
-                    }) \
-                    .eq('user_id', user_id) \
-                    .execute()
-                return {
-                    'usage_count': MAX_USAGE_COUNT,
-                    'max_usage': data.get('max_usage', MAX_USAGE_COUNT),
-                    'can_use': True
-                }
-
+        supabase = get_user_supabase(
+            validated_access_token=validated_access_token,
+        )
+        if not supabase:
             return {
-                'usage_count': data.get('usage_count', 0),
-                'max_usage': data.get('max_usage', MAX_USAGE_COUNT),
-                'can_use': data.get('usage_count', 0) > 0
+                'usage_count': 0,
+                'max_usage': MAX_USAGE_COUNT,
+                'can_use': False,
             }
 
-        # 새 사용자: 레코드 생성
-        supabase.table('ie_usage').insert({
-            'user_id': user_id,
-            'usage_count': MAX_USAGE_COUNT,
-            'max_usage': MAX_USAGE_COUNT,
-            'last_reset_date': date.today().isoformat()
-        }).execute()
+        result = supabase.rpc(
+            'get_usage_safe',
+            {'p_user_id': user_id},
+        ).execute()
+        payload = getattr(result, 'data', None)
+        if not isinstance(payload, dict):
+            raise RuntimeError('get_usage_safe returned a malformed payload')
 
+        usage_count = int(payload.get('usage_count', 0))
+        max_usage = int(payload.get('max_usage', MAX_USAGE_COUNT))
         return {
-            'usage_count': MAX_USAGE_COUNT,
-            'max_usage': MAX_USAGE_COUNT,
-            'can_use': True
+            'usage_count': usage_count,
+            'max_usage': max_usage,
+            'can_use': bool(payload.get('can_use', usage_count > 0)),
         }
 
     return _db_operation('Usage fetch', {'usage_count': 0, 'max_usage': MAX_USAGE_COUNT, 'can_use': False}, operation)
 
 
-def decrement_usage(user_id: str) -> bool:
-    """사용량 1 차감. 원자적 RPC 함수 사용으로 Race Condition 방지."""
-    supabase = get_supabase()
-    if not supabase or not user_id:
+def decrement_usage(
+    user_id: str,
+    *,
+    validated_access_token: str | None = None,
+) -> bool:
+    """사용량 1회를 인증된 사용자 RPC로 원자적으로 차감한다."""
+    if not user_id:
         return False
 
     def operation():
-        # 원자적 차감 (Race Condition 방지)
-        try:
-            result = supabase.rpc('decrement_usage_safe', {'p_user_id': user_id}).execute()
-            if result.data:
-                return result.data.get('success', False)
+        supabase = get_user_supabase(
+            validated_access_token=validated_access_token,
+        )
+        if not supabase:
             return False
-        except Exception as e:
-            # RPC 함수가 없는 경우 기존 방식으로 폴백 (하위 호환성)
-            import logging
-            logging.warning(f"decrement_usage_safe RPC 실패, 폴백 사용: {e}")
 
-            # 폴백: 기존 방식 (Race Condition 가능성 있음)
-            result = supabase.table('ie_usage') \
-                .select('usage_count') \
-                .eq('user_id', user_id) \
-                .limit(1) \
-                .execute()
-
-            if not result.data or len(result.data) == 0 or result.data[0].get('usage_count', 0) <= 0:
-                return False
-
-            new_count = result.data[0]['usage_count'] - 1
-            supabase.table('ie_usage') \
-                .update({
-                    'usage_count': new_count,
-                    'updated_at': 'now()'
-                }) \
-                .eq('user_id', user_id) \
-                .execute()
-
-            return True
+        result = supabase.rpc(
+            'decrement_usage_safe',
+            {'p_user_id': user_id, 'p_amount': 1},
+        ).execute()
+        payload = getattr(result, 'data', None)
+        return bool(isinstance(payload, dict) and payload.get('success') is True)
 
     return _db_operation('Usage decrement', False, operation)
 

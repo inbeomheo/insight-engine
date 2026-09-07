@@ -56,12 +56,13 @@ class MainPageHelper {
     await this.dismissOnboarding();
   }
 
-  /** 온보딩 모달이 보이면 "시작하기" 클릭 */
+  /** 온보딩 모달이 보이면 시작 버튼으로 완료한다. */
   async dismissOnboarding() {
     const startBtn = this.page.getByRole('button', { name: '시작하기' });
     // 온보딩 모달 표시까지 잠시 대기
     const visible = await startBtn.isVisible().catch(() => false);
     if (visible) {
+      await expect(startBtn).toBeEnabled();
       await startBtn.click();
       // 모달 닫힘 대기
       await startBtn.waitFor({ state: 'hidden', timeout: 3000 }).catch(() => {});

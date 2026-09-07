@@ -16,13 +16,16 @@ import os
 import pkgutil
 from typing import Any, Dict, List
 
-from agent.registry import registry
+from agent.registry import TOOL_EXECUTION_ERROR_MESSAGE, registry
+from agent.tools._auto_register import build_parameters_schema
+from services.usage.usage_lock import UsageLockUnavailable
 
 logger = logging.getLogger(__name__)
 
 _ANALYSIS_DIR = os.path.join(
     os.path.dirname(__file__), "..", "..", "services", "analysis"
 )
+_HIDDEN_PARAMETERS = frozenset({"model", "on_cost_start"})
 
 # 대부분의 분석 함수가 content: str을 받으므로 기본 스키마
 _DEFAULT_PARAMS: Dict[str, Any] = {
@@ -68,33 +71,11 @@ def _resolve_json_type(annotation: Any) -> str:
 
 def _build_params_schema(sig: inspect.Signature) -> Dict[str, Any]:
     """함수 시그니처에서 JSON Schema를 빌드합니다."""
-    props: Dict[str, Any] = {}
-    required: List[str] = []
-
-    for pname, param in sig.parameters.items():
-        if pname in ("self", "cls", "kwargs", "args"):
-            continue
-
-        annotation = param.annotation
-        if annotation is inspect.Parameter.empty:
-            ptype = "string"
-        else:
-            ptype = _resolve_json_type(annotation)
-
-        prop_def: Dict[str, Any] = {"type": ptype}
-        # Gemini 요구: array 타입에 items 필수
-        if ptype == "array":
-            prop_def["items"] = {"type": "string"}
-        props[pname] = prop_def
-
-        # 기본값이 없으면 required
-        if param.default is inspect.Parameter.empty:
-            required.append(pname)
-
-    if not props:
-        return _DEFAULT_PARAMS
-
-    return {"type": "object", "properties": props, "required": required}
+    return build_parameters_schema(
+        sig,
+        default_content_description="분석할 텍스트 콘텐츠",
+        excluded_parameters=_HIDDEN_PARAMETERS,
+    )
 
 
 def _find_main_function(mod: Any) -> Any | None:
@@ -117,15 +98,31 @@ def _make_handler(func, param_names: List[str]):
     클로저 변수 캡처 문제를 피하기 위해 팩토리 함수 사용.
     """
     def handler(args: dict, **kwargs) -> str:
-        call_args = {k: args.get(k) for k in param_names if k in args}
+        call_args = {
+            key: args.get(key)
+            for key in param_names
+            if key not in _HIDDEN_PARAMETERS and key in args
+        }
+        on_cost_start = kwargs.get("on_cost_start")
+        if "on_cost_start" in param_names and callable(on_cost_start):
+            call_args["on_cost_start"] = on_cost_start
         try:
             result = func(**call_args)
             if isinstance(result, str):
                 return result
             return json.dumps(result, ensure_ascii=False, default=str)
-        except Exception as e:
-            logger.warning("analysis 도구 실행 실패: %s — %s", func.__name__, e)
-            return json.dumps({"error": str(e)}, ensure_ascii=False)
+        except UsageLockUnavailable:
+            raise
+        except Exception as exc:
+            logger.warning(
+                "analysis 도구 실행 실패: %s (type=%s)",
+                func.__name__,
+                type(exc).__name__,
+            )
+            return json.dumps(
+                {"error": TOOL_EXECUTION_ERROR_MESSAGE},
+                ensure_ascii=False,
+            )
     return handler
 
 
@@ -170,7 +167,11 @@ def _register_analysis_tools() -> int:
 
         # 파라미터 스키마
         sig = inspect.signature(fn)
-        params = _build_params_schema(sig)
+        params = build_parameters_schema(
+            fn,
+            default_content_description="분석할 텍스트 콘텐츠",
+            excluded_parameters=_HIDDEN_PARAMETERS,
+        )
 
         # 핸들러 클로저
         param_names = [

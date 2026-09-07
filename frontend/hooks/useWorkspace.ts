@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   getWorkspaces,
@@ -11,15 +11,49 @@ import {
   deleteWorkspace,
 } from '@/lib/api';
 import type { Workspace } from '@/lib/types';
+import {
+  getAuthScopeSnapshot,
+  isCurrentAuthScope,
+  protectedAuthMeta,
+  runProtectedMutation,
+  useAuthScope,
+  type AuthScope,
+} from '@/components/Providers';
+import { subscribeAuthSession } from '@/lib/auth-session';
 import { toast } from 'sonner';
 
 export function useWorkspace(enabled = false) {
   const queryClient = useQueryClient();
-  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
+  const authScope = useAuthScope();
+  const [activeWorkspaceSelection, setActiveWorkspaceSelection] = useState<{
+    authScope: AuthScope;
+    id: string | null;
+  }>(() => ({ authScope, id: null }));
+  const activeWorkspaceId = activeWorkspaceSelection.authScope === authScope
+    ? activeWorkspaceSelection.id
+    : null;
+  const workspacesQueryKey = ['protected', authScope, 'workspaces'] as const;
+  const membersQueryKey = [
+    'protected',
+    authScope,
+    'workspace-members',
+    activeWorkspaceId,
+  ] as const;
+
+  useEffect(() => {
+    return subscribeAuthSession(() => {
+      const nextAuthScope = getAuthScopeSnapshot();
+      setActiveWorkspaceSelection((current) =>
+        current.authScope === nextAuthScope
+          ? current
+          : { authScope: nextAuthScope, id: null },
+      );
+    });
+  }, []);
 
   // 워크스페이스 목록 (enabled일 때만 호출 — Supabase 비활성 시 불필요한 400 에러 방지)
   const workspacesQuery = useQuery({
-    queryKey: ['workspaces'],
+    queryKey: workspacesQueryKey,
     queryFn: async () => {
       const data = await getWorkspaces();
       return data.workspaces;
@@ -27,6 +61,7 @@ export function useWorkspace(enabled = false) {
     staleTime: 60_000,
     retry: false,
     enabled,
+    meta: protectedAuthMeta(authScope),
   });
 
   // 현재 워크스페이스
@@ -36,7 +71,7 @@ export function useWorkspace(enabled = false) {
 
   // 멤버 목록 (활성 워크스페이스가 있을 때만)
   const membersQuery = useQuery({
-    queryKey: ['workspace-members', activeWorkspaceId],
+    queryKey: membersQueryKey,
     queryFn: async () => {
       if (!activeWorkspaceId) return [];
       const data = await getWorkspaceMembers(activeWorkspaceId);
@@ -44,70 +79,95 @@ export function useWorkspace(enabled = false) {
     },
     enabled: !!activeWorkspaceId,
     staleTime: 30_000,
+    meta: protectedAuthMeta(authScope),
   });
 
   // 생성
   const createMutation = useMutation({
-    mutationFn: (name: string) => createWorkspace(name),
+    mutationKey: ['protected', authScope, 'workspaces', 'create'],
+    mutationFn: (name: string) =>
+      runProtectedMutation(authScope, () => createWorkspace(name)),
+    meta: protectedAuthMeta(authScope),
     onSuccess: (ws) => {
-      queryClient.invalidateQueries({ queryKey: ['workspaces'] });
-      setActiveWorkspaceId(ws.id);
+      if (!isCurrentAuthScope(authScope)) return;
+      void queryClient.invalidateQueries({ queryKey: workspacesQueryKey });
+      setActiveWorkspaceSelection({ authScope, id: ws.id });
       toast.success('워크스페이스가 생성되었습니다.');
     },
     onError: (err: Error) => {
+      if (!isCurrentAuthScope(authScope)) return;
       toast.error(err.message || '워크스페이스 생성 실패');
     },
   });
 
   // 초대
   const inviteMutation = useMutation({
-    mutationFn: ({ email, role }: { email: string; role: string }) => {
-      if (!activeWorkspaceId) throw new Error('워크스페이스를 선택해주세요.');
-      return inviteMember(activeWorkspaceId, email, role);
-    },
+    mutationKey: ['protected', authScope, 'workspace-members', activeWorkspaceId, 'invite'],
+    mutationFn: ({ email, role }: { email: string; role: string }) =>
+      runProtectedMutation(authScope, () => {
+        if (!activeWorkspaceId) throw new Error('워크스페이스를 선택해주세요.');
+        return inviteMember(activeWorkspaceId, email, role);
+      }),
+    meta: protectedAuthMeta(authScope),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['workspace-members', activeWorkspaceId] });
+      if (!isCurrentAuthScope(authScope)) return;
+      void queryClient.invalidateQueries({ queryKey: membersQueryKey });
       toast.success('멤버를 초대했습니다.');
     },
     onError: (err: Error) => {
+      if (!isCurrentAuthScope(authScope)) return;
       toast.error(err.message || '초대 실패');
     },
   });
 
   // 제거
   const removeMutation = useMutation({
-    mutationFn: (userId: string) => {
-      if (!activeWorkspaceId) throw new Error('워크스페이스를 선택해주세요.');
-      return removeMember(activeWorkspaceId, userId);
-    },
+    mutationKey: ['protected', authScope, 'workspace-members', activeWorkspaceId, 'remove'],
+    mutationFn: (userId: string) =>
+      runProtectedMutation(authScope, () => {
+        if (!activeWorkspaceId) throw new Error('워크스페이스를 선택해주세요.');
+        return removeMember(activeWorkspaceId, userId);
+      }),
+    meta: protectedAuthMeta(authScope),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['workspace-members', activeWorkspaceId] });
+      if (!isCurrentAuthScope(authScope)) return;
+      void queryClient.invalidateQueries({ queryKey: membersQueryKey });
       toast.success('멤버를 제거했습니다.');
     },
     onError: (err: Error) => {
+      if (!isCurrentAuthScope(authScope)) return;
       toast.error(err.message || '멤버 제거 실패');
     },
   });
 
   // 삭제
   const deleteMutation = useMutation({
-    mutationFn: () => {
-      if (!activeWorkspaceId) throw new Error('워크스페이스를 선택해주세요.');
-      return deleteWorkspace(activeWorkspaceId);
-    },
+    mutationKey: ['protected', authScope, 'workspaces', activeWorkspaceId, 'delete'],
+    mutationFn: () =>
+      runProtectedMutation(authScope, () => {
+        if (!activeWorkspaceId) throw new Error('워크스페이스를 선택해주세요.');
+        return deleteWorkspace(activeWorkspaceId);
+      }),
+    meta: protectedAuthMeta(authScope),
     onSuccess: () => {
-      setActiveWorkspaceId(null);
-      queryClient.invalidateQueries({ queryKey: ['workspaces'] });
+      if (!isCurrentAuthScope(authScope)) return;
+      setActiveWorkspaceSelection((current) =>
+        current.authScope === authScope && current.id === activeWorkspaceId
+          ? { authScope, id: null }
+          : current,
+      );
+      void queryClient.invalidateQueries({ queryKey: workspacesQueryKey });
       toast.success('워크스페이스가 삭제되었습니다.');
     },
     onError: (err: Error) => {
+      if (!isCurrentAuthScope(authScope)) return;
       toast.error(err.message || '삭제 실패');
     },
   });
 
   const switchWorkspace = useCallback((id: string | null) => {
-    setActiveWorkspaceId(id);
-  }, []);
+    setActiveWorkspaceSelection({ authScope, id });
+  }, [authScope]);
 
   return {
     workspaces: workspacesQuery.data ?? [],

@@ -37,31 +37,27 @@ class TestCleanupFile(unittest.TestCase):
 
 class TestDownloadAudio(unittest.TestCase):
 
-    @patch.dict('sys.modules', {'yt_dlp': None})
-    def test_no_yt_dlp(self):
-        """yt-dlp 미설치 → None"""
-        # yt_dlp import 실패 시뮬레이션
-        import importlib
-        import services.transcript.whisper_service as ws
-        with patch.object(ws, 'download_audio', wraps=ws.download_audio):
-            # 직접 ImportError를 시뮬레이션
-            with patch('builtins.__import__', side_effect=ImportError('no yt_dlp')):
-                result = download_audio('https://youtube.com/watch?v=test')
+    @patch(
+        'services.media.video_deepdive_service.run_monitored_download',
+        side_effect=OSError('no yt-dlp'),
+    )
+    def test_no_yt_dlp(self, _mock_download):
+        """yt-dlp 실행 실패 → None"""
+        result = download_audio('https://youtube.com/watch?v=dQw4w9WgXcQ')
         self.assertIsNone(result)
 
     def test_empty_audio_file(self):
         """오디오 파일 비어있음 → None"""
-        mock_yt_dlp = MagicMock()
-        mock_ydl = MagicMock()
-        mock_yt_dlp.YoutubeDL.return_value.__enter__ = MagicMock(return_value=mock_ydl)
-        mock_yt_dlp.YoutubeDL.return_value.__exit__ = MagicMock(return_value=False)
-
-        with patch.dict('sys.modules', {'yt_dlp': mock_yt_dlp}):
-            with patch('services.transcript.whisper_service.tempfile.mkdtemp', return_value='/tmp/ytdlp_audio_test'):
-                with patch('services.transcript.whisper_service.os.listdir', return_value=['audio.wav']):
-                    with patch('services.transcript.whisper_service.os.path.getsize', return_value=0):
-                        with patch('services.transcript.whisper_service.shutil.rmtree'):
-                            result = download_audio('https://youtube.com/watch?v=test')
+        with patch(
+            'services.transcript.whisper_service.tempfile.mkdtemp',
+            return_value='/tmp/ytdlp_audio_test',
+        ), patch(
+            'services.media.video_deepdive_service.run_monitored_download',
+        ), patch(
+            'services.transcript.whisper_service.Path.glob',
+            return_value=[],
+        ), patch('services.transcript.whisper_service.shutil.rmtree'):
+            result = download_audio('https://youtube.com/watch?v=dQw4w9WgXcQ')
         self.assertIsNone(result)
 
 
@@ -90,7 +86,10 @@ class TestTranscribeAudio(unittest.TestCase):
         mock_whisper = MagicMock()
         mock_whisper.WhisperModel.return_value = mock_model
 
-        with patch.dict('sys.modules', {'faster_whisper': mock_whisper}):
+        with patch.dict('sys.modules', {'faster_whisper': mock_whisper}), patch(
+            'services.transcript.whisper_service._is_audio_duration_allowed',
+            return_value=True,
+        ):
             result = transcribe_audio('/tmp/audio.wav')
         self.assertEqual(result, '안녕하세요 테스트입니다')
 
@@ -105,7 +104,10 @@ class TestTranscribeAudio(unittest.TestCase):
         mock_whisper = MagicMock()
         mock_whisper.WhisperModel.return_value = mock_model
 
-        with patch.dict('sys.modules', {'faster_whisper': mock_whisper}):
+        with patch.dict('sys.modules', {'faster_whisper': mock_whisper}), patch(
+            'services.transcript.whisper_service._is_audio_duration_allowed',
+            return_value=True,
+        ):
             result = transcribe_audio('/tmp/audio.wav')
         self.assertIsNone(result)
 
@@ -114,8 +116,21 @@ class TestTranscribeAudio(unittest.TestCase):
         mock_whisper = MagicMock()
         mock_whisper.WhisperModel.side_effect = Exception('model error')
 
-        with patch.dict('sys.modules', {'faster_whisper': mock_whisper}):
+        with patch.dict('sys.modules', {'faster_whisper': mock_whisper}), patch(
+            'services.transcript.whisper_service._is_audio_duration_allowed',
+            return_value=True,
+        ):
             result = transcribe_audio('/tmp/audio.wav')
+
+    @patch(
+        'services.transcript.whisper_service._probe_audio_duration',
+        return_value=None,
+    )
+    @patch.dict('sys.modules', {'faster_whisper': MagicMock()})
+    def test_rejects_unbounded_or_too_long_audio_before_whisper(self, mock_probe):
+        result = transcribe_audio('/tmp/untrusted.mp3')
+        self.assertIsNone(result)
+        mock_probe.assert_called_once_with('/tmp/untrusted.mp3')
         self.assertIsNone(result)
 
 

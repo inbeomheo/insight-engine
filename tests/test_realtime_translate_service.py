@@ -8,6 +8,7 @@ from services.transcript.realtime_translate_service import (
     _TRANSLATE_PROMPTS,
     RealtimeTranslateService,
 )
+from services.usage.usage_lock import UsageLockUnavailable
 
 
 class TestConstants(unittest.TestCase):
@@ -55,6 +56,54 @@ class TestTranslateWithDeepL(unittest.TestCase):
         self.assertEqual(result, '안녕')
         call_args = mock_client.post.call_args
         self.assertIn('api-free', call_args[0][0])
+
+    @patch('services.transcript.realtime_translate_service.DEEPL_API_KEY', 'test-key')
+    def test_cost_callback_runs_immediately_before_deepl_request(self):
+        events = []
+        mock_httpx = MagicMock()
+        mock_client = MagicMock()
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            'translations': [{'text': '안녕'}],
+        }
+        mock_client.post.side_effect = lambda *_args, **_kwargs: (
+            events.append('provider') or mock_response
+        )
+        mock_client.__enter__ = MagicMock(return_value=mock_client)
+        mock_client.__exit__ = MagicMock(return_value=False)
+        mock_httpx.Client.return_value = mock_client
+
+        with patch.dict('sys.modules', {'httpx': mock_httpx}):
+            result = _translate_with_deepl(
+                'hello',
+                'ko',
+                on_cost_start=lambda: events.append('cost'),
+            )
+
+        self.assertEqual(result, '안녕')
+        self.assertEqual(events, ['cost', 'provider'])
+
+    @patch('services.transcript.realtime_translate_service.DEEPL_API_KEY', 'test-key')
+    def test_deepl_lock_loss_prevents_provider(self):
+        mock_httpx = MagicMock()
+        mock_client = MagicMock()
+        mock_client.__enter__ = MagicMock(return_value=mock_client)
+        mock_client.__exit__ = MagicMock(return_value=False)
+        mock_httpx.Client.return_value = mock_client
+
+        def reject_cost():
+            raise UsageLockUnavailable('lease lost')
+
+        with patch.dict('sys.modules', {'httpx': mock_httpx}), self.assertRaises(
+            UsageLockUnavailable
+        ):
+            _translate_with_deepl(
+                'hello',
+                'ko',
+                on_cost_start=reject_cost,
+            )
+
+        mock_client.post.assert_not_called()
 
 
 class TestRealtimeTranslateService(unittest.TestCase):
@@ -110,6 +159,22 @@ class TestRealtimeTranslateService(unittest.TestCase):
         svc = RealtimeTranslateService()
         with self.assertRaises(RuntimeError):
             svc.translate('hello', 'ko')
+
+    @patch('services.transcript.realtime_translate_service._translate_with_ai')
+    def test_ai_only_forwards_trusted_cost_callback(self, mock_ai):
+        callback = MagicMock()
+        mock_ai.return_value = 'AI 번역'
+        svc = RealtimeTranslateService()
+
+        result = svc.translate(
+            'hello',
+            'ko',
+            use_ai_only=True,
+            on_cost_start=callback,
+        )
+
+        self.assertEqual(result['translated'], 'AI 번역')
+        self.assertIs(mock_ai.call_args.kwargs['on_cost_start'], callback)
 
 
 class TestTranslateContent(unittest.TestCase):

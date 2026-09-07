@@ -7,7 +7,7 @@ import functools
 import logging
 import json
 import re
-from typing import Dict, List, Optional
+from typing import Callable, Dict, List, Optional
 
 
 
@@ -53,12 +53,17 @@ def _parse_brief_json(raw_text: str) -> Optional[Dict]:
         return None
 
 
-def generate_brief(topic: str, keywords: Optional[List[str]] = None) -> Dict:
+def generate_brief(
+    topic: str,
+    keywords: Optional[List[str]] = None,
+    on_cost_start: Optional[Callable[[], None]] = None,
+) -> Dict:
     """주제에 대한 콘텐츠 브리프를 생성합니다.
 
     Args:
         topic: 콘텐츠 주제
         keywords: 포함할 키워드 목록 (선택)
+        on_cost_start: 실제 AI 호출 직전에 실행할 콜백
 
     Returns:
         dict: {
@@ -88,6 +93,7 @@ def generate_brief(topic: str, keywords: Optional[List[str]] = None) -> Dict:
             prompt,
             _get_model(),
             "",  # 스타일 프롬프트 없음
+            on_cost_start=on_cost_start,
         )
 
         content_text = result.get('content', '')
@@ -97,8 +103,8 @@ def generate_brief(topic: str, keywords: Optional[List[str]] = None) -> Dict:
             return _fallback_brief(topic, content_text, keywords)
 
         return _ensure_brief_defaults(parsed, topic, keywords)
-    except Exception as e:
-        logger.error(f"브리프 생성 처리 실패: {e}")
+    except Exception as exc:
+        logger.error("브리프 생성 처리 실패 (type=%s)", type(exc).__name__)
         raise
 def _fallback_brief(
     topic: str, content_text: str, keywords: Optional[List[str]],

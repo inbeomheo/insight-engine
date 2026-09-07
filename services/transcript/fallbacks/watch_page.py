@@ -5,7 +5,8 @@ import html as html_module
 import json
 import re
 from typing import Any, Dict, List, Optional
-from xml.etree import ElementTree
+
+from defusedxml import ElementTree
 
 import requests
 

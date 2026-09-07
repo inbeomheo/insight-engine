@@ -25,6 +25,18 @@ class TestGraphRAGRoutes(unittest.TestCase):
 
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     @patch('services.rag.graph_rag_engine.GraphRAGEngine.ingest')
+    def test_ingest_rejects_non_string_without_engine(self, mock_ingest, _mock_sb):
+        resp = self.client.post(
+            '/api/rag/graph/ingest',
+            json={'text': ['not', 'text']},
+            headers=_HEADERS,
+        )
+
+        self.assertEqual(resp.status_code, 400)
+        mock_ingest.assert_not_called()
+
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    @patch('services.rag.graph_rag_engine.GraphRAGEngine.ingest')
     def test_ingest_success(self, mock_ingest, _mock_sb):
         """인제스트 성공."""
         mock_ingest.return_value = {'entities_added': 3, 'relations_added': 2}

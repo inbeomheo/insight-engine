@@ -48,6 +48,32 @@ class TestInlineEditorRoutes(unittest.TestCase):
         data = resp.get_json()
         self.assertIn('error', data)
 
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    def test_render_then_action_uses_same_singleton_session(self, _mock_sb):
+        rendered = self.client.post(
+            '/api/mcp/apps/inline-editor/render',
+            json={'title': '제목', 'content': '원본 단락'},
+            headers=_HEADERS,
+        )
+        self.assertEqual(rendered.status_code, 200)
+        session_id = rendered.get_json()['session_id']
+
+        edited = self.client.post(
+            '/api/mcp/apps/inline-editor/action',
+            json={
+                'action': 'save_edit',
+                'session_id': session_id,
+                'section': 0,
+                'new_content': '수정된 단락',
+            },
+            headers=_HEADERS,
+        )
+        self.assertEqual(edited.status_code, 200)
+        self.assertEqual(
+            edited.get_json()['updated_content']['sections'][0],
+            '수정된 단락',
+        )
+
 
 if __name__ == '__main__':
     unittest.main()

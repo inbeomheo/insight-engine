@@ -1,7 +1,9 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
-import { apiUrl } from '@/lib/api';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { apiUrl, createIdempotencyKey } from '@/lib/api';
+import { authFetch, getAuthSession } from '@/lib/auth-session';
+import { useAuthUserId } from '@/hooks/useAuthUserId';
 
 // ── 타입 ──
 
@@ -48,10 +50,44 @@ export function useAgentChat() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [progress, setProgress] = useState<{ iteration: number; total: number } | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const requestEpochRef = useRef(0);
+  const authUserId = useAuthUserId();
+
+  useEffect(() => {
+    requestEpochRef.current += 1;
+    abortRef.current?.abort();
+    abortRef.current = null;
+
+    // 이전 계정의 대화와 세션을 새 계정에 인계하지 않는다.
+    setMessages([]);
+    setSessionId(null);
+    setIsStreaming(false);
+    setProgress(null);
+
+    return () => {
+      requestEpochRef.current += 1;
+      abortRef.current?.abort();
+      abortRef.current = null;
+    };
+  }, [authUserId]);
 
   const sendMessage = useCallback(
     async (text: string, toolsets: string[] = ['role_writer']) => {
       if (!text.trim() || isStreaming) return;
+
+      const requestUserId = authUserId;
+      const controller = new AbortController();
+      const requestEpoch = requestEpochRef.current + 1;
+      requestEpochRef.current = requestEpoch;
+      abortRef.current?.abort();
+      abortRef.current = controller;
+
+      const isRequestContextCurrent = () =>
+        requestEpochRef.current === requestEpoch
+        && (getAuthSession()?.user.id ?? null) === requestUserId;
+      const ownsRequest = () =>
+        isRequestContextCurrent() && abortRef.current === controller;
+      const canApplyEvent = () => ownsRequest() && !controller.signal.aborted;
 
       // 사용자 메시지 추가
       const userMsg: ChatMessage = {
@@ -75,13 +111,13 @@ export function useAgentChat() {
       setIsStreaming(true);
       setProgress(null);
 
-      const controller = new AbortController();
-      abortRef.current = controller;
-
       try {
-        const res = await fetch(apiUrl('/api/agent/chat/stream'), {
+        const res = await authFetch(apiUrl('/api/agent/chat/stream'), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Idempotency-Key': createIdempotencyKey(),
+          },
           body: JSON.stringify({
             message: text.trim(),
             session_id: sessionId,
@@ -90,18 +126,26 @@ export function useAgentChat() {
           signal: controller.signal,
         });
 
+        if (!canApplyEvent()) return;
+
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
+          if (!canApplyEvent()) return;
           throw new Error(body.error || `HTTP ${res.status}`);
         }
 
-        const reader = res.body!.getReader();
+        if (!res.body) throw new Error('응답 스트림이 없습니다.');
+        const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
 
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
+          if (!canApplyEvent()) {
+            await reader.cancel().catch(() => undefined);
+            return;
+          }
 
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split('\n');
@@ -115,94 +159,109 @@ export function useAgentChat() {
             } catch {
               continue;
             }
+            if (!canApplyEvent()) return;
 
             switch (event.type) {
               case 'delta':
                 setMessages((prev) =>
-                  prev.map((m) =>
-                    m.id === assistantId
-                      ? { ...m, content: m.content + (event.content ?? '') }
-                      : m,
-                  ),
+                  isRequestContextCurrent()
+                    ? prev.map((m) =>
+                        m.id === assistantId
+                          ? { ...m, content: m.content + (event.content ?? '') }
+                          : m,
+                      )
+                    : prev,
                 );
                 break;
 
               case 'tool_start':
                 setMessages((prev) =>
-                  prev.map((m) =>
-                    m.id === assistantId
-                      ? {
-                          ...m,
-                          tools: [
-                            ...(m.tools ?? []),
-                            {
-                              name: event.name ?? 'unknown',
-                              args: event.args,
-                              startedAt: Date.now(),
-                              done: false,
-                            },
-                          ],
-                        }
-                      : m,
-                  ),
+                  isRequestContextCurrent()
+                    ? prev.map((m) =>
+                        m.id === assistantId
+                          ? {
+                              ...m,
+                              tools: [
+                                ...(m.tools ?? []),
+                                {
+                                  name: event.name ?? 'unknown',
+                                  args: event.args,
+                                  startedAt: Date.now(),
+                                  done: false,
+                                },
+                              ],
+                            }
+                          : m,
+                      )
+                    : prev,
                 );
                 break;
 
               case 'tool_end':
                 setMessages((prev) =>
-                  prev.map((m) => {
-                    if (m.id !== assistantId) return m;
-                    const tools = (m.tools ?? []).map((t) =>
-                      t.name === event.name && !t.done
-                        ? { ...t, elapsed: event.elapsed, done: true }
-                        : t,
-                    );
-                    return { ...m, tools };
-                  }),
+                  isRequestContextCurrent()
+                    ? prev.map((m) => {
+                        if (m.id !== assistantId) return m;
+                        const tools = (m.tools ?? []).map((t) =>
+                          t.name === event.name && !t.done
+                            ? { ...t, elapsed: event.elapsed, done: true }
+                            : t,
+                        );
+                        return { ...m, tools };
+                      })
+                    : prev,
                 );
                 break;
 
               case 'progress':
-                setProgress({
-                  iteration: event.iteration ?? 0,
-                  total: event.total ?? 0,
-                });
+                setProgress((current) => isRequestContextCurrent()
+                  ? {
+                      iteration: event.iteration ?? 0,
+                      total: event.total ?? 0,
+                    }
+                  : current);
                 break;
 
               case 'done':
                 if (event.session_id) {
-                  setSessionId(event.session_id);
+                  setSessionId((current) => isRequestContextCurrent() ? event.session_id! : current);
                 }
                 break;
 
               case 'error':
                 setMessages((prev) =>
-                  prev.map((m) =>
-                    m.id === assistantId
-                      ? { ...m, content: m.content || `오류: ${event.error ?? '알 수 없는 오류'}` }
-                      : m,
-                  ),
+                  isRequestContextCurrent()
+                    ? prev.map((m) =>
+                        m.id === assistantId
+                          ? { ...m, content: m.content || `오류: ${event.error ?? '알 수 없는 오류'}` }
+                          : m,
+                      )
+                    : prev,
                 );
                 break;
             }
           }
         }
       } catch (err) {
-        if ((err as DOMException)?.name === 'AbortError') return;
+        if ((err as DOMException)?.name === 'AbortError' || !canApplyEvent()) return;
         setMessages((prev) =>
-          prev.map((m) =>
-            m.id === assistantId
-              ? { ...m, content: m.content || `연결 오류: ${(err as Error).message}` }
-              : m,
-          ),
+          isRequestContextCurrent()
+            ? prev.map((m) =>
+                m.id === assistantId
+                  ? { ...m, content: m.content || `연결 오류: ${(err as Error).message}` }
+                  : m,
+              )
+            : prev,
         );
       } finally {
-        setIsStreaming(false);
-        setProgress(null);
-        abortRef.current = null;
+        if (ownsRequest()) {
+          setIsStreaming(false);
+          setProgress(null);
+          abortRef.current = null;
+        }
       }
     },
-    [isStreaming, sessionId],
+    [authUserId, isStreaming, sessionId],
   );
 
   const stopStreaming = useCallback(() => {
@@ -210,7 +269,9 @@ export function useAgentChat() {
   }, []);
 
   const newSession = useCallback(() => {
+    requestEpochRef.current += 1;
     abortRef.current?.abort();
+    abortRef.current = null;
     setMessages([]);
     setSessionId(null);
     setIsStreaming(false);

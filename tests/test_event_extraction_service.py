@@ -1,13 +1,70 @@
 """event_extraction_service 단위 테스트 (내부 함수 위주)"""
 import unittest
+from unittest.mock import MagicMock, patch
 
 from services.content.event_extraction_service import (
     _parse_events_json, _validate_events, categorize_events, get_event_summary,
-    EVENT_TYPES
+    EVENT_TYPES, extract_events,
 )
 
 
 class TestParseEventsJson(unittest.TestCase):
+
+    def test_arbitrary_litellm_model_is_rejected_before_call(self):
+        with patch(
+            'services.usage.usage_decorator.mark_usage_charge_committed'
+        ) as mock_mark:
+            with self.assertRaisesRegex(ValueError, '지원하지 않는 AI 모델'):
+                extract_events('이벤트가 있는 자막', model='attacker/arbitrary-model')
+        mock_mark.assert_not_called()
+
+    def test_provider_failure_commits_charge_before_call(self):
+        with patch(
+            'services.usage.usage_decorator.mark_usage_charge_committed'
+        ) as mock_mark, patch('litellm.completion') as mock_completion:
+            def fail_after_provider_start(**_kwargs):
+                self.assertTrue(mock_mark.called)
+                raise Exception('공급자 실패')
+
+            mock_completion.side_effect = fail_after_provider_start
+            with self.assertRaisesRegex(RuntimeError, '이벤트 추출 중 오류'):
+                extract_events('이벤트가 있는 자막')
+
+        mock_mark.assert_called_once_with()
+
+    def test_trusted_callback_runs_immediately_before_provider(self):
+        events = []
+        response = MagicMock()
+        response.choices[0].message.content = '[]'
+
+        def provider(**_kwargs):
+            events.append('provider')
+            return response
+
+        with patch('litellm.completion', side_effect=provider):
+            self.assertEqual(
+                extract_events(
+                    'transcript',
+                    on_cost_start=lambda: events.append('cost'),
+                ),
+                [],
+            )
+
+        self.assertEqual(events, ['cost', 'provider'])
+
+    def test_lock_loss_is_not_wrapped_and_provider_is_skipped(self):
+        from services.usage.usage_lock import UsageLockUnavailable
+
+        provider = MagicMock()
+
+        def reject_cost():
+            raise UsageLockUnavailable('lease lost')
+
+        with patch('litellm.completion', provider):
+            with self.assertRaises(UsageLockUnavailable):
+                extract_events('transcript', on_cost_start=reject_cost)
+
+        provider.assert_not_called()
 
     def test_plain_json_array(self):
         """일반 JSON 배열 파싱"""

@@ -6,12 +6,27 @@ import { NOTE_REVIEW_HISTORY_STORAGE_KEY } from '@/lib/note-review-history';
 import { getNoteReviewScheduleKey } from '@/lib/note-review-schedule';
 import { getNoteStudyProgressKey } from '@/lib/note-study-progress';
 import NoteDetailPage from './page';
+import { setAuthSession, type AuthSession } from '@/lib/auth-session';
+
+(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const navigation = vi.hoisted(() => ({
   id: 'support',
   search: 'flow=recall&origin=origin&support=support&step=support',
 }));
 const store = vi.hoisted(() => ({ hydrate: vi.fn(), reports: [] }));
+
+function authSession(userId: string): AuthSession {
+  return { user: { id: userId }, session: { access_token: `${userId}-token` } };
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+}
 
 vi.mock('next/navigation', () => ({
   useParams: () => ({ id: navigation.id }),
@@ -76,9 +91,11 @@ function findButton(label: string): HTMLButtonElement {
 
 describe('NoteDetailPage 회상 보강 UI', () => {
   beforeEach(() => {
+    vi.mocked(getNote).mockClear();
     navigation.id = 'support';
     navigation.search = 'flow=recall&origin=origin&support=support&step=support';
     vi.mocked(getNote).mockImplementation(async (id) => makeNote(id));
+    setAuthSession(null);
     window.localStorage.clear();
     scrollIntoView = vi.fn();
     Object.defineProperty(Element.prototype, 'scrollIntoView', {
@@ -94,6 +111,7 @@ describe('NoteDetailPage 회상 보강 UI', () => {
 
   afterEach(async () => {
     if (root) await act(async () => root!.unmount());
+    setAuthSession(null);
     container?.remove();
     root = null;
     container = null;
@@ -327,6 +345,29 @@ describe('NoteDetailPage 회상 보강 UI', () => {
 
     expect(document.body.textContent).toContain('재도전할 복습 질문이 없습니다.');
     expect(findButton('다시 ·').disabled).toBe(true);
+  });
+
+  it('계정 전환 시 노트 상태를 즉시 재생성하고 A의 늦은 응답을 무시한다', async () => {
+    navigation.id = 'origin';
+    navigation.search = '';
+    const noteA = deferred<NoteDetail>();
+    const noteB = deferred<NoteDetail>();
+    vi.mocked(getNote)
+      .mockImplementationOnce(() => noteA.promise)
+      .mockImplementationOnce(() => noteB.promise);
+    setAuthSession(authSession('account-a'));
+
+    await renderPage();
+    await act(async () => setAuthSession(authSession('account-b')));
+    expect(getNote).toHaveBeenCalledTimes(2);
+
+    await act(async () => noteB.resolve(makeNote('B')));
+    expect(document.body.textContent).toContain('B 제목');
+    expect(document.body.textContent).not.toContain('A 제목');
+
+    await act(async () => noteA.resolve(makeNote('A')));
+    expect(document.body.textContent).toContain('B 제목');
+    expect(document.body.textContent).not.toContain('A 제목');
   });
 
 });

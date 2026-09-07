@@ -2,12 +2,22 @@
 
 인증, 사용량, 워크스페이스, 스타일 메모리, 스니펫, 채널 모니터, 대시보드 커버.
 """
+import os
 import unittest
 from unittest.mock import patch, MagicMock
 
 from app import create_app
 
 _H = {'Origin': 'http://localhost:3000'}
+
+
+def _configure_oauth_start(mock_supabase):
+    def start_oauth(_credentials):
+        storage = mock_supabase.call_args.kwargs['auth_storage']
+        storage.set_item('test-code-verifier', 'pkce-verifier')
+        return MagicMock(url='https://oauth.example.com')
+
+    mock_supabase.return_value.auth.sign_in_with_oauth.side_effect = start_oauth
 
 
 class _Base(unittest.TestCase):
@@ -114,8 +124,8 @@ class TestAuthEndpointsEnabled(_Base):
         resp = self.client.post('/api/auth/signup',
                                 json={'email': 'a@b.com', 'password': '123456'},
                                 headers=_H)
-        self.assertEqual(resp.status_code, 400)
-        self.assertIn('이미 등록', resp.get_json().get('error', ''))
+        self.assertEqual(resp.status_code, 200)
+        self.assertNotIn('등록된 이메일', resp.get_json().get('message', ''))
 
     @patch('routes.auth_routes.get_supabase')
     def test_signup_rate_limit(self, mock_sb, _, __):
@@ -161,6 +171,54 @@ class TestAuthEndpointsEnabled(_Base):
                                 json={'email': 'a@b.com', 'password': '123456'},
                                 headers=_H)
         self.assertEqual(resp.status_code, 200)
+        self.assertNotIn('refresh_token', resp.get_json()['session'])
+
+    @patch('routes.auth_routes.get_supabase')
+    def test_login_explicit_token_transport_returns_refresh_token(self, mock_sb, _, __):
+        mock_user = MagicMock(id='uid1', email='a@b.com')
+        mock_session = MagicMock(
+            access_token='at',
+            refresh_token='rt',
+            expires_at=9999,
+        )
+        mock_sb.return_value.auth.sign_in_with_password.return_value = MagicMock(
+            user=mock_user,
+            session=mock_session,
+        )
+
+        resp = self.client.post(
+            '/api/auth/login',
+            json={'email': 'a@b.com', 'password': '123456'},
+            headers={**_H, 'X-Auth-Transport': 'token'},
+        )
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.get_json()['session']['refresh_token'], 'rt')
+
+    @patch('routes.auth_routes.get_supabase')
+    def test_login_cookie_transport_hides_refresh_token(self, mock_sb, _, __):
+        mock_user = MagicMock(id='uid1', email='a@b.com')
+        mock_session = MagicMock(
+            access_token='at',
+            refresh_token='rt',
+            expires_at=9999,
+        )
+        mock_sb.return_value.auth.sign_in_with_password.return_value = MagicMock(
+            user=mock_user,
+            session=mock_session,
+        )
+        resp = self.client.post(
+            '/api/auth/login',
+            json={'email': 'a@b.com', 'password': '123456'},
+            headers={**_H, 'X-Auth-Transport': 'cookie'},
+        )
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertNotIn('refresh_token', resp.get_json()['session'])
+        cookie = resp.headers.get('Set-Cookie', '')
+        self.assertIn('ie_refresh_token=rt', cookie)
+        self.assertIn('HttpOnly', cookie)
+        self.assertIn('SameSite=Lax', cookie)
 
     @patch('routes.auth_routes.get_supabase')
     def test_login_no_session(self, mock_sb, _, __):
@@ -206,10 +264,41 @@ class TestAuthEndpointsEnabled(_Base):
 
     @patch('routes.auth_routes.get_supabase')
     def test_oauth_login_success(self, mock_sb, _, __):
-        mock_sb.return_value.auth.sign_in_with_oauth.return_value = MagicMock(url='https://oauth.example.com')
+        _configure_oauth_start(mock_sb)
         resp = self.client.get('/api/auth/oauth/google', headers=_H)
         self.assertEqual(resp.status_code, 200)
         self.assertIn('url', resp.get_json())
+        self.assertTrue(mock_sb.call_args.kwargs['fresh'])
+        self.assertIn('ie_oauth_pkce=pkce-verifier', resp.headers.get('Set-Cookie', ''))
+
+    @patch.dict(os.environ, {'CORS_ORIGINS': 'https://app.example.com'})
+    @patch('routes.auth_routes.get_supabase')
+    def test_oauth_redirect_requires_exact_origin(self, mock_sb, _, __):
+        _configure_oauth_start(mock_sb)
+        resp = self.client.get(
+            '/api/auth/oauth/google?redirect_url='
+            'https://app.example.com.evil.test/callback',
+            headers=_H,
+        )
+        self.assertEqual(resp.status_code, 200)
+        options = mock_sb.return_value.auth.sign_in_with_oauth.call_args.args[0]
+        self.assertEqual(
+            options['options']['redirect_to'],
+            'https://app.example.com',
+        )
+
+    @patch.dict(os.environ, {'CORS_ORIGINS': 'https://app.example.com'})
+    @patch('routes.auth_routes.get_supabase')
+    def test_oauth_redirect_allows_path_on_exact_origin(self, mock_sb, _, __):
+        _configure_oauth_start(mock_sb)
+        redirect = 'https://app.example.com/auth/callback?next=notes'
+        resp = self.client.get(
+            f'/api/auth/oauth/google?redirect_url={redirect}',
+            headers=_H,
+        )
+        self.assertEqual(resp.status_code, 200)
+        options = mock_sb.return_value.auth.sign_in_with_oauth.call_args.args[0]
+        self.assertEqual(options['options']['redirect_to'], redirect)
 
     @patch('routes.auth_routes.get_supabase')
     def test_oauth_login_exception(self, mock_sb, _, __):
@@ -223,6 +312,7 @@ class TestAuthEndpointsEnabled(_Base):
 
     @patch('routes.auth_routes.get_supabase')
     def test_oauth_callback_success(self, mock_sb, _, __):
+        self.client.set_cookie('ie_oauth_pkce', 'pkce-verifier')
         mock_user = MagicMock()
         mock_user.id = 'uid1'
         mock_user.email = 'a@b.com'
@@ -237,9 +327,11 @@ class TestAuthEndpointsEnabled(_Base):
                                 json={'code': 'abc'},
                                 headers=_H)
         self.assertEqual(resp.status_code, 200)
+        self.assertNotIn('refresh_token', resp.get_json()['session'])
 
     @patch('routes.auth_routes.get_supabase')
     def test_oauth_callback_no_session(self, mock_sb, _, __):
+        self.client.set_cookie('ie_oauth_pkce', 'pkce-verifier')
         mock_sb.return_value.auth.exchange_code_for_session.return_value = MagicMock(
             user=None, session=None
         )
@@ -250,6 +342,7 @@ class TestAuthEndpointsEnabled(_Base):
 
     @patch('routes.auth_routes.get_supabase')
     def test_oauth_callback_exception(self, mock_sb, _, __):
+        self.client.set_cookie('ie_oauth_pkce', 'pkce-verifier')
         mock_sb.return_value.auth.exchange_code_for_session.side_effect = Exception('fail')
         resp = self.client.post('/api/auth/oauth/callback',
                                 json={'code': 'abc'},
@@ -266,11 +359,62 @@ class TestAuthEndpointsEnabled(_Base):
         mock_session.access_token = 'new_at'
         mock_session.refresh_token = 'new_rt'
         mock_session.expires_at = 9999
-        mock_sb.return_value.auth.refresh_session.return_value = MagicMock(session=mock_session)
+        mock_user = MagicMock(id='uid1', email='a@b.com')
+        mock_sb.return_value.auth.refresh_session.return_value = MagicMock(
+            session=mock_session,
+            user=mock_user,
+        )
         resp = self.client.post('/api/auth/refresh',
                                 json={'refresh_token': 'old_rt'},
                                 headers=_H)
         self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.get_json()['user']['id'], 'uid1')
+        self.assertNotIn('refresh_token', resp.get_json()['session'])
+
+    @patch('routes.auth_routes.get_supabase')
+    def test_refresh_explicit_token_transport_returns_rotated_token(self, mock_sb, _, __):
+        mock_session = MagicMock(
+            access_token='new_at',
+            refresh_token='new_rt',
+            expires_at=9999,
+        )
+        mock_sb.return_value.auth.refresh_session.return_value = MagicMock(
+            session=mock_session,
+            user=MagicMock(id='uid1', email='a@b.com'),
+        )
+
+        resp = self.client.post(
+            '/api/auth/refresh',
+            json={'refresh_token': 'old_rt'},
+            headers={**_H, 'X-Auth-Transport': 'token'},
+        )
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.get_json()['session']['refresh_token'], 'new_rt')
+
+    @patch('routes.auth_routes.get_supabase')
+    def test_refresh_cookie_transport_rotates_http_only_cookie(self, mock_sb, _, __):
+        self.client.set_cookie('ie_refresh_token', 'old_rt')
+        mock_session = MagicMock(
+            access_token='new_at',
+            refresh_token='new_rt',
+            expires_at=9999,
+        )
+        mock_sb.return_value.auth.refresh_session.return_value = MagicMock(
+            session=mock_session,
+            user=MagicMock(id='uid1', email='a@b.com'),
+        )
+
+        resp = self.client.post(
+            '/api/auth/refresh',
+            json={},
+            headers={**_H, 'X-Auth-Transport': 'cookie'},
+        )
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertNotIn('refresh_token', resp.get_json()['session'])
+        self.assertIn('ie_refresh_token=new_rt', resp.headers.get('Set-Cookie', ''))
+        mock_sb.return_value.auth.refresh_session.assert_called_once_with('old_rt')
 
     @patch('routes.auth_routes.get_supabase')
     def test_refresh_token_fail(self, mock_sb, _, __):

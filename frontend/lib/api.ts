@@ -19,9 +19,9 @@ import type {
   ReadabilityResponse,
   SentimentFlowResponse,
   SharePageResponse,
-  JobResponse,
 } from './types';
 import { parseSSEStream } from './sse-parser';
+import { authFetch } from './auth-session';
 
 /** Flask 백엔드 직접 호출 (Next.js 프록시 우회) */
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? '';
@@ -47,10 +47,28 @@ const TIMEOUT_MS: Record<string, number> = {
   '/api/video-deepdives/extract': 660_000,
   '/api/extract-document': 60_000,
   '/api/extract-audio': 600_000,
+  '/api/knowledge/upload': 120_000,
+  '/api/tts': 300_000,
 };
 const DEFAULT_TIMEOUT_MS = 30_000;
+const NOTEBOOKLM_DOWNLOAD_TIMEOUT_MS = 10 * 60_000;
+
+function timeoutFor(url: string): number {
+  if (url.startsWith('/api/notebooklm/download/')) {
+    return NOTEBOOKLM_DOWNLOAD_TIMEOUT_MS;
+  }
+  return TIMEOUT_MS[url] ?? DEFAULT_TIMEOUT_MS;
+}
 
 const SUPPORT_SESSION_KEY = 'insight-engine-support-session-id';
+
+/** 한 번의 사용자 작업을 식별한다. authFetch의 토큰 갱신 재시도에는 같은 키가 유지된다. */
+export function createIdempotencyKey(): string {
+  if (typeof globalThis.crypto?.randomUUID === 'function') {
+    return globalThis.crypto.randomUUID();
+  }
+  return `ie-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+}
 
 function getSupportSessionId(): string {
   if (typeof window === 'undefined') return 'server';
@@ -75,14 +93,20 @@ export function isApiError<T = unknown>(err: unknown): err is ApiError<T> {
   return err instanceof Error && ('status' in err || 'body' in err);
 }
 
-async function request<T>(url: string, init?: RequestInit): Promise<T> {
-  const timeoutMs = TIMEOUT_MS[url] ?? DEFAULT_TIMEOUT_MS;
+export async function request<T>(url: string, init?: RequestInit): Promise<T> {
+  const timeoutMs = timeoutFor(url);
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
+  const onExternalAbort = () => controller.abort();
 
   // 외부 signal이 있으면 연동
   if (init?.signal) {
-    init.signal.addEventListener('abort', () => controller.abort());
+    if (init.signal.aborted) controller.abort();
+    else init.signal.addEventListener('abort', onExternalAbort, { once: true });
   }
 
   // FormData일 때는 Content-Type 헤더 생략 (브라우저가 boundary 자동 설정)
@@ -94,7 +118,13 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
       ...headers,
       ...(init?.headers || {}),
     };
-    const res = await fetch(`${BASE}${url}`, {
+    if (
+      init?.method?.toUpperCase() === 'POST'
+      && !Object.keys(mergedHeaders).some((name) => name.toLowerCase() === 'idempotency-key')
+    ) {
+      mergedHeaders['Idempotency-Key' as keyof typeof mergedHeaders] = createIdempotencyKey();
+    }
+    const res = await authFetch(`${BASE}${url}`, {
       ...init,
       headers: mergedHeaders,
       signal: controller.signal,
@@ -106,25 +136,35 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
       error.body = body;
       throw error;
     }
-    return res.json();
+    // 본문 수신까지 기다려야 시간 제한과 외부 취소 연결이 유지된다.
+    return await res.json();
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError') {
+      if (!timedOut) throw err;
       throw new Error(`요청 시간이 초과되었습니다 (${Math.round(timeoutMs / 1000)}초). 네트워크 상태를 확인하거나 다시 시도해주세요.`);
     }
     throw err;
   } finally {
     clearTimeout(timer);
+    init?.signal?.removeEventListener('abort', onExternalAbort);
   }
 }
 
 /** Blob 응답 전용 (Markdown 파일 다운로드) */
 async function requestBlob(url: string, init?: RequestInit): Promise<Blob> {
-  const timeoutMs = TIMEOUT_MS[url] ?? DEFAULT_TIMEOUT_MS;
+  const timeoutMs = timeoutFor(url);
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
+  const onExternalAbort = () => controller.abort();
+  if (init?.signal?.aborted) controller.abort();
+  else init?.signal?.addEventListener('abort', onExternalAbort, { once: true });
 
   try {
-    const res = await fetch(`${BASE}${url}`, {
+    const res = await authFetch(`${BASE}${url}`, {
       headers: { 'Content-Type': 'application/json' },
       ...init,
       signal: controller.signal,
@@ -133,14 +173,16 @@ async function requestBlob(url: string, init?: RequestInit): Promise<Blob> {
       const body = await res.json().catch(() => ({}));
       throw new Error(body.error || `HTTP ${res.status}`);
     }
-    return res.blob();
+    return await res.blob();
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError') {
+      if (!timedOut) throw err;
       throw new Error(`요청 시간이 초과되었습니다 (${Math.round(timeoutMs / 1000)}초).`);
     }
     throw err;
   } finally {
     clearTimeout(timer);
+    init?.signal?.removeEventListener('abort', onExternalAbort);
   }
 }
 
@@ -184,10 +226,6 @@ export async function extractAudio(file: File): Promise<ExtractAudioResponse> {
     method: 'POST',
     body: formData,
   });
-}
-
-export async function getJob(jobId: string): Promise<JobResponse> {
-  return request(`/api/jobs/${jobId}`);
 }
 
 export async function createSharePage(req: {
@@ -290,9 +328,12 @@ export async function generateStream(
   onEvent: (event: StreamEvent) => void,
   signal?: AbortSignal
 ): Promise<void> {
-  const res = await fetch(`${BASE}/generate-stream`, {
+  const res = await authFetch(`${BASE}/generate-stream`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Idempotency-Key': createIdempotencyKey(),
+    },
     body: JSON.stringify(req),
     signal,
   });
@@ -311,18 +352,30 @@ export async function generateStream(
 }
 
 // 배치 생성
+export interface BatchGenerateOptions {
+  detail_level?: GenerateRequest['detail_level'];
+  transcript_language?: GenerateRequest['transcript_language'];
+  enable_web_search?: boolean;
+  enable_agent_mode?: boolean;
+}
+
+export type BatchGenerateResult =
+  | (GenerateResponse & { url: string; success: true })
+  | { url: string; success: false; error?: string };
+
 export async function generateBatch(
   urls: string[],
   model: string,
   style: string,
   modifiers: GenerateRequest['modifiers'],
-  customPrompt?: string
+  customPrompt?: string,
+  options: BatchGenerateOptions = {},
 ) {
-  return request<{ results: Array<GenerateResponse & { url: string; success: boolean }> }>(
+  return request<{ results: BatchGenerateResult[] }>(
     '/generate-batch',
     {
       method: 'POST',
-      body: JSON.stringify({ urls, model, style, modifiers, customPrompt }),
+      body: JSON.stringify({ urls, model, style, modifiers, customPrompt, ...options }),
     }
   );
 }
@@ -339,11 +392,12 @@ export async function generateMerged(
   model: string,
   style: string,
   modifiers: Modifiers,
-  customPrompt?: string
+  customPrompt?: string,
+  transcriptLanguage?: GenerateRequest['transcript_language'],
 ): Promise<MergedGenerateResponse> {
   return request('/api/generate-merged', {
     method: 'POST',
-    body: JSON.stringify({ urls, model, style, modifiers, customPrompt }),
+    body: JSON.stringify({ urls, model, style, modifiers, customPrompt, transcript_language: transcriptLanguage }),
   });
 }
 
@@ -370,9 +424,24 @@ export async function fetchPlaylistVideos(
   });
 }
 
-// 포맷별 내보내기 (MD)
-export async function exportFormat(format: 'markdown', title: string, content: string): Promise<Blob> {
-  return requestBlob(`/api/export/${format}`, { method: 'POST', body: JSON.stringify({ title, content }) });
+// 포맷별 내보내기 (Markdown / Anki)
+export interface ExportMetadata {
+  style?: string;
+  source_url?: string;
+  tags?: string[];
+  cards?: Array<{ front: string; back: string; chapter?: string; tags?: string[] }>;
+}
+
+export async function exportFormat(
+  format: 'markdown' | 'anki',
+  title: string,
+  content: string,
+  metadata: ExportMetadata = {},
+): Promise<Blob> {
+  return requestBlob(`/api/export/${format}`, {
+    method: 'POST',
+    body: JSON.stringify({ title, content, ...metadata }),
+  });
 }
 
 // 퓨전 분석
@@ -403,7 +472,10 @@ export async function generateFusion(req: FusionRequest): Promise<FusionResponse
 
 // 캐시 삭제
 export async function clearCache(): Promise<void> {
-  await request('/api/cache', { method: 'DELETE' });
+  await request('/api/cache', {
+    method: 'DELETE',
+    body: JSON.stringify({ scope: 'all' }),
+  });
 }
 
 // 웹훅 테스트
@@ -470,16 +542,10 @@ export async function deleteWorkspace(
 export async function uploadKnowledge(file: File): Promise<KnowledgeItem> {
   const formData = new FormData();
   formData.append('file', file);
-
-  const res = await fetch(`${BASE}/api/knowledge/upload`, {
+  return request('/api/knowledge/upload', {
     method: 'POST',
     body: formData,
   });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error || `HTTP ${res.status}`);
-  }
-  return res.json();
 }
 
 export async function getKnowledgeList(): Promise<{ documents: KnowledgeItem[] }> {
@@ -642,16 +708,11 @@ export async function synthesizeTts(
   voice = 'alloy',
   speed = 1.0,
 ): Promise<Blob> {
-  const res = await fetch(`${BASE}/api/tts`, {
+  return requestBlob('/api/tts', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text, voice, speed }),
   });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error || `TTS 오류: HTTP ${res.status}`);
-  }
-  return res.blob();
 }
 
 // === 이벤트 추출 ===
@@ -744,6 +805,16 @@ export async function notebookLmGenerate(params: {
 
 export async function notebookLmStatus(artifactId: string): Promise<{ status: string; type?: string; error?: string }> {
   return request(`/api/notebooklm/status/${artifactId}`);
+}
+
+export async function downloadNotebookLmArtifact(
+  artifactId: string,
+  signal?: AbortSignal,
+): Promise<Blob> {
+  return requestBlob(
+    `/api/notebooklm/download/${encodeURIComponent(artifactId)}`,
+    { signal },
+  );
 }
 
 // ── Support Assistant / Feedback Handoff ──

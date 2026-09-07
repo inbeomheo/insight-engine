@@ -11,6 +11,11 @@ import {
   recordNoteReviewCompletion,
 } from './note-review-history';
 import { getNextReviewInterval } from './note-review-schedule';
+import { setAuthSession, type AuthSession } from './auth-session';
+
+function authSession(userId: string): AuthSession {
+  return { user: { id: userId }, session: { access_token: `${userId}-token` } };
+}
 
 function createMemoryStorage() {
   const data = new Map<string, string>();
@@ -145,6 +150,31 @@ describe('note-review-history', () => {
     });
     expect(storage.getItem(NOTE_REVIEW_HISTORY_STORAGE_KEY)).toContain('note-1');
     expect(readNoteReviewHistory(storage)).toEqual(updated);
+  });
+
+  it('서로 다른 계정의 복습 이력을 같은 Storage 안에서 격리한다', () => {
+    const storage = createMemoryStorage();
+    try {
+      setAuthSession(authSession('account-a'));
+      recordNoteReviewCompletion(
+        { noteId: 'note-a', noteTitle: 'A 노트', intervalDays: 1 },
+        storage,
+        new Date('2026-07-11T01:00:00.000Z'),
+      );
+
+      setAuthSession(authSession('account-b'));
+      expect(readNoteReviewHistory(storage)).toEqual([]);
+      recordNoteReviewCompletion(
+        { noteId: 'note-b', noteTitle: 'B 노트', intervalDays: 3 },
+        storage,
+        new Date('2026-07-12T01:00:00.000Z'),
+      );
+
+      setAuthSession(authSession('account-a'));
+      expect(readNoteReviewHistory(storage).map(({ noteId }) => noteId)).toEqual(['note-a']);
+    } finally {
+      setAuthSession(null);
+    }
   });
 
   it('builds an oldest-to-today seven-day activity series', () => {

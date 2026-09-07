@@ -1,6 +1,11 @@
 import type { ResultChatSource } from './api';
+import { getAccountStorageKey } from './storage';
 
 export const RESULT_CHAT_STUDY_CARDS_STORAGE_KEY = 'ie:result-chat-study-cards:v1';
+
+export function getResultChatStudyCardsStorageKey(namespace?: string): string {
+  return getAccountStorageKey(RESULT_CHAT_STUDY_CARDS_STORAGE_KEY, namespace);
+}
 
 export interface ResultChatStudyCardInput {
   title?: string;
@@ -168,7 +173,7 @@ export function buildResultChatStudyCard(input: ResultChatStudyCardInput): Resul
 
 export function readResultChatStudyCards(storage: Pick<Storage, 'getItem'>): ResultChatStudyCard[] {
   try {
-    const raw = storage.getItem(RESULT_CHAT_STUDY_CARDS_STORAGE_KEY);
+    const raw = storage.getItem(getResultChatStudyCardsStorageKey());
     const parsed = raw ? JSON.parse(raw) : [];
     if (!Array.isArray(parsed)) return [];
     return parsed
@@ -187,6 +192,6 @@ export function saveResultChatStudyCard(
   const card = buildResultChatStudyCard(input);
   const existing = readResultChatStudyCards(storage);
   const next = [card, ...existing.filter((item) => item.id !== card.id)];
-  storage.setItem(RESULT_CHAT_STUDY_CARDS_STORAGE_KEY, JSON.stringify(next));
+  storage.setItem(getResultChatStudyCardsStorageKey(), JSON.stringify(next));
   return card;
 }

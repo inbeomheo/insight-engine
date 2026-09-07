@@ -7,6 +7,11 @@ import {
   readResultChatStudyCards,
   saveResultChatStudyCard,
 } from './result-chat-study-card';
+import { setAuthSession, type AuthSession } from './auth-session';
+
+function authSession(userId: string): AuthSession {
+  return { user: { id: userId }, session: { access_token: `${userId}-token` } };
+}
 
 describe('result-chat-study-card', () => {
   it('builds markdown for a grounded chat answer', () => {
@@ -154,6 +159,37 @@ describe('result-chat-study-card', () => {
     expect(JSON.parse(store.get(RESULT_CHAT_STUDY_CARDS_STORAGE_KEY) ?? '[]')).toHaveLength(2);
     expect(readResultChatStudyCards(storage).map((card) => card.title)).toEqual(['최근 카드', '이전 카드']);
     expect(readResultChatStudyCards(storage)[0].sourceHref).toBe('/notes/recent');
+  });
+
+  it('계정별 Q&A 복습 카드를 서로 노출하지 않는다', () => {
+    const store = new Map<string, string>();
+    const storage = {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => store.set(key, value),
+    };
+    try {
+      setAuthSession(authSession('account-a'));
+      saveResultChatStudyCard(storage, {
+        title: 'A 카드',
+        question: 'A?',
+        answer: 'A!',
+        createdAt: '2026-07-10T00:00:00.000Z',
+      });
+
+      setAuthSession(authSession('account-b'));
+      expect(readResultChatStudyCards(storage)).toEqual([]);
+      saveResultChatStudyCard(storage, {
+        title: 'B 카드',
+        question: 'B?',
+        answer: 'B!',
+        createdAt: '2026-07-11T00:00:00.000Z',
+      });
+
+      setAuthSession(authSession('account-a'));
+      expect(readResultChatStudyCards(storage).map(({ title }) => title)).toEqual(['A 카드']);
+    } finally {
+      setAuthSession(null);
+    }
   });
 
   it('ignores malformed local study card storage', () => {

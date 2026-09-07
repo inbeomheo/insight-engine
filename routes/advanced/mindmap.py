@@ -9,6 +9,7 @@ from services.core import ai_service, content_service
 from src.contexts.identity.interface.auth_decorators import require_auth
 from services.usage import require_usage
 from services.usage.usage_decorator import get_usage_for_response
+from services.usage.usage_lock import UsageLockUnavailable
 from utils.responses import api_error, handle_error, validate_content_length
 
 
@@ -24,7 +25,12 @@ def generate_mindmap():
         start_time = time.time()
         data = request.get_json(silent=True) or {}
         content = data.get('content')
-        model = data.get('model', DEFAULT_MODEL)
+        try:
+            model = ai_service.resolve_public_model(
+                data.get('model'), DEFAULT_MODEL, allow_auto=False
+            )
+        except ValueError as exc:
+            return api_error(str(exc), 400, 'UNSUPPORTED_MODEL')
 
         if not content:
             return api_error('마인드맵으로 변환할 콘텐츠가 필요합니다.', 400)
@@ -61,6 +67,8 @@ def generate_mindmap():
             'quota': get_usage_for_response()
         })
 
+    except UsageLockUnavailable:
+        raise
     except ValueError as e:
         return handle_error(str(e))
     except Exception as e:

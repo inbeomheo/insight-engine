@@ -273,6 +273,30 @@ class TestAIAgentMocked(unittest.TestCase):
         self.assertEqual(result.iterations_used, 1)
 
     @patch("litellm.completion")
+    def test_cost_callback_runs_immediately_before_provider(self, mock_completion):
+        events = []
+
+        def provider(**_kwargs):
+            events.append("provider")
+            message = MagicMock(content="완료", tool_calls=None)
+            return MagicMock(
+                choices=[MagicMock(message=message)],
+                usage=MagicMock(prompt_tokens=1, completion_tokens=1),
+            )
+
+        mock_completion.side_effect = provider
+
+        from agent import AIAgent
+        agent = AIAgent(
+            model="chatmock/test",
+            max_iterations=1,
+            on_cost_start=lambda: events.append("cost"),
+        )
+        agent.run("안녕")
+
+        self.assertEqual(events, ["cost", "provider"])
+
+    @patch("litellm.completion")
     def test_agent_run_with_tool_call(self, mock_completion):
         """도구를 호출하고 결과를 사용하는 케이스."""
         from types import SimpleNamespace

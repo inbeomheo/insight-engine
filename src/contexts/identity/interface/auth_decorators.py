@@ -17,16 +17,104 @@ Issue #17 (소PR B-2) — `g.auth` (UserAccount Aggregate) 인터페이스 추�
 """
 from __future__ import annotations
 
+import os
 from functools import wraps
 from typing import Callable
 
-from flask import g, jsonify, request
+from flask import current_app, g, jsonify, request
 
 from services.core.logging_config import supabase_logger as logger
 from src.shared.infrastructure.supabase_client import (
     get_supabase,
     is_supabase_enabled,
 )
+
+
+_AUTH_BYPASS_ENVIRONMENTS = frozenset({'development', 'testing'})
+_INVALID_TOKEN_ERROR_CODES = frozenset({
+    'bad_jwt',
+    'invalid_credentials',
+    'invalid_jwt',
+    'no_authorization',
+    'session_not_found',
+    'unexpected_audience',
+    'user_banned',
+    'user_not_found',
+})
+_SUPABASE_CONFIGURATION_ERROR_MARKERS = (
+    'api key',
+    'apikey',
+    'connection',
+    'dns',
+    'invalid url',
+    'project not found',
+    'timed out',
+    'timeout',
+)
+_INVALID_TOKEN_ERROR_MARKERS = (
+    'bad jwt',
+    'invalid claim',
+    'invalid jwt',
+    'invalid token',
+    'malformed',
+    'missing sub claim',
+    'no authorization',
+    'not authenticated',
+    'session not found',
+    'user not found',
+)
+
+
+def _runtime_environment() -> str:
+    """현재 앱에 명시된 실행 환경을 정규화해 반환한다."""
+    configured = current_app.config.get('FLASK_ENV')
+    if not configured:
+        configured = os.getenv('FLASK_ENV', '')
+    return str(configured or '').strip().lower()
+
+
+def _allows_auth_bypass() -> bool:
+    """명시적인 로컬 개발/테스트 실행에서만 인증 우회를 허용한다."""
+    runtime_environment = _runtime_environment()
+    if runtime_environment == 'production':
+        return False
+    return bool(
+        current_app.testing
+        or runtime_environment in _AUTH_BYPASS_ENVIRONMENTS
+    )
+
+
+def _auth_service_unavailable_result() -> dict:
+    """Supabase 설정/가용성 오류를 외부에 안전한 형태로 반환한다."""
+    return {
+        'valid': False,
+        'error': '인증 서비스를 일시적으로 사용할 수 없습니다.',
+        'code': 'AUTH_SERVICE_UNAVAILABLE',
+        'status': 503,
+    }
+
+
+def _is_invalid_token_error(error: Exception, error_str: str) -> bool:
+    """Supabase 장애와 호출자가 보낸 잘못된 토큰을 구분한다."""
+    if any(marker in error_str for marker in _SUPABASE_CONFIGURATION_ERROR_MARKERS):
+        return False
+
+    error_code = str(getattr(error, 'code', '') or '').strip().lower()
+    if error_code in _INVALID_TOKEN_ERROR_CODES:
+        return True
+
+    error_name = type(error).__name__.lower()
+    if error_name in {
+        'authinvalidcredentialserror',
+        'authinvalidjwterror',
+        'authsessionmissingerror',
+    }:
+        return True
+
+    if any(marker in error_str for marker in _INVALID_TOKEN_ERROR_MARKERS):
+        return True
+
+    return getattr(error, 'status', None) in {400, 401, 403}
 
 
 def _extract_bearer_token() -> str | None:
@@ -39,19 +127,31 @@ def _validate_token(token: str) -> dict:
     """토큰 검증 + g 객체에 사용자 정보 설정.
 
     Returns:
-        {'valid': bool, 'error': str|None, 'code': str|None}.
+        {'valid': bool, 'error': str|None, 'code': str|None, 'status': int}.
         성공 시 g.user_id / g.user_email / g.access_token 채워짐.
     """
     try:
         supabase = get_supabase()
-        user = supabase.auth.get_user(token)
-        g.user_id = user.user.id
-        g.user_email = user.user.email
+        if supabase is None:
+            logger.error('Supabase 인증 클라이언트를 생성할 수 없습니다.')
+            return _auth_service_unavailable_result()
+
+        response = supabase.auth.get_user(token)
+        verified_user = getattr(response, 'user', None)
+        user_id = getattr(verified_user, 'id', None)
+        if not user_id:
+            logger.warning('Supabase 토큰 검증 응답에 사용자 ID가 없습니다.')
+            return _auth_service_unavailable_result()
+
+        g.user_id = str(user_id)
+        g.user_email = getattr(verified_user, 'email', None)
         g.access_token = token
         logger.info(
-            f"토큰 검증 성공: user_id={user.user.id[:8]}..., email={user.user.email}"
+            '토큰 검증 성공: user_id=%s..., email=%s',
+            str(user_id)[:8],
+            g.user_email,
         )
-        return {'valid': True, 'error': None, 'code': None}
+        return {'valid': True, 'error': None, 'code': None, 'status': 200}
     except Exception as e:
         error_str = str(e).lower()
 
@@ -61,22 +161,20 @@ def _validate_token(token: str) -> dict:
                 'valid': False,
                 'error': '인증 토큰이 만료되었습니다.',
                 'code': 'TOKEN_EXPIRED',
+                'status': 401,
             }
 
-        if 'invalid' in error_str or 'malformed' in error_str:
+        if _is_invalid_token_error(e, error_str):
             logger.debug("무효 토큰")
             return {
                 'valid': False,
                 'error': '유효하지 않은 토큰입니다.',
                 'code': 'TOKEN_INVALID',
+                'status': 401,
             }
 
-        logger.warning(f"토큰 검증 실패: {e}")
-        return {
-            'valid': False,
-            'error': '인증에 실패했습니다.',
-            'code': 'AUTH_FAILED',
-        }
+        logger.warning('Supabase 토큰 검증 서비스 오류: %s', type(e).__name__)
+        return _auth_service_unavailable_result()
 
 
 def _populate_auth_account() -> None:
@@ -125,15 +223,32 @@ def inject_auth_context() -> None:
 def require_auth(f: Callable) -> Callable:
     """JWT 토큰 검증 데코레이터.
 
-    Supabase가 비활성화된 개발 환경에서는 `g.user_id = None`으로 진입 허용.
-    활성 환경에서는 Bearer 토큰 누락 시 401, 검증 실패 시 401.
+    Supabase가 비활성화된 명시적 개발/테스트 환경에서만
+    `g.user_id = None`으로 진입을 허용한다. 그 외 환경에서 Supabase 설정이
+    없거나 검증 서비스가 실패하면 503으로 실패-폐쇄한다. 활성 환경에서는
+    Bearer 토큰 누락/잘못된 토큰에 401을 반환한다.
     UserAccount Aggregate가 필요한 라우트는 `get_auth_account()`로 지연 조회.
     """
     @wraps(f)
     def decorated(*args, **kwargs):
-        if not is_supabase_enabled():
+        try:
+            supabase_enabled = is_supabase_enabled()
+        except Exception as error:
+            logger.warning('Supabase 설정 확인 실패: %s', type(error).__name__)
+            supabase_enabled = False
+
+        if not supabase_enabled and _allows_auth_bypass():
             g.user_id = None
+            g.user_email = None
+            g.access_token = None
             return f(*args, **kwargs)
+
+        if not supabase_enabled:
+            unavailable = _auth_service_unavailable_result()
+            return jsonify({
+                'error': unavailable['error'],
+                'code': unavailable['code'],
+            }), unavailable['status']
 
         token = _extract_bearer_token()
         if not token:
@@ -145,7 +260,7 @@ def require_auth(f: Callable) -> Callable:
         if not result['valid']:
             return jsonify(
                 {'error': result['error'], 'code': result['code']}
-            ), 401
+            ), result.get('status', 401)
 
         # g.auth는 get_auth_account()로 지연 조회 (eager 조회 시 요청당
         # Supabase 왕복 5~6회가 낭비됐음 — 현재 g.auth 소비 라우트 없음)
@@ -160,4 +275,5 @@ __all__ = [
     "_extract_bearer_token",
     "_validate_token",
     "_populate_auth_account",
+    "_allows_auth_bypass",
 ]

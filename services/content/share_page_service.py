@@ -20,10 +20,25 @@ try:
 except Exception:  # pragma: no cover - 배포 환경에서 markdown이 없을 때만 fallback
     _markdown = None
 
+_MATHML_TAGS = {
+    "math", "semantics", "annotation", "annotation-xml", "mrow", "mi", "mn", "mo",
+    "ms", "mtext", "mspace", "msup", "msub", "msubsup", "mfrac", "msqrt", "mroot",
+    "mstyle", "merror", "mpadded", "mphantom", "mfenced", "menclose", "mtable", "mtr",
+    "mtd", "maligngroup", "malignmark", "mover", "munder", "munderover", "mmultiscripts",
+    "mprescripts", "none",
+}
 _ALLOWED_TAGS = {
     "h1", "h2", "h3", "h4", "h5", "h6", "p", "br", "strong", "em", "b", "i", "u", "s",
     "ul", "ol", "li", "a", "img", "table", "thead", "tbody", "tr", "th", "td", "blockquote",
     "pre", "code", "span", "div", "hr", "sup", "sub", "mark",
+} | _MATHML_TAGS
+_MATHML_ATTRS = {
+    "xmlns", "display", "encoding", "mathvariant", "mathsize", "mathcolor", "mathbackground",
+    "displaystyle", "scriptlevel", "stretchy", "symmetric", "fence", "separator", "form",
+    "accent", "accentunder", "lspace", "rspace", "maxsize", "minsize", "movablelimits", "largeop",
+    "width", "height", "depth", "voffset", "rowalign", "columnalign", "rowspacing", "columnspacing",
+    "rowlines", "columnlines", "frame", "framespacing", "equalrows", "equalcolumns", "columnspan",
+    "rowspan",
 }
 _ALLOWED_ATTRS = {
     "a": {"href", "target", "rel"},
@@ -34,6 +49,7 @@ _ALLOWED_ATTRS = {
     "div": {"class"},
     "code": {"class"},
     "pre": {"class"},
+    **{tag: _MATHML_ATTRS for tag in _MATHML_TAGS},
 }
 _DEFAULT_SHARE_DIR = Path(os.getenv("SHARE_PAGE_DIR", "data/shared_pages"))
 
@@ -123,7 +139,7 @@ class SharePageStore:
         return data
 
 
-def render_share_html(item: Mapping[str, Any]) -> str:
+def render_share_html(item: Mapping[str, Any], *, style_nonce: str | None = None) -> str:
     title = escape(str(item.get("title") or "공유 콘텐츠"))
     body = sanitize_html(str(item.get("html") or html_from_content(str(item.get("content") or ""))))
     source_url = escape(str(item.get("url") or ""), quote=True)
@@ -132,6 +148,11 @@ def render_share_html(item: Mapping[str, Any]) -> str:
     source_link = (
         f'<a class="source" href="{source_url}" target="_blank" rel="noopener noreferrer">원본 열기</a>'
         if source_url else ""
+    )
+    nonce_attr = (
+        f' nonce="{escape(style_nonce, quote=True)}"'
+        if style_nonce
+        else ''
     )
     return f"""<!doctype html>
 <html lang="ko">
@@ -143,7 +164,7 @@ def render_share_html(item: Mapping[str, Any]) -> str:
   <meta property="og:title" content="{title}">
   <meta property="og:description" content="{description}">
   <meta property="og:type" content="article">
-  <style>
+  <style{nonce_attr}>
     :root {{ color-scheme: light dark; --bg:#0f1115; --card:#171a21; --text:#f4f4f5; --muted:#a1a1aa; --accent:#8b5cf6; }}
     @media (prefers-color-scheme: light) {{ :root {{ --bg:#f8fafc; --card:#fff; --text:#111827; --muted:#6b7280; }} }}
     body {{ margin:0; background:var(--bg); color:var(--text); font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height:1.72; }}
@@ -158,6 +179,9 @@ def render_share_html(item: Mapping[str, Any]) -> str:
     th,td {{ border:1px solid color-mix(in srgb, var(--muted) 30%, transparent); padding:8px 10px; }}
     .meta {{ color:var(--muted); font-size:14px; display:flex; gap:12px; flex-wrap:wrap; }}
     .source {{ text-decoration:none; font-weight:700; }}
+    .katex-display {{ display:block; max-width:100%; margin:1em 0; overflow-x:auto; text-align:center; }}
+    .katex {{ font-size:1.05em; }}
+    math {{ font-family:'STIX Two Math','Cambria Math',serif; }}
   </style>
 </head>
 <body>

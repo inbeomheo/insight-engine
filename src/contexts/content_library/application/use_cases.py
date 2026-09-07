@@ -17,14 +17,23 @@ class SaveHistoryEntryUseCase:
 
     repository: IHistoryRepository
 
-    def execute(self, user_id: str | None, data: dict) -> dict | None:
+    def execute(
+        self,
+        user_id: str | None,
+        data: dict,
+        *,
+        validated_access_token: str | None = None,
+    ) -> dict | None:
         if not user_id:
             return None
         try:
             entry = HistoryEntry.from_dict(data, user_id)
         except ValueError:
             return None
-        return self.repository.save(entry)
+        return self.repository.save(
+            entry,
+            validated_access_token=validated_access_token,
+        )
 
 
 __all__ = [

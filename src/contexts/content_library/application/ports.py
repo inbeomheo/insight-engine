@@ -13,8 +13,13 @@ class IHistoryRepository(ABC):
     """
 
     @abstractmethod
-    def save(self, entry: HistoryEntry) -> dict | None:
-        """HistoryEntry 저장. 저장된 row dict 반환 (Supabase 응답 형식 호환)."""
+    def save(
+        self,
+        entry: HistoryEntry,
+        *,
+        validated_access_token: str | None = None,
+    ) -> dict | None:
+        """검증된 사용자 권한으로 저장하고 Supabase row dict를 반환한다."""
 
     @abstractmethod
     def save_many(self, entries: list[HistoryEntry]) -> int:

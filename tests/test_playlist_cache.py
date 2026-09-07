@@ -1,5 +1,6 @@
 """R16: /api/playlist-videos 결과 캐싱 테스트"""
 import time
+import threading
 import unittest
 from unittest.mock import patch, MagicMock
 
@@ -67,20 +68,25 @@ class TestPlaylistCache(unittest.TestCase):
 
         url = 'https://youtube.com/playlist?list=PLexpired'
 
-        # 첫 번째 요청
-        self.client.post('/api/playlist-videos',
-                         json={'url': url},
-                         headers={'Origin': 'http://localhost:3000'})
+        # 이 테스트는 프로세스 로컬 TTL만 검증하므로 CI의 Redis 캐시와 격리한다.
+        with patch(
+            'routes.utility._state._redis_playlist_client',
+            return_value=None,
+        ):
+            # 첫 번째 요청
+            self.client.post('/api/playlist-videos',
+                             json={'url': url},
+                             headers={'Origin': 'http://localhost:3000'})
 
-        # 캐시 타임스탬프를 강제로 과거로 설정
-        import routes.utility_routes as ut
-        cache_key = f"{url}|10"
-        ut._PLAYLIST_CACHE[cache_key]['ts'] = time.time() - 400  # 5분 초과
+            # 캐시 타임스탬프를 강제로 과거로 설정
+            import routes.utility_routes as ut
+            cache_key = "playlist:PLexpired:10"
+            ut._PLAYLIST_CACHE[cache_key]['ts'] = time.time() - 400  # 5분 초과
 
-        # 두 번째 요청 — 캐시 만료, 재호출
-        self.client.post('/api/playlist-videos',
-                         json={'url': url},
-                         headers={'Origin': 'http://localhost:3000'})
+            # 두 번째 요청 — 캐시 만료, 재호출
+            self.client.post('/api/playlist-videos',
+                             json={'url': url},
+                             headers={'Origin': 'http://localhost:3000'})
         self.assertEqual(mock_get.call_count, 2)
 
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
@@ -98,8 +104,115 @@ class TestPlaylistCache(unittest.TestCase):
         self.assertEqual(resp.status_code, 400)
 
         import routes.utility_routes as ut
-        cache_key = f"{url}|10"
+        cache_key = "playlist:PLerror:10"
         self.assertNotIn(cache_key, ut._PLAYLIST_CACHE)
+
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    @patch('services.core.content_service.is_playlist_url', return_value=True)
+    @patch('services.core.content_service.get_playlist_videos')
+    def test_query_variants_share_normalized_cache_key(self, mock_get, mock_is_pl, mock_supa):
+        mock_get.return_value = {'videos': [], 'total': 0}
+        base = 'https://youtube.com/playlist?list=PLnormalized'
+
+        self.client.post('/api/playlist-videos', json={'url': base})
+        response = self.client.post(
+            '/api/playlist-videos',
+            json={'url': f'{base}&tracking=unique'},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.get_json().get('cached'))
+        self.assertEqual(mock_get.call_count, 1)
+
+    def test_playlist_cache_is_bounded(self):
+        from routes.utility import _state
+
+        _state._PLAYLIST_CACHE.clear()
+        with patch.object(_state, '_PLAYLIST_CACHE_MAX_ITEMS', 2):
+            _state.set_playlist_cache('one', {'value': 1}, now=1)
+            _state.set_playlist_cache('two', {'value': 2}, now=2)
+            _state.set_playlist_cache('three', {'value': 3}, now=3)
+
+        self.assertEqual(list(_state._PLAYLIST_CACHE), ['two', 'three'])
+
+    def test_concurrent_misses_are_singleflight(self):
+        from routes.utility import _state
+
+        cache_key = 'playlist:PLsingleflight:10'
+        _state._PLAYLIST_CACHE.clear()
+        barrier = threading.Barrier(6)
+        calls = []
+        results = []
+
+        def loader():
+            calls.append(1)
+            time.sleep(0.05)
+            return {'videos': [], 'total': 0}
+
+        def request_cache():
+            barrier.wait()
+            results.append(_state.get_or_load_playlist_cache(cache_key, loader))
+
+        workers = [threading.Thread(target=request_cache) for _ in range(6)]
+        with patch.dict('os.environ', {'REDIS_URL': ''}):
+            for worker in workers:
+                worker.start()
+            for worker in workers:
+                worker.join(timeout=2)
+
+        self.assertTrue(all(not worker.is_alive() for worker in workers))
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(len(results), 6)
+        self.assertEqual(sum(1 for _data, cached in results if not cached), 1)
+
+    def test_redis_lock_and_cache_cover_cross_process_workers(self):
+        from routes.utility import _state
+
+        _state._PLAYLIST_CACHE.clear()
+        redis_client = MagicMock()
+        redis_client.get.side_effect = [None, None]
+        redis_lock = MagicMock()
+        redis_lock.acquire.return_value = True
+        redis_client.lock.return_value = redis_lock
+        loader = MagicMock(return_value={'videos': [], 'total': 0})
+
+        with patch.object(_state, '_redis_playlist_client', return_value=redis_client):
+            result, cached = _state.get_or_load_playlist_cache(
+                'playlist:PLredis:10',
+                loader,
+            )
+
+        self.assertFalse(cached)
+        self.assertEqual(result['total'], 0)
+        loader.assert_called_once_with()
+        redis_lock.acquire.assert_called_once_with(blocking=True)
+        redis_lock.release.assert_called_once_with()
+        redis_client.setex.assert_called_once()
+
+    def test_redis_path_preserves_usage_lock_loss(self):
+        from routes.utility import _state
+        from services.usage.usage_lock import UsageLockUnavailable
+
+        _state._PLAYLIST_CACHE.clear()
+        redis_client = MagicMock()
+        redis_client.get.side_effect = [None, None]
+        redis_lock = MagicMock()
+        redis_lock.acquire.return_value = True
+        redis_client.lock.return_value = redis_lock
+        loader = MagicMock(side_effect=UsageLockUnavailable('lease lost'))
+
+        with patch.object(
+            _state,
+            '_redis_playlist_client',
+            return_value=redis_client,
+        ), self.assertRaises(UsageLockUnavailable):
+            _state.get_or_load_playlist_cache(
+                'playlist:PLredislockloss:10',
+                loader,
+            )
+
+        redis_lock.release.assert_called_once_with()
+        redis_client.setex.assert_not_called()
 
 
 if __name__ == '__main__':

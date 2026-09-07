@@ -6,7 +6,6 @@ from services.data.web_scraper_service import (
     _clean_wikipedia_title,
     scrape_webpage,
     _extract_with_trafilatura,
-    _extract_with_scrapling,
     _REQUEST_TIMEOUT,
     _WIKIPEDIA_RE,
 )
@@ -64,10 +63,11 @@ class TestConstants(unittest.TestCase):
 
 class TestExtractWithTrafilatura(unittest.TestCase):
 
+    @patch('services.data.web_scraper_service._safe_fetch_html')
     @patch('services.data.web_scraper_service.trafilatura')
-    def test_success(self, mock_traf):
+    def test_success(self, mock_traf, mock_fetch):
         """정상 추출"""
-        mock_traf.fetch_url.return_value = '<html><body>content</body></html>'
+        mock_fetch.return_value = b'<html><body>content</body></html>'
         mock_traf.extract.return_value = '본문 텍스트입니다. 충분히 긴 텍스트.'
         mock_meta = MagicMock()
         mock_meta.title = '페이지 제목'
@@ -77,18 +77,20 @@ class TestExtractWithTrafilatura(unittest.TestCase):
         self.assertEqual(title, '페이지 제목')
         self.assertIn('본문', content)
 
+    @patch('services.data.web_scraper_service._safe_fetch_html')
     @patch('services.data.web_scraper_service.trafilatura')
-    def test_fetch_fails(self, mock_traf):
+    def test_fetch_fails(self, mock_traf, mock_fetch):
         """fetch 실패 → 빈 결과"""
-        mock_traf.fetch_url.return_value = None
+        mock_fetch.return_value = b''
         title, content = _extract_with_trafilatura('https://fail.com')
         self.assertEqual(title, '')
         self.assertEqual(content, '')
 
+    @patch('services.data.web_scraper_service._safe_fetch_html')
     @patch('services.data.web_scraper_service.trafilatura')
-    def test_exception(self, mock_traf):
+    def test_exception(self, mock_traf, mock_fetch):
         """예외 → 빈 결과"""
-        mock_traf.fetch_url.side_effect = Exception('network')
+        mock_fetch.side_effect = Exception('network')
         title, content = _extract_with_trafilatura('https://error.com')
         self.assertEqual(title, '')
         self.assertEqual(content, '')

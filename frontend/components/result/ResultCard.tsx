@@ -3,10 +3,11 @@
 import { memo, useState, useMemo, useCallback, useReducer, useRef, useEffect } from 'react';
 import {
   Copy, Check, ChevronDown, ChevronUp, MoreHorizontal, Trash2,
-  FileText, Code, Brain, BookOpen, Share2,
+  FileText, Code, Brain, BookOpen, Share2, Pencil,
   Zap, Type, MessageSquare, ExternalLink, Layers, Mic, Bot, Headphones, ListChecks, Loader2, Image as ImageIcon,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -18,7 +19,6 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import DOMPurify from 'dompurify';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 // KaTeX는 수식 감지 시에만 동적 로드 (초기 번들 ~280KB 절감)
@@ -31,13 +31,25 @@ import { useUIStore } from '@/stores/uiStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useClipboardCopy } from '@/hooks/useClipboardCopy';
-import { exportFormat, extractEvents, notebookLmGenerate, notebookLmStatus, notebookLmAuthCheck, createSharePage, createVideoDeepDiveFromResult, extractVideoDeepDiveScreenshots, apiUrl, createKnowledgeNote, isApiError, type NoteDuplicateWarning, type VideoDeepDiveSlide } from '@/lib/api';
+import { exportFormat, extractEvents, notebookLmGenerate, notebookLmStatus, notebookLmAuthCheck, createSharePage, createVideoDeepDiveFromResult, extractVideoDeepDiveScreenshots, createKnowledgeNote, isApiError, type NoteDuplicateWarning, type VideoDeepDiveSlide } from '@/lib/api';
 import { getKnowledgeNoteContent, getKnowledgeNotePreview, getKnowledgeNoteSource } from '@/lib/knowledge-note-source';
+import {
+  createDownloadFilename,
+  escapeHtmlText,
+  getNotebookLmTerminalStatus,
+  hasReportChanges,
+  normalizeReportDraft,
+  validateReportDraft,
+  type ReportDraft,
+} from '@/lib/report-edit';
+import { injectTimestampLinks, markdownToHtml } from '@/lib/markdown-to-html';
 import { NotebookLmSection } from './NotebookLmSection';
+import ProtectedImage from '@/components/media/ProtectedImage';
 import type { VideoEvent, EventSummary } from '@/lib/types';
 
 import { ReportProvider } from './ReportContext';
 import { EXPORT_HTML_STYLE } from '@/lib/exportHtmlTemplate';
+import { sanitizeReportHtml } from '@/lib/sanitize-report-html';
 
 // 조건부 서브컴포넌트 — 특정 스타일/데이터에서만 사용되므로 dynamic import
 const SeoSection = dynamic(() => import('./SeoSection'), { ssr: false });
@@ -59,16 +71,8 @@ const ResultChatPanel = dynamic(() => import('./ResultChatPanel'), { ssr: false 
 // KaTeX 수식 렌더링 — 콘텐츠에 수식 패턴이 있을 때만 로드
 const MathMarkdown = dynamic(() => import('./MathMarkdown'), { ssr: false });
 
-/** DOMPurify 기반 HTML 새니타이징 (XSS 방지) */
-function sanitizeHtml(html: string): string {
-  return DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: ['h1','h2','h3','h4','h5','h6','p','br','strong','em','b','i','u','s',
-      'ul','ol','li','a','img','table','thead','tbody','tr','th','td',
-      'blockquote','pre','code','span','div','hr','sup','sub','mark'],
-    ALLOWED_ATTR: ['href','src','alt','class','style','target','rel','colspan','rowspan'],
-    ALLOW_DATA_ATTR: false,
-  });
-}
+// 문서 편집기 — 편집 버튼을 눌렀을 때만 필요하므로 dynamic import
+const ContentEditor = dynamic(() => import('./ContentEditor'), { ssr: false });
 
 interface ResultCardProps {
   report: Report;
@@ -79,8 +83,116 @@ interface ResultCardProps {
 
 const remarkPlugins = [remarkGfm];
 const NOTEBOOKLM_ENABLED = process.env.NEXT_PUBLIC_NOTEBOOKLM_ENABLED === 'true';
+const NOTEBOOKLM_POLL_INTERVAL_MS = 5000;
+const NOTEBOOKLM_MAX_POLL_ATTEMPTS = 60;
+const NOTEBOOKLM_MAX_CONSECUTIVE_ERRORS = 3;
+const ANKI_EXPORT_STYLES = new Set(['quiz', 'retention_cards']);
 // 수식 감지 패턴: $$...$$ 또는 \(...\) 또는 \[...\]
 const MATH_PATTERN = /\$\$[\s\S]+?\$\$|\\\([\s\S]+?\\\)|\\\[[\s\S]+?\\\]/;
+
+function shareSnapshotFingerprint(
+  report: Pick<Report, 'title' | 'content' | 'html' | 'url' | 'style'>,
+): string {
+  return [report.title, report.content, report.html ?? '', report.url ?? '', report.style].join('\u0000');
+}
+
+export interface NotebookLmPollJob {
+  timer: ReturnType<typeof setTimeout> | null;
+  cancelled: boolean;
+}
+
+interface NotebookLmPollingOptions {
+  artifactId: string;
+  jobs: Map<string, NotebookLmPollJob>;
+  fetchStatus: (artifactId: string) => Promise<{ status: string; error?: string }>;
+  onTerminal: (status: 'completed' | 'failed', error?: string) => void;
+  onTimeout: () => void;
+  onFailure: (error: unknown) => void;
+  intervalMs?: number;
+  maxAttempts?: number;
+  maxConsecutiveErrors?: number;
+}
+
+function cancelNotebookLmPollJob(
+  jobs: Map<string, NotebookLmPollJob>,
+  artifactId: string,
+  job: NotebookLmPollJob,
+): void {
+  job.cancelled = true;
+  if (job.timer !== null) clearTimeout(job.timer);
+  job.timer = null;
+  if (jobs.get(artifactId) === job) jobs.delete(artifactId);
+}
+
+/**
+ * NotebookLM 상태를 한 번에 하나씩 확인한다. 같은 artifact의 새 폴링이 시작되면 이전 작업은
+ * 응답이 늦게 도착해도 콜백을 실행하지 못하며, 일시 오류는 연속 실패 상한까지 재시도한다.
+ */
+export function startNotebookLmStatusPolling({
+  artifactId,
+  jobs,
+  fetchStatus,
+  onTerminal,
+  onTimeout,
+  onFailure,
+  intervalMs = NOTEBOOKLM_POLL_INTERVAL_MS,
+  maxAttempts = NOTEBOOKLM_MAX_POLL_ATTEMPTS,
+  maxConsecutiveErrors = NOTEBOOKLM_MAX_CONSECUTIVE_ERRORS,
+}: NotebookLmPollingOptions): () => void {
+  const previousJob = jobs.get(artifactId);
+  if (previousJob) cancelNotebookLmPollJob(jobs, artifactId, previousJob);
+
+  const job: NotebookLmPollJob = { timer: null, cancelled: false };
+  jobs.set(artifactId, job);
+  let attempts = 0;
+  let consecutiveErrors = 0;
+
+  const cancel = () => cancelNotebookLmPollJob(jobs, artifactId, job);
+  const schedule = () => {
+    if (job.cancelled) return;
+    job.timer = setTimeout(() => {
+      job.timer = null;
+      void poll();
+    }, intervalMs);
+  };
+  const poll = async () => {
+    if (job.cancelled) return;
+    if (attempts >= maxAttempts) {
+      cancel();
+      onTimeout();
+      return;
+    }
+    attempts += 1;
+
+    try {
+      const status = await fetchStatus(artifactId);
+      if (job.cancelled) return;
+      consecutiveErrors = 0;
+      const terminalStatus = getNotebookLmTerminalStatus(status.status);
+      if (terminalStatus) {
+        cancel();
+        onTerminal(
+          terminalStatus,
+          status.error || (status.status === 'not_found' ? 'artifact_not_found' : undefined),
+        );
+        return;
+      }
+      schedule();
+    } catch (error) {
+      if (job.cancelled) return;
+      consecutiveErrors += 1;
+      if (consecutiveErrors >= maxConsecutiveErrors) {
+        cancel();
+        onFailure(error);
+        return;
+      }
+      schedule();
+    }
+  };
+
+  schedule();
+  return cancel;
+}
 
 // 품질 등급별 스타일 정의
 const GRADE_STYLES: Record<QualityScore['grade'], { badge: string; label: string }> = {
@@ -125,12 +237,6 @@ function extractTutorialVisualCues(content: string): VisualCue[] {
     })
     .filter((cue): cue is VisualCue => Boolean(cue))
     .slice(0, 7);
-}
-
-function visualSrc(src?: string): string {
-  if (!src) return '';
-  if (/^https?:\/\//.test(src)) return src;
-  return apiUrl(src);
 }
 
 function TutorialVisualCueSection({
@@ -196,8 +302,7 @@ function TutorialVisualCueSection({
         <div className="mb-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {visibleSlides.slice(0, 6).map((slide, index) => (
             <figure key={`${slide.img}-${index}`} className="overflow-hidden rounded-sm border border-border/70 bg-card">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={visualSrc(slide.img)} alt={slide.title || `스크린샷 ${index + 1}`} className="aspect-video w-full object-cover" />
+              <ProtectedImage src={slide.img} alt={slide.title || `스크린샷 ${index + 1}`} className="aspect-video w-full object-cover" />
               <figcaption className="flex items-center justify-between gap-2 px-3 py-2 text-xs text-muted-foreground">
                 <span className="font-semibold text-primary">{slide.mmss || '00:00'}</span>
                 <span className="truncate">{slide.title || `스크린샷 ${index + 1}`}</span>
@@ -250,6 +355,7 @@ function panelReducer(state: PanelState, action: PanelAction): PanelState {
 }
 
 const ResultCard = memo(function ResultCard({ report, viewMode = 'full', onExpandToFull }: ResultCardProps) {
+  const router = useRouter();
   const [panel, dispatch] = useReducer(panelReducer, panelInitial);
   const [isSharing, setIsSharing] = useState(false);
   const [isSavingNote, setIsSavingNote] = useState(false);
@@ -257,6 +363,7 @@ const ResultCard = memo(function ResultCard({ report, viewMode = 'full', onExpan
   const [isExtractingScreenshots, setIsExtractingScreenshots] = useState(false);
   const [deepDiveUrl, setDeepDiveUrl] = useState<string | null>(null);
   const [deepDiveSlides, setDeepDiveSlides] = useState<VideoDeepDiveSlide[]>([]);
+  const [isEditing, setIsEditing] = useState(false);
   const { collapsed, hasExpanded, chatOpen, showTranscript, eventOpen, eventLoading, extractedEvents, eventSummary } = panel;
 
   // 간편 setter
@@ -267,6 +374,7 @@ const ResultCard = memo(function ResultCard({ report, viewMode = 'full', onExpan
   // Zustand selector — 함수 참조만 구독 (전체 스토어 구독 방지)
   const removeReport = useResultStore((s) => s.removeReport);
   const updateReport = useResultStore((s) => s.updateReport);
+  const updateReportPersisted = useResultStore((s) => s.updateReportPersisted);
   const setPromptModalOpen = useUIStore((s) => s.setPromptModalOpen);
 
   const selectedModel = useSettingsStore((s) => s.selectedModel);
@@ -282,18 +390,83 @@ const ResultCard = memo(function ResultCard({ report, viewMode = 'full', onExpan
   const noteSource = getKnowledgeNoteSource(report);
   const notePreview = useMemo(() => (noteSource ? getKnowledgeNotePreview(report) : null), [noteSource, report]);
   const linkedNoteId = report.knowledge_note_id;
+  // 스트림이 실제로 갱신 중인 임시 보고서만 편집을 막는다.
+  // 완료된 마크다운/평문 결과는 html이 비어 있어도 편집할 수 있어야 한다.
+  const isStreaming = report.is_streaming === true;
+  const editingBaseRef = useRef<string | null>(null);
+  const canExportAnki = ANKI_EXPORT_STYLES.has(report.style);
 
-  // NotebookLM 폴링 interval 추적 — 언마운트 시 정리 (메모리 누수/유령 폴링 방지)
-  const pollIdsRef = useRef<Set<ReturnType<typeof setInterval>>>(new Set());
+  // NotebookLM 폴링 작업 추적 — 언마운트 시 타이머와 진행 중 응답을 모두 무효화한다.
+  const pollJobsRef = useRef<Map<string, NotebookLmPollJob>>(new Map());
   useEffect(() => {
-    const ids = pollIdsRef.current;
+    const jobs = pollJobsRef.current;
     return () => {
-      ids.forEach((id) => clearInterval(id));
-      ids.clear();
+      jobs.forEach((job, artifactId) => cancelNotebookLmPollJob(jobs, artifactId, job));
+      jobs.clear();
     };
   }, []);
 
   const charCount = report.content.length;
+
+  // --- 문서 편집 (제목 + 본문 마크다운) ---
+  // 저장 성공 알림 전에 resultStore.updateReportPersisted로 localStorage 기록을 끝낸다.
+  const startEditing = useCallback(() => {
+    if (isStreaming) {
+      toast.info(t('result.editStreaming'));
+      return;
+    }
+    if (isSharing) {
+      toast.info(t('result.shareInProgress'));
+      return;
+    }
+    editingBaseRef.current = `${report.title}\u0000${report.content}`;
+    dispatch({ type: 'BATCH', updates: { hasExpanded: true, collapsed: false } });
+    setIsEditing(true);
+  }, [isSharing, isStreaming, report.title, report.content, t]);
+
+  const handleSaveEdit = useCallback(
+    async (draft: ReportDraft) => {
+      const currentFingerprint = `${report.title}\u0000${report.content}`;
+      if (isStreaming || editingBaseRef.current !== currentFingerprint) {
+        toast.error(t(isStreaming ? 'result.editStreaming' : 'result.editConflict'));
+        return;
+      }
+      const error = validateReportDraft(draft);
+      if (error) {
+        toast.error(t(`result.${error === 'emptyTitle' ? 'editEmptyTitle' : 'editEmptyContent'}`));
+        return;
+      }
+      if (!hasReportChanges(report, draft)) {
+        editingBaseRef.current = null;
+        setIsEditing(false);
+        toast.info(t('result.editNoChange'));
+        return;
+      }
+      const { title, content } = normalizeReportDraft(draft);
+      // html은 내보내기/공유가 소비하므로 편집 본문으로 다시 렌더링해 stale 상태를 막는다.
+      try {
+        const html = await markdownToHtml(content, report.url);
+        // 기존 공유 페이지는 편집 전 스냅샷이므로 편집 저장과 같은 트랜잭션에서 무효화한다.
+        const saved = updateReportPersisted(report.id, { title, content, html, share_url: undefined });
+        if (!saved) {
+          toast.error(t('result.editStorageFailed'));
+          return;
+        }
+        editingBaseRef.current = null;
+        setIsEditing(false);
+        toast.success(t('result.editSaved'));
+      } catch {
+        toast.error(t('result.editSaveFailed'));
+      }
+    },
+    [report, updateReportPersisted, t, isStreaming],
+  );
+
+  const cancelEditing = useCallback(() => {
+    editingBaseRef.current = null;
+    setIsEditing(false);
+  }, []);
+
   const tokenMeta = `${(report.usage?.total_tokens ?? 0).toLocaleString()} TOKENS`;
   const timeMeta = `${(report.elapsed_time ?? 0).toFixed(1)}초`;
 
@@ -306,8 +479,9 @@ const ResultCard = memo(function ResultCard({ report, viewMode = 'full', onExpan
   }
 
   async function copyRich() {
-    const result = await copyClipboardItems(() => {
-      const html = report.html || report.content;
+    const result = await copyClipboardItems(async () => {
+      const rendered = report.html || await markdownToHtml(report.content, report.url);
+      const html = sanitizeReportHtml(rendered);
       const blob = new Blob([html], { type: 'text/html' });
       const textBlob = new Blob([report.content], { type: 'text/plain' });
       return [
@@ -326,22 +500,24 @@ const ResultCard = memo(function ResultCard({ report, viewMode = 'full', onExpan
     }
   }
 
-  function handleExportHtml() {
+  async function handleExportHtml() {
+    const rendered = report.html || await markdownToHtml(report.content, report.url);
     const html = `<!DOCTYPE html>
-<html lang="ko"><head><meta charset="utf-8"><title>${report.title}</title>
-<style>${EXPORT_HTML_STYLE}</style></head><body>${sanitizeHtml(report.html || report.content)}</body></html>`;
+<html lang="ko"><head><meta charset="utf-8"><title>${escapeHtmlText(report.title)}</title>
+<style>${EXPORT_HTML_STYLE}</style></head><body>${sanitizeReportHtml(rendered)}</body></html>`;
     const blob = new Blob([html], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${report.title.slice(0, 50)}.html`;
+    a.download = createDownloadFilename(report.title, 'html');
     a.click();
     URL.revokeObjectURL(url);
     toast.success(t('result.htmlSuccess'));
   }
 
   async function handleShare() {
-    if (isSharing) return;
+    if (isSharing || isEditing) return;
+    const snapshotFingerprint = shareSnapshotFingerprint(report);
     setIsSharing(true);
     try {
       let shareUrl = report.share_url ?? '';
@@ -349,13 +525,28 @@ const ResultCard = memo(function ResultCard({ report, viewMode = 'full', onExpan
       const result = await copyClipboardText(async () => {
         try {
           if (!shareUrl) {
-            shareUrl = (await createSharePage({
+            const rendered = report.html || await markdownToHtml(report.content, report.url);
+            const createdShareUrl = (await createSharePage({
               title: report.title,
               content: report.content,
-              html: report.html,
+              html: rendered,
               url: report.url,
               style: report.style,
             })).share_url;
+
+            // 공유 페이지는 요청 시점의 스냅샷이다. 요청 중 다른 화면/동기화가
+            // 문서를 편집했다면 오래된 URL을 최신 보고서에 다시 연결하지 않는다.
+            const latestReport = useResultStore.getState().reports.find(
+              (item) => item.id === report.id,
+            );
+            if (
+              !latestReport
+              || shareSnapshotFingerprint(latestReport) !== snapshotFingerprint
+            ) {
+              throw new Error(t('result.shareStale'));
+            }
+
+            shareUrl = createdShareUrl;
             updateReport(report.id, { share_url: shareUrl });
           }
           return shareUrl;
@@ -386,7 +577,7 @@ const ResultCard = memo(function ResultCard({ report, viewMode = 'full', onExpan
   }
 
   function openKnowledgeNote(noteId: string) {
-    window.location.href = `/notes/${encodeURIComponent(noteId)}`;
+    router.push(`/notes/${encodeURIComponent(noteId)}`);
   }
 
   function markKnowledgeNoteLinked(noteId: string, title?: string) {
@@ -447,19 +638,23 @@ const ResultCard = memo(function ResultCard({ report, viewMode = 'full', onExpan
     void handleSaveKnowledgeNote();
   }
 
-  async function handleExportFormat(format: 'markdown') {
+  async function handleExportFormat(format: 'markdown' | 'anki') {
     try {
-      const blob = await exportFormat(format, report.title, report.content);
-      const ext = format === 'markdown' ? 'md' : format;
+      const blob = await exportFormat(format, report.title, report.content, {
+        style: report.style,
+        source_url: report.url,
+        tags: [report.style, 'generated-content'],
+      });
+      const ext = format === 'markdown' ? 'md' : 'apkg';
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${report.title.slice(0, 50)}.${ext}`;
+      a.download = createDownloadFilename(report.title, ext);
       a.click();
       URL.revokeObjectURL(url);
-      toast.success(`${ext.toUpperCase()} 내보내기 완료`);
-    } catch {
-      toast.error('내보내기에 실패했습니다.');
+      toast.success(format === 'anki' ? 'Anki 덱 내보내기 완료' : 'MD 내보내기 완료');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '내보내기에 실패했습니다.');
     }
   }
 
@@ -477,37 +672,40 @@ const ResultCard = memo(function ResultCard({ report, viewMode = 'full', onExpan
         source_text: sourceText,
       });
       const artifact = { artifact_id: res.artifact_id, content_type: contentType, status: 'in_progress' as const };
-      const existing = report.notebooklm?.artifacts ?? [];
-      updateReport(report.id, { notebooklm: { artifacts: [...existing, artifact] } });
+      const latestReport = useResultStore.getState().reports.find((item) => item.id === report.id);
+      const existing = latestReport?.notebooklm?.artifacts ?? report.notebooklm?.artifacts ?? [];
+      const artifacts = [...existing.filter((item) => item.artifact_id !== artifact.artifact_id), artifact];
+      updateReport(report.id, { notebooklm: { artifacts } });
       toast.success(`NotebookLM ${contentType} 생성 시작`);
 
-      // 폴링 (최대 5분 — 멈춘 artifact가 영원히 폴링하지 않도록 상한)
-      let attempts = 0;
-      const MAX_POLL_ATTEMPTS = 60;
-      const stopPoll = (id: ReturnType<typeof setInterval>) => {
-        clearInterval(id);
-        pollIdsRef.current.delete(id);
+      const finishArtifact = (status: 'completed' | 'failed', error?: string) => {
+        const currentReport = useResultStore.getState().reports.find((item) => item.id === report.id);
+        const currentArtifacts = currentReport?.notebooklm?.artifacts ?? [...existing, artifact];
+        const hasArtifact = currentArtifacts.some((item) => item.artifact_id === artifact.artifact_id);
+        const artifacts = (hasArtifact ? currentArtifacts : [...currentArtifacts, artifact]).map((item) =>
+          item.artifact_id === artifact.artifact_id ? { ...item, status, ...(error ? { error } : {}) } : item,
+        );
+        updateReport(report.id, { notebooklm: { artifacts } });
       };
-      const poll = setInterval(async () => {
-        try {
-          if (++attempts > MAX_POLL_ATTEMPTS) {
-            stopPoll(poll);
-            return;
-          }
-          const status = await notebookLmStatus(res.artifact_id);
-          if (status.status === 'completed' || status.status === 'failed') {
-            stopPoll(poll);
-            // 새로 추가된 artifact도 반영
-            const all = [...existing, { ...artifact, status: status.status as 'completed' | 'failed' }];
-            updateReport(report.id, { notebooklm: { artifacts: all } });
-            if (status.status === 'completed') toast.success(`NotebookLM ${contentType} 생성 완료!`);
-            else toast.error(`NotebookLM ${contentType} 생성 실패`);
-          }
-        } catch {
-          stopPoll(poll);
-        }
-      }, 5000);
-      pollIdsRef.current.add(poll);
+
+      startNotebookLmStatusPolling({
+        artifactId: res.artifact_id,
+        jobs: pollJobsRef.current,
+        fetchStatus: notebookLmStatus,
+        onTerminal: (terminalStatus, error) => {
+          finishArtifact(terminalStatus, error);
+          if (terminalStatus === 'completed') toast.success(`NotebookLM ${contentType} 생성 완료!`);
+          else toast.error(`NotebookLM ${contentType} 생성 실패`);
+        },
+        onTimeout: () => {
+          finishArtifact('failed', 'status_poll_timeout');
+          toast.error(`NotebookLM ${contentType} 생성 상태 확인 시간이 초과되었습니다.`);
+        },
+        onFailure: (error) => {
+          finishArtifact('failed', error instanceof Error ? error.message : 'status_check_failed');
+          toast.error(`NotebookLM ${contentType} 상태 확인에 반복해서 실패했습니다.`);
+        },
+      });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'NotebookLM 생성에 실패했습니다.');
     }
@@ -598,24 +796,6 @@ const ResultCard = memo(function ResultCard({ report, viewMode = 'full', onExpan
       setIsExtractingScreenshots(false);
     }
   }
-
-  /**
-   * 마크다운 콘텐츠에서 [HH:MM:SS] 형식의 타임코드를 YouTube 딥링크로 변환합니다.
-   * 영상 URL이 없거나 타임코드가 없으면 원본 텍스트를 그대로 반환합니다.
-   */
-  function injectTimestampLinks(content: string, videoUrl: string | undefined): string {
-    if (!videoUrl) return content;
-    return content.replace(/\[(\d{1,2}:\d{2}:\d{2})\]/g, (_, hhmmss) => {
-      const parts = hhmmss.split(':').map(Number);
-      const seconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
-      const separator = videoUrl.includes('?') ? '&' : '?';
-      const deeplink = `${videoUrl}${separator}t=${seconds}`;
-      return `[[${hhmmss}]](${deeplink})`;
-    });
-  }
-
-  // html이 비어있고 content가 있으면 스트리밍 진행 중
-  const isStreaming = !report.html && report.content.length > 0;
 
   const articleContent = useMemo(
     () => ['tutorial', 'course'].includes(report.style) ? stripTutorialVisualCueLines(report.content) : report.content,
@@ -774,11 +954,11 @@ const ResultCard = memo(function ResultCard({ report, viewMode = 'full', onExpan
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-variant={report.share_url ? 'secondary' : 'outline'}
+                  variant={report.share_url ? 'secondary' : 'outline'}
                   size="sm"
                   className="signal-meta h-8 gap-1.5 rounded-sm border-primary/40 px-2.5 text-[10px] text-primary hover:bg-primary/5"
                   onClick={handleShare}
-                  disabled={isSharing}
+                  disabled={isSharing || isEditing}
                   aria-label={report.share_url ? '공유 링크 복사' : '공유 페이지 만들고 링크 복사'}
                 >
                   {isSharing ? (
@@ -809,6 +989,22 @@ variant={report.share_url ? 'secondary' : 'outline'}
                 </Button>
               </TooltipTrigger>
               <TooltipContent>{t('result.richCopy')}</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={isEditing ? 'secondary' : 'ghost'}
+                  size="icon"
+                  className="h-8 w-8 rounded-sm"
+                  aria-label={t('result.edit')}
+                  aria-pressed={isEditing}
+                  disabled={isStreaming || isSharing}
+                  onClick={() => (isEditing ? cancelEditing() : startEditing())}
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t(isStreaming ? 'result.editStreaming' : 'result.edit')}</TooltipContent>
             </Tooltip>
             <Button
               variant="ghost"
@@ -934,9 +1130,17 @@ variant={report.share_url ? 'secondary' : 'outline'}
             </section>
           )}
 
-          {/* 타임라인 모드: 챕터 우선 표시 + 챕터별 콘텐츠 */}
-          {viewMode === 'timeline' && report.chapters && report.chapters.length > 0 ? (
+          {/* 편집 모드: 뷰 모드/자막 패널 대신 편집기를 표시 */}
+          {isEditing ? (
+            <ContentEditor
+              initialTitle={report.title}
+              initialContent={report.content}
+              onSave={handleSaveEdit}
+              onCancel={cancelEditing}
+            />
+          ) : viewMode === 'timeline' && report.chapters && report.chapters.length > 0 ? (
             <>
+              {/* 타임라인 모드: 챕터 우선 표시 + 챕터별 콘텐츠 */}
               <ChapterTimeline chapters={report.chapters} videoUrl={report.url} />
               <div className="mt-5 space-y-4">
                 {report.chapters.map((ch, i) => (
@@ -1095,6 +1299,14 @@ variant={report.share_url ? 'secondary' : 'outline'}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuItem
+                onClick={startEditing}
+                disabled={isStreaming || isSharing}
+              >
+                <Pencil className="h-3.5 w-3.5 mr-2" />
+                {t('result.edit')}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => copyText(report.title, 'title')}>
                 <Copy className="h-3.5 w-3.5 mr-2" />
                 {t('result.copyTitle')}
@@ -1180,6 +1392,12 @@ variant={report.share_url ? 'secondary' : 'outline'}
                 <FileText className="h-3.5 w-3.5 mr-2" />
                 마크다운 (.md)
               </DropdownMenuItem>
+              {canExportAnki && (
+                <DropdownMenuItem onClick={() => handleExportFormat('anki')}>
+                  <Layers className="h-3.5 w-3.5 mr-2" />
+                  Anki 덱 (.apkg)
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive"

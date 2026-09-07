@@ -1,6 +1,7 @@
 from unittest.mock import patch
 
 import pytest
+from flask import g
 
 from app import create_app
 from routes.blog_routes import DEFAULT_MODEL
@@ -18,11 +19,19 @@ def _payload(**overrides):
         "question": "핵심 결론은 뭐야?",
         "context": "[00:01] AI는 반복 학습을 돕습니다.\n[00:05] 복습 질문이 중요합니다.",
         "history": [{"role": "user", "content": "요약해줘"}],
-        "model": "gemini/test",
+        "model": "chatmock/gpt-5.4-mini",
         "language": "ko",
     }
     data.update(overrides)
     return data
+
+
+def _validate_user_b(token):
+    if token != "token-b":
+        return {"valid": False, "error": "invalid", "code": "TOKEN_INVALID"}
+    g.user_id = "user-b"
+    g.access_token = token
+    return {"valid": True, "error": None, "code": None}
 
 
 def test_chat_happy_path_uses_ai_and_note_search():
@@ -50,13 +59,66 @@ def test_chat_happy_path_uses_ai_and_note_search():
         "score": 0.9,
         "snippet": "복습 질문 메모",
     }]
-    search_notes.assert_called_once_with("핵심 결론은 뭐야?", limit=3)
+    search_notes.assert_called_once_with("핵심 결론은 뭐야?", owner_id=None, limit=3)
     messages = create_chat.call_args.args[0]
     assert messages[0]["role"] == "system"
     assert "자막/본문과 관련 지식 노트만" in messages[0]["content"]
     assert messages[1]["role"] == "user"
     assert "복습 질문 메모" in messages[-1]["content"]
-    assert create_chat.call_args.kwargs["model"] == "gemini/test"
+    assert create_chat.call_args.kwargs["model"] == "chatmock/gpt-5.4-mini"
+
+
+def test_chat_rejects_unlisted_model_before_search_or_ai():
+    client = _client()
+    with (
+        patch("src.contexts.identity.interface.auth_decorators.is_supabase_enabled", return_value=False),
+        patch("services.content.note_index_service.search_notes") as search_notes,
+        patch("services.core.ai_service.create_chat_response") as create_chat,
+    ):
+        resp = client.post(
+            "/api/chat",
+            json=_payload(model="attacker/model"),
+            headers=_H,
+        )
+
+    assert resp.status_code == 400
+    search_notes.assert_not_called()
+    create_chat.assert_not_called()
+
+
+def test_chat_rag_search_is_scoped_to_authenticated_user():
+    client = _client()
+
+    with (
+        patch(
+            "src.contexts.identity.interface.auth_decorators.is_supabase_enabled",
+            return_value=True,
+        ),
+        patch(
+            "src.contexts.identity.interface.auth_decorators._validate_token",
+            side_effect=_validate_user_b,
+        ),
+        patch(
+            "services.content.note_index_service.search_notes",
+            return_value=[],
+        ) as search_notes,
+        patch(
+            "services.core.ai_service.create_chat_response",
+            return_value={"answer": "ok", "usage": {}},
+        ),
+    ):
+        response = client.post(
+            "/api/chat",
+            json=_payload(),
+            headers={**_H, "Authorization": "Bearer token-b"},
+        )
+
+    assert response.status_code == 200
+    search_notes.assert_called_once_with(
+        "핵심 결론은 뭐야?",
+        owner_id="user-b",
+        limit=3,
+    )
 
 
 def test_chat_non_numeric_score_returns_insufficient_evidence_without_ai():

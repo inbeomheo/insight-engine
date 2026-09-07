@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,11 +14,13 @@ import { useUIStore } from '@/stores/uiStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { formatModelSize } from '@/lib/utils';
 import { useTranslation } from '@/hooks/useTranslation';
+import { useAuthUserId } from '@/hooks/useAuthUserId';
 import { Trash2, Bot, Brain, RotateCcw } from 'lucide-react';
 import { clearCache, getStyleMemory, updateStyleMemory, resetStyleMemory, type StyleProfile } from '@/lib/api';
 import { STYLE_OPTIONS } from '@/lib/constants';
 import { toast } from 'sonner';
 import LanguageSwitcher from './LanguageSwitcher';
+import AuthSection from './AuthSection';
 
 const STYLE_LABELS = Object.fromEntries(STYLE_OPTIONS.map((style) => [style.id, style.label]));
 
@@ -35,7 +37,19 @@ const WRITING_STYLE_LABELS: Record<string, string> = {
   expert: '전문가체',
 };
 
+type ProfileLoadState = 'unauthenticated' | 'loading' | 'ready' | 'error';
+
 export default function SettingsModal() {
+  const authUserId = useAuthUserId();
+  return (
+    <AccountSettingsModal
+      key={authUserId ?? 'anonymous'}
+      authUserId={authUserId}
+    />
+  );
+}
+
+function AccountSettingsModal({ authUserId }: { authUserId: string | null }) {
   const { activeModal, setSettingsModalOpen } = useUIStore();
   const settingsModalOpen = activeModal === 'settings';
   const {
@@ -57,23 +71,51 @@ export default function SettingsModal() {
   const [customInstructions, setCustomInstructions] = useState('');
   const [memoryEnabled, setMemoryEnabled] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [profileLoadState, setProfileLoadState] = useState<ProfileLoadState>(
+    authUserId ? 'loading' : 'unauthenticated',
+  );
+  const profileRequestRef = useRef(0);
+  const mountedRef = useRef(false);
 
-  // 모달이 열릴 때 프로필 로드
-  const loadProfile = useCallback(async () => {
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      profileRequestRef.current += 1;
+    };
+  }, []);
+
+  // 인증 전환·모달 재오픈 중 이전 요청이 늦게 와도 현재 폼을 덮지 않는다.
+  const loadProfile = useCallback(async (): Promise<boolean> => {
+    if (!authUserId) return false;
+    const requestId = ++profileRequestRef.current;
+    setProfileLoadState('loading');
     try {
       const res = await getStyleMemory();
+      if (!mountedRef.current || requestId !== profileRequestRef.current) return false;
       setProfile(res.profile);
       setAvoidInput((res.profile.avoid_keywords || []).join(', '));
       setCustomInstructions(res.profile.custom_instructions || '');
       setMemoryEnabled(res.profile.style_memory_enabled !== false);
+      setProfileLoadState('ready');
+      return true;
     } catch {
-      // Supabase 비활성화 또는 미로그인 시 무시
+      if (!mountedRef.current || requestId !== profileRequestRef.current) return false;
+      setProfile(null);
+      setAvoidInput('');
+      setCustomInstructions('');
+      setMemoryEnabled(true);
+      setProfileLoadState('error');
+      return false;
     }
-  }, []);
+  }, [authUserId]);
 
   useEffect(() => {
-    if (settingsModalOpen) loadProfile();
-  }, [settingsModalOpen, loadProfile]);
+    if (settingsModalOpen && authUserId) void loadProfile();
+    return () => {
+      profileRequestRef.current += 1;
+    };
+  }, [authUserId, settingsModalOpen, loadProfile]);
 
   async function handleClearCache() {
     try {
@@ -85,6 +127,7 @@ export default function SettingsModal() {
   }
 
   async function handleSaveMemory() {
+    if (!authUserId || profileLoadState !== 'ready' || isSaving) return;
     setIsSaving(true);
     try {
       const keywords = avoidInput
@@ -97,28 +140,30 @@ export default function SettingsModal() {
         custom_instructions: customInstructions.trim().slice(0, 500),
         style_memory_enabled: memoryEnabled,
       });
+      if (!mountedRef.current) return;
       toast.success('스타일 메모리가 저장되었습니다.');
       await loadProfile();
     } catch {
-      toast.error('저장에 실패했습니다.');
+      if (mountedRef.current) toast.error('저장에 실패했습니다.');
     } finally {
-      setIsSaving(false);
+      if (mountedRef.current) setIsSaving(false);
     }
   }
 
   async function handleResetMemory() {
+    if (!authUserId || profileLoadState !== 'ready' || isSaving) return;
     if (!confirm('스타일 메모리를 초기화하시겠습니까? 학습된 선호도가 모두 삭제됩니다.')) return;
     try {
       await resetStyleMemory();
+      if (!mountedRef.current) return;
       toast.success('스타일 메모리가 초기화되었습니다.');
       await loadProfile();
-      setAvoidInput('');
-      setCustomInstructions('');
-      setMemoryEnabled(true);
     } catch {
-      toast.error('초기화에 실패했습니다.');
+      if (mountedRef.current) toast.error('초기화에 실패했습니다.');
     }
   }
+
+  const profileReady = Boolean(authUserId) && profileLoadState === 'ready';
 
   const topStyles = (profile?.preferred_styles || [])
     .filter((style) => STYLE_LABELS[style.style_id])
@@ -141,6 +186,8 @@ export default function SettingsModal() {
           <h3 className="text-sm font-semibold">{t('language.label')}</h3>
           <LanguageSwitcher />
         </div>
+
+        <AuthSection />
 
         {/* AI 서비스 */}
         <div className="space-y-3 pt-4 border-t">
@@ -198,6 +245,7 @@ export default function SettingsModal() {
                 type="checkbox"
                 checked={memoryEnabled}
                 onChange={(e) => setMemoryEnabled(e.target.checked)}
+                disabled={!profileReady}
                 className="w-4 h-4 accent-primary"
               />
             </label>
@@ -206,6 +254,16 @@ export default function SettingsModal() {
           <p className="text-xs text-muted-foreground">
             생성 패턴을 학습하여 AI 프롬프트에 개인 선호도를 자동 반영합니다.
           </p>
+
+          {profileLoadState !== 'ready' && (
+            <p className="text-xs text-muted-foreground" role="status">
+              {profileLoadState === 'unauthenticated'
+                ? '로그인한 뒤 스타일 메모리를 설정할 수 있습니다.'
+                : profileLoadState === 'loading'
+                  ? '계정의 스타일 메모리를 불러오는 중입니다.'
+                  : '스타일 메모리를 불러오지 못해 저장을 잠극니다.'}
+            </p>
+          )}
 
           {/* 학습된 선호도 */}
           {profile && profile.generation_count > 0 && (
@@ -228,6 +286,7 @@ export default function SettingsModal() {
               type="text"
               value={avoidInput}
               onChange={(e) => setAvoidInput(e.target.value)}
+              disabled={!profileReady}
               placeholder="예: 혁신적, 획기적, 놀라운 (쉼표로 구분)"
               className="w-full text-xs rounded-md border px-3 py-2 bg-background focus:outline-none focus:ring-1 focus:ring-primary"
             />
@@ -240,6 +299,7 @@ export default function SettingsModal() {
             <textarea
               value={customInstructions}
               onChange={(e) => setCustomInstructions(e.target.value)}
+              disabled={!profileReady}
               placeholder="예: 항상 결론 먼저 작성, 소제목 3개 이상 사용"
               rows={3}
               maxLength={500}
@@ -253,7 +313,7 @@ export default function SettingsModal() {
               size="sm"
               className="flex-1 text-xs"
               onClick={handleSaveMemory}
-              disabled={isSaving}
+              disabled={!profileReady || isSaving}
             >
               {isSaving ? '저장 중...' : '저장'}
             </Button>
@@ -262,6 +322,7 @@ export default function SettingsModal() {
               variant="outline"
               className="text-xs text-destructive border-destructive/30 hover:bg-destructive/10"
               onClick={handleResetMemory}
+              disabled={!profileReady || isSaving}
             >
               <RotateCcw className="h-3 w-3 mr-1" />
               초기화

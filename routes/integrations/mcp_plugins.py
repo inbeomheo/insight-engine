@@ -1,9 +1,26 @@
 """MCP 앱/서버(인라인 편집 등 인터랙티브 기능). 발행 플러그인 시스템은 제거됨(Dep-5)."""
-from flask import request, jsonify, current_app
+from flask import request, jsonify, current_app, g
 
+from extensions import limiter
 from routes.blog_routes import blog_bp
 from src.contexts.identity.interface.auth_decorators import require_auth
-from utils.responses import api_error, handle_error
+from utils.responses import api_error
+
+
+def _authenticated_app_data(data: dict) -> dict:
+    """HTTP 입력의 소유자 필드를 신뢰된 인증 컨텍스로 덮어쓴다."""
+    trusted_data = dict(data)
+    trusted_data.pop("owner_id", None)
+    trusted_data["_owner_id"] = str(g.get("user_id") or "anonymous")
+    return trusted_data
+
+
+def _get_registered_app(app_name: str):
+    """자동 등록된 MCP 앱 싱글턴을 반환한다."""
+    from services.mcp.mcp_apps import app_registry
+    from services.mcp import apps as _  # noqa: F401
+
+    return app_registry.get(app_name)
 
 
 # ── MCP Apps (인터랙티브 UI) ──────────────────────────────────────
@@ -18,21 +35,22 @@ def mcp_apps_list():
 
 
 @blog_bp.route('/api/mcp-apps/<app_name>/render', methods=['POST'])
+@limiter.limit("30/minute")
+@require_auth
 def mcp_app_render(app_name: str):
     """지정된 MCP 앱으로 콘텐츠를 렌더링합니다."""
-    from services.mcp.mcp_apps import app_registry
-    from services.mcp import apps as _  # noqa: F401
-
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
         return api_error("요청 데이터가 없습니다.", 400)
 
-    app = app_registry.get(app_name)
+    app = _get_registered_app(app_name)
     if app is None:
         return api_error(f"앱 '{app_name}'을(를) 찾을 수 없습니다.", 404)
 
     try:
-        result = app.render(data)
+        result = app.render(_authenticated_app_data(data))
+    except ValueError:
+        return api_error('요청 데이터가 허용 범위를 벗어났습니다.', 400)
     except Exception as e:
         current_app.logger.error('MCP app render failed for %s: %s', app_name, e, exc_info=True)
         return api_error('[서버 오류] 앱 렌더링 중 문제가 발생했습니다.', 500)
@@ -40,25 +58,25 @@ def mcp_app_render(app_name: str):
 
 
 @blog_bp.route('/api/mcp-apps/<app_name>/action', methods=['POST'])
+@limiter.limit("30/minute")
+@require_auth
 def mcp_app_action(app_name: str):
     """MCP 앱의 사용자 액션을 처리합니다."""
-    from services.mcp.mcp_apps import app_registry
-    from services.mcp import apps as _  # noqa: F401
-
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
         return api_error("요청 데이터가 없습니다.", 400)
 
     action = data.get("action")
-    if not action:
+    if not isinstance(action, str) or not action.strip():
         return api_error("'action' 필드가 필요합니다.", 400)
+    action = action.strip()
 
-    app = app_registry.get(app_name)
+    app = _get_registered_app(app_name)
     if app is None:
         return api_error(f"앱 '{app_name}'을(를) 찾을 수 없습니다.", 404)
 
     try:
-        result = app.handle_action(action, data)
+        result = app.handle_action(action, _authenticated_app_data(data))
     except Exception as e:
         current_app.logger.error('MCP app action failed for %s: %s', app_name, e, exc_info=True)
         return api_error('[서버 오류] 앱 작업 처리 중 문제가 발생했습니다.', 500)
@@ -88,52 +106,60 @@ def mcp_list_tools():
         tools = get_mcp_tools_schema()
         return jsonify({'tools': tools})
     except Exception as e:
-        return handle_error(str(e))
+        current_app.logger.error('MCP tool schema listing failed: %s', e, exc_info=True)
+        return api_error('[서버 오류] MCP 도구 목록을 불러오지 못했습니다.', 500)
 
 
 # ── 인라인 편집 앱 (MCP App) ──────────────────────────────────────
 
 
 @blog_bp.route('/api/mcp/apps/inline-editor/render', methods=['POST'])
+@limiter.limit("30/minute")
 @require_auth
 def inline_editor_render():
     """인라인 편집 앱 — 콘텐츠를 단락 단위로 렌더링"""
-    from services.mcp.apps.inline_editor import InlineEditorApp
-
     data = request.get_json(silent=True)
     if not data:
         return api_error('요청 데이터가 없습니다.', 400)
 
-    content_text = data.get('content', '').strip()
-    if not content_text:
+    content_text = data.get('content', '')
+    if not isinstance(content_text, str) or not content_text.strip():
         return api_error('content가 필요합니다.', 400)
 
     try:
-        app = InlineEditorApp()
-        result = app.render(data)
+        app = _get_registered_app('inline_editor')
+        if app is None:
+            return api_error('인라인 편집 앱을 찾을 수 없습니다.', 404)
+        result = app.render(_authenticated_app_data(data))
         return jsonify(result)
+    except ValueError:
+        return api_error('요청 데이터가 허용 범위를 벗어났습니다.', 400)
     except Exception as e:
-        return handle_error(str(e))
+        current_app.logger.error('Inline editor render failed: %s', e, exc_info=True)
+        return api_error('[서버 오류] 인라인 편집기 렌더링 중 문제가 발생했습니다.', 500)
 
 
 @blog_bp.route('/api/mcp/apps/inline-editor/action', methods=['POST'])
+@limiter.limit("30/minute")
 @require_auth
 def inline_editor_action():
     """인라인 편집 앱 — 편집 액션 처리 (save_edit/undo/reset/get_result)"""
-    from services.mcp.apps.inline_editor import InlineEditorApp
-
     data = request.get_json(silent=True)
     if not data:
         return api_error('요청 데이터가 없습니다.', 400)
 
-    action = data.get('action', '').strip()
-    if not action:
+    action = data.get('action', '')
+    if not isinstance(action, str) or not action.strip():
         return api_error('action이 필요합니다.', 400)
+    action = action.strip()
 
     try:
-        app = InlineEditorApp()
-        result = app.handle_action(action, data)
+        app = _get_registered_app('inline_editor')
+        if app is None:
+            return api_error('인라인 편집 앱을 찾을 수 없습니다.', 404)
+        result = app.handle_action(action, _authenticated_app_data(data))
         status_code = 200 if result.get('success') else 400
         return jsonify(result), status_code
     except Exception as e:
-        return handle_error(str(e))
+        current_app.logger.error('Inline editor action failed: %s', e, exc_info=True)
+        return api_error('[서버 오류] 인라인 편집 작업 중 문제가 발생했습니다.', 500)

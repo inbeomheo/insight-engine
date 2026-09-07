@@ -13,7 +13,16 @@ import feedparser
 from bs4 import BeautifulSoup
 import logging
 
+from utils.url_safety import fetch_public_url
+
 logger = logging.getLogger(__name__)
+
+_REQUEST_TIMEOUT = (5, 15)
+_MAX_FEED_BYTES = 2 * 1024 * 1024
+_FEED_HEADERS = {
+    "User-Agent": "InsightEngine/1.0 (RSS ingestion)",
+    "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml",
+}
 
 
 def _clean_html(raw: str) -> str:
@@ -91,7 +100,20 @@ def parse_feed(url: str, max_items: int = 10) -> List[Dict]:
         ValueError: 유효하지 않은 피드이거나 파싱 실패
     """
     try:
-        feed = feedparser.parse(url)
+        response = fetch_public_url(
+            url,
+            headers=_FEED_HEADERS,
+            timeout=_REQUEST_TIMEOUT,
+            max_bytes=_MAX_FEED_BYTES,
+            max_redirects=3,
+        )
+        response.raise_for_status()
+        # feedparser에 URL을 넘기면 내부에서 호스트명을 다시 해석하므로, 검증된
+        # IP에서 제한적으로 받은 바이트만 파싱합니다. Content-Location은 상대
+        # 엔트리 링크를 최종 리다이렉트 URL 기준으로 해석하게 합니다.
+        parser_headers = dict(response.headers)
+        parser_headers.setdefault("Content-Location", response.url)
+        feed = feedparser.parse(response.content, response_headers=parser_headers)
 
         # bozo == True 이면 파싱 오류 (단, 일부 피드는 bozo여도 파싱 가능)
         if feed.bozo and not feed.entries:

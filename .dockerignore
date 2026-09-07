@@ -3,7 +3,7 @@
 .gitignore
 
 # Python
-__pycache__
+**/__pycache__/
 *.py[cod]
 *$py.class
 *.so
@@ -23,9 +23,9 @@ build/
 *.swo
 
 # 환경변수 (배포 시 Cloud Run 콘솔에서 설정)
-.env
-.env.*
-!.env.example
+**/.env
+**/.env.*
+!**/.env.example
 
 # 테스트
 tests/
@@ -36,13 +36,17 @@ htmlcov/
 coverage.xml
 
 # Node (Tailwind 빌드용 - 빌드 결과물만 필요)
-node_modules/
+**/node_modules/
+**/.next/
+**/.turbo/
 package-lock.json
+!frontend/package-lock.json
 
 # 문서/설정
 *.md
 !README.md
 LICENSE
+!LICENSE
 Procfile
 nixpacks.toml
 railway.json
@@ -51,3 +55,28 @@ railway.json
 .DS_Store
 *.log
 tmp/
+
+# 런타임 사용자 데이터/상태 — COPY . . 이전에 빌드 컨텍스트에서 제외해야 합니다.
+# 루트 경로만 제외해 services/data 같은 소스 디렉터리는 보존합니다.
+/data/
+/cache/
+/logs/
+/app-backups/
+/backups/
+/data_volume_backups/
+/downloads/
+/services/cache/
+/.agent/
+/.agents/
+/.playwright-mcp/
+/test-results/
+/playwright-report/
+/blob-report/
+**/*.db
+**/*.db-*
+**/*.sqlite
+**/*.sqlite-*
+**/*.sqlite3
+**/*.sqlite3-*
+**/*.jsonl
+**/notebooklm_state.json*

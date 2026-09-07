@@ -2,7 +2,11 @@
 프롬프트 템플릿 갤러리 서비스
 사용자가 커스텀 프롬프트를 저장/공유/재사용하는 기능
 """
-from services.data.supabase_service import get_supabase, is_supabase_enabled
+from src.shared.infrastructure.supabase_client import (
+    get_service_supabase,
+    get_user_supabase,
+    is_supabase_enabled,
+)
 from services.core.logging_config import supabase_logger as logger
 import logging
 
@@ -61,7 +65,7 @@ def get_templates(user_id: str | None, page: int = 1, search: str = '') -> dict:
         return _empty_page(page)
 
     try:
-        supabase = get_supabase()
+        supabase = get_user_supabase()
         if not supabase:
             return _empty_page(page)
 
@@ -100,7 +104,7 @@ def get_template_by_id(template_id: str, user_id: str | None) -> dict | None:
         return None
 
     try:
-        supabase = get_supabase()
+        supabase = get_user_supabase()
         if not supabase:
             return None
 
@@ -141,7 +145,7 @@ def create_template(user_id: str, data: dict) -> dict | None:
         return _local_template(data)
 
     try:
-        supabase = get_supabase()
+        supabase = get_user_supabase()
         if not supabase:
             return _local_template(data)
 
@@ -192,7 +196,7 @@ def update_template(template_id: str, user_id: str, data: dict) -> dict | None:
         return None
 
     try:
-        supabase = get_supabase()
+        supabase = get_user_supabase()
         if not supabase:
             return None
 
@@ -237,7 +241,7 @@ def delete_template(template_id: str, user_id: str) -> bool:
         return False
 
     try:
-        supabase = get_supabase()
+        supabase = get_user_supabase()
         if not supabase:
             return False
 
@@ -258,12 +262,12 @@ def delete_template(template_id: str, user_id: str) -> bool:
 
 
 def increment_usage(template_id: str) -> bool:
-    """템플릿 사용 횟수 증가 (사용 시 호출)"""
+    """검증된 서버 사용 흐름에서만 템플릿 사용 횟수를 증가한다."""
     if not is_supabase_enabled():
         return False
 
     try:
-        supabase = get_supabase()
+        supabase = get_service_supabase()
         if not supabase:
             return False
 

@@ -15,6 +15,8 @@ from typing import Callable, Dict, Optional, Tuple
 
 from flask import current_app
 
+from services.usage.usage_lock import UsageLockUnavailable
+
 logger = logging.getLogger(__name__)
 
 # 등급 순서 (낮을수록 낮은 등급)
@@ -119,7 +121,13 @@ def _build_eval_kwargs(eval_model: str, eval_prompt: str) -> Dict:
     return kwargs
 
 
-def evaluate_quality(content: str, source_summary: str, model: Optional[str] = None) -> Dict:
+def evaluate_quality(
+    content: str,
+    source_summary: str,
+    model: Optional[str] = None,
+    *,
+    on_cost_start: Optional[Callable[[], None]] = None,
+) -> Dict:
     """LLM-as-judge 패턴으로 생성된 콘텐츠의 품질을 평가합니다.
 
     Args:
@@ -151,6 +159,11 @@ def evaluate_quality(content: str, source_summary: str, model: Optional[str] = N
     kwargs = _build_eval_kwargs(eval_model, eval_prompt)
 
     try:
+        if callable(on_cost_start):
+            on_cost_start()
+        else:
+            from services.usage.usage_decorator import mark_usage_charge_committed
+            mark_usage_charge_committed()
         response = completion(**kwargs)
         raw_text = response.choices[0].message.content
 
@@ -162,6 +175,8 @@ def evaluate_quality(content: str, source_summary: str, model: Optional[str] = N
         result['eval_model'] = eval_model
         return result
 
+    except UsageLockUnavailable:
+        raise
     except Exception as e:
         current_app.logger.error(f"품질 평가 실패: eval_model={eval_model}, error={e}")
         raise
@@ -311,6 +326,7 @@ def auto_regenerate(
     quality_threshold: str = "C",
     max_retries: int = 1,
     eval_model: Optional[str] = None,
+    on_cost_start: Optional[Callable[[], None]] = None,
 ) -> Tuple[Dict, Dict]:
     """
     기준 미달 시 콘텐츠를 재생성합니다. 최대 1회 재시도.
@@ -336,7 +352,12 @@ def auto_regenerate(
             result, _ = content_fn()
             content = result.get('content', '')
 
-            quality = evaluate_quality(content, source_summary, eval_model)
+            quality = evaluate_quality(
+                content,
+                source_summary,
+                eval_model,
+                on_cost_start=on_cost_start,
+            )
 
             # 첫 시도 또는 더 높은 등급이면 업데이트
             if best_quality is None or _GRADE_ORDER.get(quality['grade'], 0) > _GRADE_ORDER.get(best_quality['grade'], 0):
@@ -353,6 +374,8 @@ def auto_regenerate(
                     f"품질 기준 미달 (grade={quality['grade']}), 재시도 {attempt + 1}/{max_retries}"
                 )
 
+        except UsageLockUnavailable:
+            raise
         except Exception as e:
             current_app.logger.warning(f"auto_regenerate 시도 {attempt + 1} 실패: {e}")
             # 품질 평가 실패 시 마지막 생성 결과라도 반환

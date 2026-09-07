@@ -11,15 +11,18 @@ from __future__ import annotations
 import logging
 import re
 from typing import Dict
+from urllib.parse import urlencode, urlparse
 
 import requests
 import trafilatura
 
-from utils.url_safety import is_safe_public_url
+from utils.url_safety import fetch_public_url, is_safe_public_url
 
 logger = logging.getLogger(__name__)
 
 _REQUEST_TIMEOUT = 15  # 초
+_MAX_RESPONSE_BYTES = 2 * 1024 * 1024
+_USER_AGENT = "InsightEngine/1.0 (social ingestion)"
 
 # Nitter 인스턴스 목록 (가용성 순)
 _NITTER_INSTANCES = [
@@ -58,10 +61,9 @@ def scrape_twitter_thread(url: str) -> Dict:
         ValueError: 본문을 추출할 수 없는 경우
     """
     if not is_safe_public_url(url):
-        raise ValueError(f"안전하지 않은 URL입니다: {url}")
+        raise ValueError("안전하지 않은 URL입니다.")
 
     # 원본 URL에서 경로 추출 (예: /user/status/123)
-    from urllib.parse import urlparse
     parsed = urlparse(url)
     path = parsed.path
 
@@ -87,7 +89,7 @@ def scrape_twitter_thread(url: str) -> Dict:
             "source_type": "twitter",
         }
 
-    raise ValueError(f"Twitter 게시물에서 본문을 추출할 수 없습니다: {url}")
+    raise ValueError("Twitter 게시물에서 본문을 추출할 수 없습니다.")
 
 
 def scrape_reddit_post(url: str) -> Dict:
@@ -102,15 +104,17 @@ def scrape_reddit_post(url: str) -> Dict:
         ValueError: 포스트를 추출할 수 없는 경우
     """
     if not is_safe_public_url(url):
-        raise ValueError(f"안전하지 않은 URL입니다: {url}")
+        raise ValueError("안전하지 않은 URL입니다.")
 
     json_url = url.rstrip("/") + ".json"
 
     try:
-        resp = requests.get(
+        resp = fetch_public_url(
             json_url,
             headers={"User-Agent": "InsightEngine/1.0"},
             timeout=_REQUEST_TIMEOUT,
+            max_bytes=_MAX_RESPONSE_BYTES,
+            max_redirects=3,
         )
         resp.raise_for_status()
         data = resp.json()
@@ -119,7 +123,7 @@ def scrape_reddit_post(url: str) -> Dict:
 
     # Reddit JSON 응답: [포스트 리스팅, 댓글 리스팅]
     if not isinstance(data, list) or len(data) < 1:
-        raise ValueError(f"Reddit 응답 형식이 올바르지 않습니다: {url}")
+        raise ValueError("Reddit 응답 형식이 올바르지 않습니다.")
 
     # 포스트 추출
     post_data = data[0]["data"]["children"][0]["data"]
@@ -148,7 +152,7 @@ def scrape_reddit_post(url: str) -> Dict:
 
     content = "\n\n".join(content_parts)
     if not content.strip():
-        raise ValueError(f"Reddit 포스트에서 본문을 추출할 수 없습니다: {url}")
+        raise ValueError("Reddit 포스트에서 본문을 추출할 수 없습니다.")
 
     return {
         "title": title,
@@ -170,19 +174,21 @@ def scrape_hackernews(url: str) -> Dict:
         ValueError: 아이템을 추출할 수 없는 경우
     """
     if not is_safe_public_url(url):
-        raise ValueError(f"안전하지 않은 URL입니다: {url}")
+        raise ValueError("안전하지 않은 URL입니다.")
 
     # URL에서 아이템 ID 추출
     match = _HN_ITEM_RE.search(url)
     if not match:
-        raise ValueError(f"유효하지 않은 Hacker News URL: {url}")
+        raise ValueError("유효하지 않은 Hacker News URL입니다.")
 
     item_id = match.group(1)
 
     try:
-        resp = requests.get(
+        resp = fetch_public_url(
             f"{_HN_API_BASE}/item/{item_id}.json",
             timeout=_REQUEST_TIMEOUT,
+            max_bytes=_MAX_RESPONSE_BYTES,
+            max_redirects=3,
         )
         resp.raise_for_status()
         item = resp.json()
@@ -201,9 +207,11 @@ def scrape_hackernews(url: str) -> Dict:
     kid_ids = item.get("kids", [])[:10]
     for kid_id in kid_ids:
         try:
-            cr = requests.get(
+            cr = fetch_public_url(
                 f"{_HN_API_BASE}/item/{kid_id}.json",
                 timeout=_REQUEST_TIMEOUT,
+                max_bytes=_MAX_RESPONSE_BYTES,
+                max_redirects=3,
             )
             cr.raise_for_status()
             comment = cr.json()
@@ -249,24 +257,28 @@ def scrape_stackoverflow(url: str) -> Dict:
         ValueError: 질문을 추출할 수 없는 경우
     """
     if not is_safe_public_url(url):
-        raise ValueError(f"안전하지 않은 URL입니다: {url}")
+        raise ValueError("안전하지 않은 URL입니다.")
 
     match = _SO_QUESTION_RE.search(url)
     if not match:
-        raise ValueError(f"유효하지 않은 Stack Overflow URL: {url}")
+        raise ValueError("유효하지 않은 Stack Overflow URL입니다.")
 
     question_id = match.group(1)
 
     # 질문 + 답변 한번에 조회
     try:
-        resp = requests.get(
-            f"{_SE_API_BASE}/questions/{question_id}",
-            params={
+        question_query = urlencode(
+            {
                 "site": "stackoverflow",
                 "filter": "withbody",  # 본문 포함
                 "sort": "votes",
-            },
+            }
+        )
+        resp = fetch_public_url(
+            f"{_SE_API_BASE}/questions/{question_id}?{question_query}",
             timeout=_REQUEST_TIMEOUT,
+            max_bytes=_MAX_RESPONSE_BYTES,
+            max_redirects=3,
         )
         resp.raise_for_status()
         data = resp.json()
@@ -286,15 +298,19 @@ def scrape_stackoverflow(url: str) -> Dict:
     # 답변 조회 (votes 순)
     answers_text = []
     try:
-        ans_resp = requests.get(
-            f"{_SE_API_BASE}/questions/{question_id}/answers",
-            params={
+        answer_query = urlencode(
+            {
                 "site": "stackoverflow",
                 "filter": "withbody",
                 "sort": "votes",
                 "order": "desc",
-            },
+            }
+        )
+        ans_resp = fetch_public_url(
+            f"{_SE_API_BASE}/questions/{question_id}/answers?{answer_query}",
             timeout=_REQUEST_TIMEOUT,
+            max_bytes=_MAX_RESPONSE_BYTES,
+            max_redirects=3,
         )
         ans_resp.raise_for_status()
         ans_data = ans_resp.json()
@@ -328,9 +344,20 @@ def scrape_stackoverflow(url: str) -> Dict:
 
 
 def _extract_with_trafilatura(url: str) -> tuple:
-    """trafilatura로 본문 + 제목 추출."""
+    """안전하게 미리 받은 HTML을 trafilatura로 추출합니다."""
     try:
-        html = trafilatura.fetch_url(url)
+        response = fetch_public_url(
+            url,
+            headers={
+                "User-Agent": _USER_AGENT,
+                "Accept": "text/html,application/xhtml+xml",
+            },
+            timeout=_REQUEST_TIMEOUT,
+            max_bytes=_MAX_RESPONSE_BYTES,
+            max_redirects=3,
+        )
+        response.raise_for_status()
+        html = response.content
         if not html:
             return "", ""
 
@@ -346,7 +373,6 @@ def _extract_with_trafilatura(url: str) -> tuple:
 
 def _make_twitter_title(url: str) -> str:
     """Twitter URL에서 기본 제목을 생성합니다."""
-    from urllib.parse import urlparse
     parsed = urlparse(url)
     parts = parsed.path.strip("/").split("/")
     if parts:

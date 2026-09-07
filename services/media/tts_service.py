@@ -11,6 +11,7 @@ import io
 import logging
 import os
 import re
+from typing import Callable
 
 from config import TTS_BACKEND, TTS_DEFAULT_VOICE, TTS_MAX_CHARS
 
@@ -225,8 +226,37 @@ def _split_text(text: str, max_chars: int) -> list[str]:
     return [c for c in chunks if c.strip()]
 
 
-def _synthesize_with_fallback(backend: str, text: str, voice: str, speed: float) -> bytes:
+def _validate_tts_backend(backend: str) -> None:
+    """실제 합성 시도 전에 백엔드의 기본 준비 상태를 검증합니다."""
+    if backend == 'openai':
+        if not os.getenv('OPENAI_API_KEY'):
+            raise RuntimeError('OPENAI_API_KEY가 설정되지 않았습니다.')
+        try:
+            import httpx  # noqa: F401
+        except ImportError as exc:
+            raise RuntimeError('httpx 패키지가 설치되지 않았습니다.') from exc
+        return
+
+    try:
+        import edge_tts  # noqa: F401
+    except ImportError as exc:
+        raise RuntimeError(
+            'edge-tts 패키지가 설치되지 않았습니다. '
+            '"pip install edge-tts>=6.1.0" 실행 후 재시도하세요.'
+        ) from exc
+
+
+def _synthesize_with_fallback(
+    backend: str,
+    text: str,
+    voice: str,
+    speed: float,
+    on_cost_start: Callable[[], None] | None = None,
+) -> bytes:
     """TTS 합성을 시도하고 OpenAI 실패 시 Edge로 폴백합니다."""
+    _validate_tts_backend(backend)
+    if on_cost_start is not None:
+        on_cost_start()
     try:
         if backend == 'openai':
             return _synthesize_openai(text, voice, speed)
@@ -235,6 +265,9 @@ def _synthesize_with_fallback(backend: str, text: str, voice: str, speed: float)
         logger.error('TTS 합성 실패 (backend=%s): %s', backend, exc)
         if backend == 'openai':
             logger.info('OpenAI TTS 실패 → Edge TTS로 폴백')
+            _validate_tts_backend('edge')
+            if on_cost_start is not None:
+                on_cost_start()
             return _synthesize_edge(text, EDGE_VOICE_KO, speed)
         raise
 
@@ -251,6 +284,7 @@ class TTSService:
         voice: str = TTS_DEFAULT_VOICE,
         speed: float = 1.0,
         preprocess: bool = True,
+        on_cost_start: Callable[[], None] | None = None,
     ) -> bytes:
         """텍스트를 오디오(MP3)로 변환합니다.
 
@@ -259,6 +293,7 @@ class TTSService:
             voice: 목소리 식별자
             speed: 재생 속도 (0.5 ~ 2.0)
             preprocess: True면 마크다운을 평문으로 전처리
+            on_cost_start: 실제 TTS 백엔드 호출 직전 실행할 선택 콜백
 
         Returns:
             MP3 포맷의 오디오 바이트
@@ -285,9 +320,21 @@ class TTSService:
             audio_parts = []
             for idx, chunk in enumerate(chunks):
                 logger.info('TTS 청크 %d/%d 합성 중 (%d자)', idx + 1, len(chunks), len(chunk))
-                part = _synthesize_with_fallback(backend, chunk, voice, speed)
+                part = _synthesize_with_fallback(
+                    backend,
+                    chunk,
+                    voice,
+                    speed,
+                    on_cost_start=on_cost_start,
+                )
                 audio_parts.append(part)
             return b''.join(audio_parts)
 
         logger.info('TTS 합성 시작: backend=%s, chars=%d, voice=%s', backend, len(text), voice)
-        return _synthesize_with_fallback(backend, text, voice, speed)
+        return _synthesize_with_fallback(
+            backend,
+            text,
+            voice,
+            speed,
+            on_cost_start=on_cost_start,
+        )

@@ -7,11 +7,13 @@
 import json
 import os
 
-from flask import request, jsonify, current_app
+from flask import request, jsonify, current_app, g
 
+from extensions import limiter
 from routes.blog_routes import blog_bp, _extract_client_id, DEFAULT_MODEL
 from services.core import ai_service, content_service
 from services.core.content_service import clear_cache
+from services.usage.usage_service import UsageService, is_supabase_enabled
 from src.contexts.identity.interface.auth_decorators import require_auth
 from services.platform.webhook_service import WebhookService
 from utils.responses import api_error, handle_error, sanitize_error_for_client
@@ -40,30 +42,46 @@ from routes.utility._state import (  # noqa: F401
 
 
 @blog_bp.route('/api/cache', methods=['DELETE'])
+@limiter.limit("5/minute")
+@require_auth
 def api_clear_cache():
-    """캐시를 삭제합니다. video_id 파라미터가 있으면 해당 영상만, 없으면 전체 삭제."""
+    """특정 영상 캐시를 삭제하거나 관리자 요청으로 전체 캐시를 삭제합니다."""
     data = request.get_json(silent=True) or {}
     video_id = data.get('videoId')
+    scope = data.get('scope')
+
+    if scope not in (None, 'all'):
+        return api_error('[입력 오류] scope는 all만 허용됩니다.', 400)
+
+    if scope == 'all':
+        # 인증 백엔드가 없는 로컬 개발 모드는 기존 전체 삭제 동작을 유지합니다.
+        if is_supabase_enabled() and not UsageService.is_admin_user(g.get('user_id')):
+            return api_error('[권한 부족] 전체 캐시 삭제는 관리자만 가능합니다.', 403)
+        deleted = clear_cache(None)
+        return jsonify({
+            'success': True,
+            'message': '전체 캐시가 삭제되었습니다.',
+            'deleted': deleted
+        })
 
     # URL에서 video_id 추출 (URL이 전달된 경우)
     url = data.get('url')
     if url and not video_id:
+        if not content_service.is_youtube_url(url):
+            return api_error('[입력 오류] 유효한 YouTube URL이 필요합니다.', 400)
         video_id = content_service.get_video_id(url)
+
+    if not video_id:
+        return api_error('[입력 오류] 유효한 videoId 또는 YouTube URL이 필요합니다.', 400)
 
     try:
         deleted = clear_cache(video_id)
     except ValueError as e:
         return api_error(sanitize_error_for_client(f'[입력 오류] 잘못된 videoId 형식: {e}'), 400)
 
-    if video_id:
-        return jsonify({
-            'success': True,
-            'message': f'영상 {video_id}의 캐시가 삭제되었습니다.',
-            'deleted': deleted
-        })
     return jsonify({
         'success': True,
-        'message': '전체 캐시가 삭제되었습니다.',
+        'message': f'영상 {video_id}의 캐시가 삭제되었습니다.',
         'deleted': deleted
     })
 

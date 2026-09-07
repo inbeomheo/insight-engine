@@ -6,9 +6,11 @@ import logging
 import os
 import re
 from collections import Counter
-from typing import Dict, List, Optional
+from typing import Callable, Dict, List, Optional
 
 import requests
+
+from services.usage.usage_lock import UsageLockUnavailable
 
 logger = logging.getLogger(__name__)
 
@@ -17,11 +19,15 @@ _API_BASE = 'https://www.googleapis.com/youtube/v3'
 _REQUEST_TIMEOUT = 15
 
 
-def analyze_channel(channel_url: str) -> Dict:
+def analyze_channel(
+    channel_url: str,
+    on_cost_start: Optional[Callable[[], None]] = None,
+) -> Dict:
     """YouTube 채널을 분석하여 통계와 주제 클러스터를 반환합니다.
 
     Args:
         channel_url: YouTube 채널 URL
+        on_cost_start: YouTube API 호출 직전에 실행할 콜백
 
     Returns:
         {"channel_name": str, "stats": dict, "topic_clusters": list,
@@ -33,17 +39,27 @@ def analyze_channel(channel_url: str) -> Dict:
     if not YOUTUBE_API_KEY:
         raise ValueError('YOUTUBE_API_KEY가 설정되지 않았습니다.')
 
-    channel_id = _extract_channel_id(channel_url)
+    channel_id = _extract_channel_id(
+        channel_url,
+        on_cost_start=on_cost_start,
+    )
     if not channel_id:
         raise ValueError('유효하지 않은 YouTube 채널 URL입니다.')
 
     # 채널 기본 정보 조회
-    channel_info = _get_channel_info(channel_id)
+    channel_info = _get_channel_info(
+        channel_id,
+        on_cost_start=on_cost_start,
+    )
     if not channel_info:
         raise ValueError('채널 정보를 가져올 수 없습니다.')
 
     # 최근 영상 목록 조회 (최대 50개)
-    videos = _get_recent_videos(channel_id, max_results=50)
+    videos = _get_recent_videos(
+        channel_id,
+        max_results=50,
+        on_cost_start=on_cost_start,
+    )
 
     # 통계 계산
     stats = _compute_stats(channel_info, videos)
@@ -59,7 +75,10 @@ def analyze_channel(channel_url: str) -> Dict:
     }
 
 
-def _extract_channel_id(url: str) -> Optional[str]:
+def _extract_channel_id(
+    url: str,
+    on_cost_start: Optional[Callable[[], None]] = None,
+) -> Optional[str]:
     """YouTube 채널 URL에서 channel ID를 추출합니다."""
     # /channel/UC... 패턴
     match = re.search(r'/channel/(UC[\w-]+)', url)
@@ -76,15 +95,25 @@ def _extract_channel_id(url: str) -> Optional[str]:
         identifier = custom_match.group(1)
 
     if identifier:
-        return _resolve_channel_id(identifier)
+        if on_cost_start is None:
+            return _resolve_channel_id(identifier)
+        return _resolve_channel_id(
+            identifier,
+            on_cost_start=on_cost_start,
+        )
 
     return None
 
 
-def _resolve_channel_id(handle: str) -> Optional[str]:
+def _resolve_channel_id(
+    handle: str,
+    on_cost_start: Optional[Callable[[], None]] = None,
+) -> Optional[str]:
     """핸들 또는 커스텀 이름으로 채널 ID를 조회합니다."""
     try:
         # forHandle 파라미터로 조회
+        if on_cost_start is not None:
+            on_cost_start()
         resp = requests.get(
             f'{_API_BASE}/channels',
             params={
@@ -100,6 +129,8 @@ def _resolve_channel_id(handle: str) -> Optional[str]:
             return items[0]['id']
 
         # forUsername 폴백
+        if on_cost_start is not None:
+            on_cost_start()
         resp = requests.get(
             f'{_API_BASE}/channels',
             params={
@@ -114,15 +145,26 @@ def _resolve_channel_id(handle: str) -> Optional[str]:
         if items:
             return items[0]['id']
 
-    except Exception as e:
-        logger.warning("채널 ID 조회 실패 (@%s): %s", handle, e)
+    except UsageLockUnavailable:
+        raise
+    except Exception as exc:
+        logger.warning(
+            "채널 ID 조회 실패 (@%s, type=%s)",
+            handle,
+            type(exc).__name__,
+        )
 
     return None
 
 
-def _get_channel_info(channel_id: str) -> Optional[Dict]:
+def _get_channel_info(
+    channel_id: str,
+    on_cost_start: Optional[Callable[[], None]] = None,
+) -> Optional[Dict]:
     """채널 기본 정보(제목, 구독자 수, 영상 수)를 조회합니다."""
     try:
+        if on_cost_start is not None:
+            on_cost_start()
         resp = requests.get(
             f'{_API_BASE}/channels',
             params={
@@ -148,14 +190,26 @@ def _get_channel_info(channel_id: str) -> Optional[Dict]:
             'video_count': int(statistics.get('videoCount', 0)),
             'view_count': int(statistics.get('viewCount', 0)),
         }
-    except Exception as e:
-        logger.error("채널 정보 조회 실패 (%s): %s", channel_id, e)
+    except UsageLockUnavailable:
+        raise
+    except Exception as exc:
+        logger.error(
+            "채널 정보 조회 실패 (%s, type=%s)",
+            channel_id,
+            type(exc).__name__,
+        )
         return None
 
 
-def _get_recent_videos(channel_id: str, max_results: int = 50) -> List[Dict]:
+def _get_recent_videos(
+    channel_id: str,
+    max_results: int = 50,
+    on_cost_start: Optional[Callable[[], None]] = None,
+) -> List[Dict]:
     """채널의 최근 영상 목록을 조회합니다."""
     try:
+        if on_cost_start is not None:
+            on_cost_start()
         resp = requests.get(
             f'{_API_BASE}/search',
             params={
@@ -176,7 +230,10 @@ def _get_recent_videos(channel_id: str, max_results: int = 50) -> List[Dict]:
             return []
 
         # 조회수 등 상세 통계 조회
-        stats_map = _get_video_stats(video_ids)
+        stats_map = _get_video_stats(
+            video_ids,
+            on_cost_start=on_cost_start,
+        )
 
         videos = []
         for item in items:
@@ -195,14 +252,25 @@ def _get_recent_videos(channel_id: str, max_results: int = 50) -> List[Dict]:
             })
 
         return videos
-    except Exception as e:
-        logger.error("최근 영상 조회 실패 (%s): %s", channel_id, e)
+    except UsageLockUnavailable:
+        raise
+    except Exception as exc:
+        logger.error(
+            "최근 영상 조회 실패 (%s, type=%s)",
+            channel_id,
+            type(exc).__name__,
+        )
         return []
 
 
-def _get_video_stats(video_ids: List[str]) -> Dict[str, Dict]:
+def _get_video_stats(
+    video_ids: List[str],
+    on_cost_start: Optional[Callable[[], None]] = None,
+) -> Dict[str, Dict]:
     """영상 ID 목록의 조회수/좋아요 통계를 조회합니다."""
     try:
+        if on_cost_start is not None:
+            on_cost_start()
         resp = requests.get(
             f'{_API_BASE}/videos',
             params={
@@ -223,8 +291,13 @@ def _get_video_stats(video_ids: List[str]) -> Dict[str, Dict]:
                 'likeCount': int(s.get('likeCount', 0)),
             }
         return stats
-    except Exception as e:
-        logger.warning("영상 통계 조회 실패: %s", e)
+    except UsageLockUnavailable:
+        raise
+    except Exception as exc:
+        logger.warning(
+            "영상 통계 조회 실패 (type=%s)",
+            type(exc).__name__,
+        )
         return {}
 
 

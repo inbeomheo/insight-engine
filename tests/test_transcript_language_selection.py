@@ -427,7 +427,11 @@ class TestFetchYoutubeContentLanguage(unittest.TestCase):
              patch('services.core.content_service.get_top_comments', return_value=[]):
             mock_get.return_value = {'text': '자막', 'source': 'api', 'segments': []}
             _fetch_youtube_content('dQw4w9WgXcQ', transcript_language='ko')
-            mock_get.assert_called_once_with('dQw4w9WgXcQ', transcript_language='ko')
+            mock_get.assert_called_once_with(
+                'dQw4w9WgXcQ',
+                transcript_language='ko',
+                on_cost_start=None,
+            )
 
     def test_omitted_language_defaults_to_none(self):
         from routes.generation_helpers import _fetch_youtube_content
@@ -435,7 +439,11 @@ class TestFetchYoutubeContentLanguage(unittest.TestCase):
              patch('services.core.content_service.get_top_comments', return_value=[]):
             mock_get.return_value = {'text': '자막', 'source': 'api', 'segments': []}
             _fetch_youtube_content('dQw4w9WgXcQ')
-            mock_get.assert_called_once_with('dQw4w9WgXcQ', transcript_language=None)
+            mock_get.assert_called_once_with(
+                'dQw4w9WgXcQ',
+                transcript_language=None,
+                on_cost_start=None,
+            )
 
 
 # ==================== I1: /generate-stream 언어 전달 ====================
@@ -470,7 +478,10 @@ class TestGenerateStreamRouteTranscriptLanguage(unittest.TestCase):
             headers=_H,
         )
 
-        mock_fetch.assert_called_once_with('dQw4w9WgXcQ', 'ja')
+        mock_fetch.assert_called_once()
+        self.assertEqual(mock_fetch.call_args.args[:2], ('dQw4w9WgXcQ', 'ja'))
+        self.assertTrue(callable(mock_fetch.call_args.args[2]))
+        self.assertTrue(callable(mock_title.call_args.kwargs['on_cost_start']))
 
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     @patch('routes.blog_routes._get_style_prompt', return_value='프롬프트')
@@ -487,7 +498,9 @@ class TestGenerateStreamRouteTranscriptLanguage(unittest.TestCase):
             headers=_H,
         )
 
-        mock_fetch.assert_called_once_with('dQw4w9WgXcQ', None)
+        mock_fetch.assert_called_once()
+        self.assertEqual(mock_fetch.call_args.args[:2], ('dQw4w9WgXcQ', None))
+        self.assertTrue(callable(mock_fetch.call_args.args[2]))
 
 
     @patch('services.usage.usage_decorator.is_supabase_enabled', return_value=False)
@@ -543,6 +556,54 @@ class TestGenerateRouteAICacheTranscriptLanguage(unittest.TestCase):
         mock_cache_hit.assert_called_once()
         self.assertEqual(mock_cache_hit.call_args.kwargs.get('transcript_language'), 'en')
 
+    @patch('services.usage.usage_decorator.is_supabase_enabled', return_value=False)
+    @patch('src.contexts.identity.interface.auth_decorators.is_supabase_enabled', return_value=False)
+    @patch('routes.blog_routes._handle_cache_hit', side_effect=lambda *args, **kwargs: ({'cached': True}, 200))
+    @patch('services.core.cache_service.AICacheService.make_key', return_value='cache-key')
+    def test_quality_check_safely_bypasses_cache(
+        self, _make_key, mock_cache_hit, _auth, _usage,
+    ):
+        resp = self.client.post(
+            '/generate',
+            json={
+                'url': 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+                'style': 'summary',
+                'quality_check': True,
+            },
+            headers=_H,
+        )
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(mock_cache_hit.call_args.args[1])
+
+    @patch('services.usage.usage_decorator.is_supabase_enabled', return_value=False)
+    @patch('src.contexts.identity.interface.auth_decorators.is_supabase_enabled', return_value=True)
+    @patch('routes.blog_routes._handle_cache_hit', side_effect=lambda *args, **kwargs: ({'cached': True}, 200))
+    @patch('services.core.cache_service.AICacheService.make_key', return_value='cache-key')
+    def test_authenticated_personal_context_safely_bypasses_cache(
+        self, _make_key, mock_cache_hit, _auth, _usage,
+    ):
+        def authenticate(_token):
+            from flask import g
+            g.user_id = 'private-user'
+            return {'valid': True, 'error': None, 'code': None}
+
+        with patch(
+            'src.contexts.identity.interface.auth_decorators._validate_token',
+            side_effect=authenticate,
+        ):
+            resp = self.client.post(
+                '/generate',
+                json={
+                    'url': 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+                    'style': 'summary',
+                },
+                headers={**_H, 'Authorization': 'Bearer token'},
+            )
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(mock_cache_hit.call_args.args[1])
+
 
 class TestCacheHitTranscriptLanguagePayload(unittest.TestCase):
     """언어 지정 캐시 히트 응답은 언어 무관 자막 파일 캐시를 우회."""
@@ -573,7 +634,11 @@ class TestCacheHitTranscriptLanguagePayload(unittest.TestCase):
             )
 
         mock_cached_transcript.assert_not_called()
-        mock_get_transcript.assert_called_once_with('vid123', transcript_language='ja')
+        mock_get_transcript.assert_called_once_with(
+            'vid123',
+            transcript_language='ja',
+            on_cost_start=None,
+        )
         body = resp.get_json()
         self.assertEqual(body['transcript'], '일본어 자막')
         self.assertEqual(body['transcript_source'], 'api')
@@ -635,11 +700,17 @@ class TestGenerateMergedRouteTranscriptLanguage(unittest.TestCase):
         )
 
         self.assertEqual(resp.status_code, 200)
-        fetch_args = {call.args for call in mock_fetch.call_args_list}
+        fetch_args = {call.args[:2] for call in mock_fetch.call_args_list}
         self.assertEqual(
             fetch_args,
             {('dQw4w9WgXcQ', 'ko'), ('9bZkp7q19f0', 'ko')},
         )
+        self.assertTrue(all(callable(call.args[2]) or call.args[2] is None
+                            for call in mock_fetch.call_args_list))
+        self.assertTrue(all(
+            'on_cost_start' in call.kwargs
+            for call in mock_title.call_args_list
+        ))
 
 
 if __name__ == '__main__':

@@ -1,5 +1,7 @@
 """문서 텍스트 분할 (청킹)"""
 import logging
+import os
+import tempfile
 
 logger = logging.getLogger(__name__)
 
@@ -26,11 +28,30 @@ def extract_text_from_file(file_bytes: bytes, filename: str) -> str:
             return file_bytes.decode('utf-8', errors='ignore')
 
         if ext == 'pdf':
-            from PyPDF2 import PdfReader
-            import io
-            reader = PdfReader(io.BytesIO(file_bytes))
-            sep = '\n'
-            return sep.join(page.extract_text() or '' for page in reader.pages)
+            from services.content.document_ingest_service import extract_text
+
+            file_descriptor = None
+            temp_path = None
+            try:
+                file_descriptor, temp_path = tempfile.mkstemp(
+                    prefix='rag_pdf_', suffix='.pdf'
+                )
+                os.fchmod(file_descriptor, 0o600)
+                with os.fdopen(file_descriptor, 'wb') as temp_file:
+                    file_descriptor = None
+                    temp_file.write(file_bytes)
+                    temp_file.flush()
+                    os.fsync(temp_file.fileno())
+                result = extract_text(temp_path, 'application/pdf')
+                return str(result.get('content') or '')
+            finally:
+                if file_descriptor is not None:
+                    os.close(file_descriptor)
+                if temp_path:
+                    try:
+                        os.remove(temp_path)
+                    except FileNotFoundError:
+                        pass
 
         raise ValueError(f"지원하지 않는 파일 형식: {ext}")
     except ValueError:

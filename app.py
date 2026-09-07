@@ -10,20 +10,18 @@ from flask_cors import CORS
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from utils.production_readiness import (
+    backup_configuration_errors,
     default_content_security_policy,
     parse_cors_origins,
+    supabase_configuration_errors,
     validate_production_security_config,
 )
-
-try:
-    from dotenv import load_dotenv
-except ModuleNotFoundError:
-    load_dotenv = lambda *args, **kwargs: False
+from utils.env_loader import load_env_file
 
 
 def create_app(test_config=None):
     """Flask 애플리케이션 인스턴스를 생성하고 설정합니다."""
-    load_dotenv()
+    load_env_file()
 
     app = Flask(
         __name__,
@@ -39,7 +37,7 @@ def create_app(test_config=None):
 
     # 부팅 시 production 보안 설정 검증 (fail-closed)
     # FLASK_ENV != 'production'이면 검증을 건너뛰므로 개발/테스트 환경에는 영향 없음
-    flask_env = os.getenv('FLASK_ENV', '')
+    flask_env = os.getenv('FLASK_ENV', '').strip().lower()
     _csp_header = os.getenv('CONTENT_SECURITY_POLICY') or default_content_security_policy(flask_env)
     validate_production_security_config(
         flask_env,
@@ -47,11 +45,26 @@ def create_app(test_config=None):
         os.getenv('METRICS_AUTH_TOKEN', ''),
         os.getenv('ENCRYPTION_SECRET', ''),
         _csp_header,
+        os.getenv('PUBLIC_ORIGIN', ''),
     )
+    backup_errors = backup_configuration_errors(dict(os.environ))
+    if backup_errors:
+        raise RuntimeError('; '.join(backup_errors))
+    supabase_errors = (
+        supabase_configuration_errors(dict(os.environ))
+        if flask_env == 'production'
+        else []
+    )
+    if supabase_errors:
+        raise RuntimeError('; '.join(supabase_errors))
 
     CORS(app, origins=[o.strip() for o in allowed_origins], supports_credentials=True)
 
     app.config.from_object('config')
+    # 인증 데코레이터가 실행 모드를 요청 시점에 판정할 수 있도록 보존한다.
+    # 빈 값은 개발로 간주하지 않는다. 로컬 무인증 모드는 FLASK_ENV=development
+    # 또는 TESTING=True를 명시해야 한다.
+    app.config['FLASK_ENV'] = flask_env
     # /api/providers 등 순서가 UI 기본 선택에 영향을 주므로 JSON 키 정렬을 끈다.
     app.json.sort_keys = False
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
@@ -131,6 +144,9 @@ def create_app(test_config=None):
         response.headers['X-Frame-Options'] = 'DENY'
         response.headers['X-XSS-Protection'] = '1; mode=block'
         response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        # HTML routes that generate a per-response nonce may set a stricter
+        # policy before this hook. Preserve that route-scoped policy.
+        response.headers.setdefault('Content-Security-Policy', _csp_header)
         # HTTPS 환경에서만 HSTS 활성화
         if request.is_secure:
             response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
@@ -150,23 +166,42 @@ def create_app(test_config=None):
             # Origin 또는 Referer 헤더 검증
             origin = request.headers.get('Origin')
             referer = request.headers.get('Referer')
-            host = request.host_url.rstrip('/')
 
-            def is_allowed_origin(url):
-                """CORS 허용 목록에 포함된 origin인지 확인"""
-                return url.rstrip('/') in [o.rstrip('/') for o in allowed_origins]
+            def normalized_origin(url):
+                """Return an exact scheme/host/effective-port key, never a prefix."""
+                if not url:
+                    return None
+                parsed = urlparse(url)
+                if parsed.scheme not in {'http', 'https'} or not parsed.hostname:
+                    return None
+                if parsed.username or parsed.password:
+                    return None
+                try:
+                    port = parsed.port
+                except ValueError:
+                    return None
+                effective_port = port or (443 if parsed.scheme == 'https' else 80)
+                return (
+                    parsed.scheme.lower(),
+                    parsed.hostname.lower().rstrip('.'),
+                    effective_port,
+                )
+
+            host_origin = normalized_origin(request.host_url)
+            allowed_origin_keys = {
+                key
+                for value in allowed_origins
+                if (key := normalized_origin(value)) is not None
+            }
 
             if origin:
-                if not origin.startswith(host) and origin != 'file://':
-                    # CORS 허용 목록 또는 로컬 개발 환경이면 통과
-                    if not is_allowed_origin(origin):
-                        return api_error('CSRF 검증 실패: 잘못된 Origin', 403)
+                origin_key = normalized_origin(origin)
+                if origin_key not in {host_origin, *allowed_origin_keys}:
+                    return api_error('CSRF 검증 실패: 잘못된 Origin', 403)
             elif referer:
-                parsed = urlparse(referer)
-                referer_origin = f"{parsed.scheme}://{parsed.netloc}"
-                if not referer_origin.startswith(host):
-                    if not is_allowed_origin(referer_origin):
-                        return api_error('CSRF 검증 실패: 잘못된 Referer', 403)
+                referer_key = normalized_origin(referer)
+                if referer_key not in {host_origin, *allowed_origin_keys}:
+                    return api_error('CSRF 검증 실패: 잘못된 Referer', 403)
             else:
                 # Origin/Referer 모두 없는 경우: Authorization 헤더가 있으면 허용 (프로그래밍 방식 접근)
                 if request.headers.get('Authorization'):

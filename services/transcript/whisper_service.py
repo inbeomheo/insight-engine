@@ -6,14 +6,159 @@ faster-whisper로 음성 인식하여 텍스트를 반환합니다.
 import os
 import re
 import shutil
+import subprocess
+import sys
 import tempfile
 import logging
+from pathlib import Path
+from urllib.parse import urlparse
+
+import requests
+
+from utils.url_safety import PublicFetchTooLarge, UnsafeURLError, fetch_public_url
 
 logger = logging.getLogger(__name__)
 
+MAX_AUDIO_DURATION_SECONDS = 2 * 60 * 60
+HARD_MAX_AUDIO_DOWNLOAD_BYTES = 50 * 1024 * 1024
+DIRECT_AUDIO_EXTENSIONS = frozenset({'.mp3', '.m4a', '.ogg', '.wav', '.flac', '.aac'})
+DOWNLOADED_AUDIO_EXTENSIONS = DIRECT_AUDIO_EXTENSIONS | frozenset({'.opus', '.webm'})
+
+
+def _audio_download_limit() -> int:
+    from config import AUDIO_UPLOAD_MAX_BYTES
+
+    try:
+        configured = int(AUDIO_UPLOAD_MAX_BYTES)
+    except (TypeError, ValueError):
+        configured = HARD_MAX_AUDIO_DOWNLOAD_BYTES
+    return max(1, min(configured, HARD_MAX_AUDIO_DOWNLOAD_BYTES))
+
+
+def _canonical_youtube_url(value: str) -> str:
+    from services.media.video_deepdive_service import normalize_youtube_id
+
+    video_id = normalize_youtube_id(value)
+    return f'https://www.youtube.com/watch?v={video_id}'
+
+
+def _probe_audio_duration(audio_path: str) -> float | None:
+    """외부 ffprobe를 짧게 실행해 비신뢰 오디오의 재생 시간을 확인한다."""
+    ffprobe = shutil.which('ffprobe')
+    if not ffprobe:
+        logger.error('ffprobe가 없어 오디오 길이를 안전하게 확인할 수 없습니다.')
+        return None
+    try:
+        result = subprocess.run(
+            [
+                ffprobe,
+                '-v', 'error',
+                '-show_entries', 'format=duration',
+                '-of', 'default=noprint_wrappers=1:nokey=1',
+                audio_path,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=False,
+        )
+        if result.returncode != 0:
+            return None
+        duration = float((result.stdout or '').strip())
+        if duration <= 0 or duration > MAX_AUDIO_DURATION_SECONDS:
+            return None
+        return duration
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return None
+
+
+def _download_youtube_audio(canonical_url: str, max_bytes: int) -> str | None:
+    from services.media.video_deepdive_service import (
+        MonitoredDownloadError,
+        run_monitored_download,
+    )
+
+    tmp_dir = tempfile.mkdtemp(prefix='ytdlp_audio_')
+    try:
+        output_template = os.path.join(tmp_dir, 'audio.%(ext)s')
+        args = [
+            sys.executable,
+            '-m',
+            'yt_dlp',
+            '--no-playlist',
+            '--no-progress',
+            '--max-filesize',
+            str(max_bytes),
+            '--match-filter',
+            f'duration <= {MAX_AUDIO_DURATION_SECONDS}',
+            '-f',
+            'bestaudio/best',
+            '-o',
+            output_template,
+            canonical_url,
+        ]
+        run_monitored_download(
+            args,
+            watch_root=tmp_dir,
+            watch_prefix='audio',
+            max_bytes=max_bytes,
+            timeout=180,
+        )
+        candidates = sorted(
+            path for path in Path(tmp_dir).glob('audio.*')
+            if path.is_file()
+            and not path.is_symlink()
+            and path.suffix.lower() in DOWNLOADED_AUDIO_EXTENSIONS
+            and 0 < path.stat().st_size <= max_bytes
+        )
+        if not candidates:
+            raise ValueError('다운로드된 오디오 파일을 확인할 수 없습니다.')
+        os.chmod(candidates[0], 0o600)
+        return str(candidates[0])
+    except (MonitoredDownloadError, OSError, ValueError):
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+        return None
+
+
+def _download_public_audio(url: str, max_bytes: int) -> str | None:
+    """공인 IP에 고정된 HTTP fetch로 직접 오디오 파일만 내려받는다."""
+    suffix = Path(urlparse(url).path).suffix.lower()
+    if suffix not in DIRECT_AUDIO_EXTENSIONS:
+        return None
+
+    temp_path = None
+    try:
+        response = fetch_public_url(
+            url,
+            headers={'Accept': 'audio/*', 'User-Agent': 'InsightEngine/1.0'},
+            timeout=(5, 20),
+            max_bytes=max_bytes,
+            max_redirects=3,
+        )
+        if response.status_code < 200 or response.status_code >= 300:
+            return None
+        content_type = (response.headers.get('Content-Type') or '').split(';', 1)[0].strip().lower()
+        if not content_type.startswith('audio/'):
+            return None
+        content = bytes(response.content or b'')
+        if not content or len(content) > max_bytes:
+            return None
+
+        descriptor, temp_path = tempfile.mkstemp(prefix='podcast_audio_', suffix=suffix)
+        os.fchmod(descriptor, 0o600)
+        with os.fdopen(descriptor, 'wb') as audio_file:
+            audio_file.write(content)
+            audio_file.flush()
+            os.fsync(audio_file.fileno())
+        return temp_path
+    except (UnsafeURLError, PublicFetchTooLarge, requests.RequestException, OSError):
+        if temp_path:
+            _cleanup_file(temp_path)
+        return None
+
 
 def download_audio(video_url: str) -> str | None:
-    """yt-dlp로 YouTube 영상에서 오디오만 추출합니다.
+    """검증된 YouTube 또는 공인 직접 오디오 URL에서 오디오를 받습니다.
 
     Args:
         video_url: YouTube 영상 URL
@@ -22,46 +167,20 @@ def download_audio(video_url: str) -> str | None:
         추출된 오디오 파일 경로 (wav). 실패 시 None.
     """
     try:
-        import yt_dlp
-    except ImportError:
-        logger.error("yt-dlp가 설치되어 있지 않습니다: pip install yt-dlp")
-        return None
+        canonical_url = _canonical_youtube_url(video_url)
+    except ValueError:
+        return _download_public_audio(video_url, _audio_download_limit())
 
-    tmp_dir = None
-    try:
-        tmp_dir = tempfile.mkdtemp(prefix='ytdlp_audio_')
-        out_template = os.path.join(tmp_dir, 'audio')
+    result = _download_youtube_audio(canonical_url, _audio_download_limit())
+    if result is None:
+        logger.warning('YouTube 오디오 다운로드에 실패했습니다.')
+    return result
 
-        ydl_opts = {
-            'format': 'bestaudio/best',
-            'outtmpl': out_template,
-            'postprocessors': [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'wav',
-                'preferredquality': '16',
-            }],
-            'quiet': True,
-            'no_warnings': True,
-        }
 
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([video_url])
-
-        # yt-dlp가 실제 생성한 .wav 파일 탐색
-        for f in os.listdir(tmp_dir):
-            fpath = os.path.join(tmp_dir, f)
-            if f.endswith('.wav') and os.path.getsize(fpath) > 0:
-                return fpath
-
-        logger.warning("오디오 다운로드 후 wav 파일을 찾을 수 없습니다: %s", tmp_dir)
-        shutil.rmtree(tmp_dir, ignore_errors=True)
-        return None
-
-    except Exception as e:
-        logger.error("오디오 다운로드 실패: %s", str(e))
-        if tmp_dir:
-            shutil.rmtree(tmp_dir, ignore_errors=True)
-        return None
+def _is_audio_duration_allowed(audio_path: str) -> bool:
+    if not isinstance(audio_path, str) or not audio_path:
+        return False
+    return _probe_audio_duration(audio_path) is not None
 
 
 def transcribe_audio(audio_path: str, model_size: str = 'base', language: str | None = None) -> str | None:
@@ -74,6 +193,10 @@ def transcribe_audio(audio_path: str, model_size: str = 'base', language: str | 
     Returns:
         인식된 텍스트. 실패 시 None.
     """
+    if not _is_audio_duration_allowed(audio_path):
+        logger.warning('오디오 길이를 확인할 수 없거나 최대 120분을 초과했습니다.')
+        return None
+
     try:
         from faster_whisper import WhisperModel
     except ImportError:
@@ -138,6 +261,12 @@ def extract_subtitles_ytdlp(video_url: str) -> str | None:
         자막 텍스트. 자막 없으면 None.
     """
     try:
+        canonical_url = _canonical_youtube_url(video_url)
+    except ValueError:
+        logger.warning('유효하지 않은 YouTube 자막 URL을 거부했습니다.')
+        return None
+
+    try:
         import yt_dlp
     except ImportError:
         logger.error("yt-dlp가 설치되어 있지 않습니다: pip install yt-dlp")
@@ -160,7 +289,7 @@ def extract_subtitles_ytdlp(video_url: str) -> str | None:
         }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([video_url])
+            ydl.download([canonical_url])
 
         # 다운로드된 자막 파일 찾기 (ko > en > ja > 기타)
         sub_file = None

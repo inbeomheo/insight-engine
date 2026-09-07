@@ -2,3 +2,4 @@ pytest
 pytest-cov
 pytest-timeout
 flake8
+pglast==8.4

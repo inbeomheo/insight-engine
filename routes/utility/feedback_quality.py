@@ -5,6 +5,9 @@ utility_routes.py에서 분리됨:
 - 팩트체크 / 표절 / 가독성 / 감정 흐름
 """
 from flask import jsonify, request
+from extensions import limiter
+from services.usage import capture_usage_charge_callback, require_usage
+from src.contexts.identity.interface.auth_decorators import require_auth
 from utils.responses import api_error
 
 from routes.blog_routes import blog_bp
@@ -37,6 +40,9 @@ def api_feedback():
 # === 팩트체크 (F3-07) ===
 
 @blog_bp.route('/api/fact-check', methods=['POST'])
+@limiter.limit("5/minute")
+@require_auth
+@require_usage
 def api_fact_check():
     """콘텐츠의 팩트체크를 수행합니다."""
     data = request.get_json(silent=True) or {}
@@ -82,6 +88,9 @@ def api_readability():
 # === 감정 흐름 분석 (F3-11) ===
 
 @blog_bp.route('/api/sentiment-flow', methods=['POST'])
+@limiter.limit("5/minute")
+@require_auth
+@require_usage
 def api_sentiment_flow():
     """콘텐츠의 문단별 감정 흐름을 분석합니다."""
     data = request.get_json(silent=True) or {}
@@ -89,6 +98,16 @@ def api_sentiment_flow():
     if not content:
         return api_error('content 필수', 400)
 
+    from services.core.ai_service import resolve_public_model
+    try:
+        model = resolve_public_model(data.get('model'))
+    except ValueError as exc:
+        return api_error(str(exc), 400)
+
     from services.analysis.nlp_analysis_service import analyze_sentiment_flow
-    result = analyze_sentiment_flow(content)
+    result = analyze_sentiment_flow(
+        content,
+        model=model,
+        on_cost_start=capture_usage_charge_callback(),
+    )
     return jsonify(result)

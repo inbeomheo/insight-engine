@@ -7,7 +7,7 @@ AI 코멘터리 서비스
 import functools
 import logging
 import re
-from typing import Dict, Optional
+from typing import Callable, Dict, Optional
 
 
 logger = logging.getLogger(__name__)
@@ -30,12 +30,17 @@ _COMMENTARY_PROMPT = """당신은 전문 해설자입니다. 아래 콘텐츠를
 """
 
 
-def add_commentary(content: str, model: Optional[str] = None) -> Dict:
+def add_commentary(
+    content: str,
+    model: Optional[str] = None,
+    on_cost_start: Optional[Callable[[], None]] = None,
+) -> Dict:
     """콘텐츠에 AI 해설 주석을 추가합니다.
 
     Args:
         content: 원본 콘텐츠 (마크다운)
         model: 사용할 모델 ID (None이면 자동 선택)
+        on_cost_start: 실제 AI 호출 직전에 실행할 콜백
 
     Returns:
         dict: {
@@ -51,15 +56,24 @@ def add_commentary(content: str, model: Optional[str] = None) -> Dict:
         if not content or not content.strip():
             raise ValueError("해설을 추가할 콘텐츠가 필요합니다.")
 
-        use_model = model or _get_model()
+        from services.core import ai_service
+
+        use_model = ai_service.resolve_public_model(
+            model or _get_model(),
+            allow_auto=False,
+        )
 
         # 콘텐츠 길이 제한 (비용 절감)
         truncated = content[:5000] if len(content) > 5000 else content
 
         prompt = _COMMENTARY_PROMPT.format(content=truncated)
 
-        from services.core import ai_service
-        result = ai_service.create_content(prompt, use_model, "")
+        result = ai_service.create_content(
+            prompt,
+            use_model,
+            "",
+            on_cost_start=on_cost_start,
+        )
 
         commented = result.get('content', '')
         if not commented:
@@ -72,8 +86,8 @@ def add_commentary(content: str, model: Optional[str] = None) -> Dict:
             "commented_content": commented,
             "comment_count": comment_count,
         }
-    except Exception as e:
-        logger.error(f"AI 해설 추가 처리 실패: {e}")
+    except Exception as exc:
+        logger.error("AI 해설 추가 처리 실패 (type=%s)", type(exc).__name__)
         raise
 @functools.lru_cache(maxsize=1)
 def _get_model() -> str:

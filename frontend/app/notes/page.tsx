@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useClipboardCopy } from '@/hooks/useClipboardCopy';
+import { useAuthUserId } from '@/hooks/useAuthUserId';
 import { getNotes, searchNotes, type NoteListItem, type NoteSearchResult } from '@/lib/api';
 import {
   advanceNoteSearchRequestId,
@@ -111,6 +112,11 @@ function topCounts(items: string[], limit: number): Array<{ label: string; count
 }
 
 export default function NotesPage() {
+  const authUserId = useAuthUserId();
+  return <AccountNotesPage key={authUserId ? `user:${authUserId}` : 'anonymous'} />;
+}
+
+function AccountNotesPage() {
   const router = useRouter();
   const [notes, setNotes] = useState<NoteListItem[]>([]);
   const [searchResults, setSearchResults] = useState<NoteSearchResult[] | null>(null);

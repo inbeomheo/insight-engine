@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Activity, Clock, CheckCircle, BarChart3, FileText, Gauge, Server } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { apiUrl } from '@/lib/api';
+import { authFetch } from '@/lib/auth-session';
+import { useAuthUserId } from '@/hooks/useAuthUserId';
 
 interface DashboardData {
   total_generations: number;
@@ -20,19 +22,44 @@ interface DashboardData {
 }
 
 export const OperationsDashboard = memo(function OperationsDashboard() {
+  const authUserId = useAuthUserId();
+  return <AccountOperationsDashboard key={`operations:${authUserId ?? 'anonymous'}`} />;
+});
+
+function AccountOperationsDashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(apiUrl('/api/admin/dashboard'))
-      .then(r => r.json())
-      .then(d => {
-        if (d.error) setError(d.error);
-        else setData(d);
-      })
-      .catch(() => setError('데이터를 가져올 수 없습니다.'))
-      .finally(() => setLoading(false));
+    const controller = new AbortController();
+    let active = true;
+
+    void (async () => {
+      try {
+        const response = await authFetch(apiUrl('/api/admin/dashboard'), {
+          signal: controller.signal,
+        });
+        const body = await response.json();
+        if (!active || controller.signal.aborted) return;
+
+        if (body.error) {
+          setError(body.error);
+        } else {
+          setData(body as DashboardData);
+        }
+      } catch {
+        if (!active || controller.signal.aborted) return;
+        setError('데이터를 가져올 수 없습니다.');
+      } finally {
+        if (active && !controller.signal.aborted) setLoading(false);
+      }
+    })();
+
+    return () => {
+      active = false;
+      controller.abort();
+    };
   }, []);
 
   if (loading) return <div className="signal-meta py-12 text-center text-[10px] text-muted-foreground">로딩 중...</div>;
@@ -223,6 +250,6 @@ export const OperationsDashboard = memo(function OperationsDashboard() {
       )}
     </div>
   );
-});
+}
 
 export default OperationsDashboard;

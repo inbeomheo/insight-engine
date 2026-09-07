@@ -12,10 +12,36 @@ Phase 2 핵심 목표
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import Optional
 
 from src.contexts.identity.domain.user_account import ApiKey, UserAccount
 from src.shared.domain.value_objects import AccountId
+
+
+class QuotaReservationConflict(RuntimeError):
+    """멱등 키가 다른 요청 본문에 재사용됨."""
+
+
+@dataclass(frozen=True)
+class QuotaReservation:
+    """비용 작업 전에 확보한 사용량 예약.
+
+    ``owned``는 현재 HTTP 요청의 RPC 시도 토큰이 이 예약을 처음 만든
+    토큰과 같은지를 나타낸다. 네트워크 응답 유실 뒤 같은 토큰으로 RPC를
+    재시도하면 계속 ``True``이고, 별도 HTTP 요청이 같은 멱등 키를 재생하면
+    ``False``다. 따라서 실패/캐시 적중 경로는 자신이 만든 예약만 환불할 수 있다.
+    """
+
+    reservation_id: str
+    idempotency_key: str
+    request_fingerprint: str
+    owner_token_hash: str
+    amount: int
+    remaining: int
+    max_usage: int
+    owned: bool
+    replayed: bool
 
 
 class IAccountRepository(ABC):
@@ -46,6 +72,25 @@ class IAccountRepository(ABC):
         Supabase RPC `decrement_usage_safe`와 동치.
         한도 초과 시 `QuotaExceeded` raise.
         """
+
+    @abstractmethod
+    def reserve_quota_atomic(
+        self,
+        account_id: AccountId,
+        idempotency_key: str,
+        request_fingerprint: str,
+        owner_token_hash: str,
+        amount: int = 1,
+    ) -> QuotaReservation:
+        """멱등 키로 사용량을 선예약하고 예약 정보를 반환."""
+
+    @abstractmethod
+    def refund_quota_reservation(
+        self,
+        account_id: AccountId,
+        reservation: QuotaReservation,
+    ) -> int:
+        """자신이 소유한 예약만 멱등 환불하고 현재 잔여량을 반환."""
 
 
 class IApiKeyVault(ABC):
@@ -93,15 +138,24 @@ class IUsageGateway(ABC):
         """
 
     @abstractmethod
-    def refund(self, account_id: AccountId, amount: int = 1) -> None:
-        """생성 실패 시 환불.
+    def reserve(
+        self,
+        account_id: AccountId,
+        idempotency_key: str,
+        request_fingerprint: str,
+        owner_token_hash: str,
+        amount: int = 1,
+    ) -> QuotaReservation:
+        """비용 작업 전에 원자적·멱등 사용량 예약을 획득."""
 
-        현재 미구현 — 마스터 플랜의 "트랜잭션 부재 문제" 해소 단초.
-        """
+    @abstractmethod
+    def refund(self, account_id: AccountId, reservation: QuotaReservation) -> int:
+        """생성 실패/비용 미발생 시 소유한 예약을 멱등 환불."""
 
 
 __all__ = [
     "IAccountRepository",
     "IApiKeyVault",
     "IUsageGateway",
+    "QuotaReservation",
 ]

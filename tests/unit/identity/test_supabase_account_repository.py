@@ -3,22 +3,30 @@
 실제 Supabase 호출은 mock으로 격리한다. 검증 포인트:
 - Supabase 비활성 시 동작 (find_by_id → None, consume_quota_atomic → _UNLIMITED_DEV_QUOTA)
 - RPC 정상/한도 초과/예외 케이스
-- find_by_id가 ie_usage + ie_credits + ie_api_keys + is_admin을 조합
-- save가 ie_usage/ie_credits upsert 호출
+- find_by_id가 ie_usage + ie_api_keys + is_admin을 조합하고 크레딧은 0으로 유지
+- save가 ie_usage만 upsert하며 미구현 크레딧 원장을 가장하지 않음
 """
 
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.contexts.identity.domain.exceptions import QuotaExceeded
+from src.contexts.identity.domain.exceptions import (
+    QuotaBackendUnavailable,
+    QuotaExceeded,
+)
 from src.contexts.identity.domain.user_account import (
     CreditBalance,
     UsageQuota,
     UserAccount,
+)
+from src.contexts.identity.application.ports import (
+    QuotaReservation,
+    QuotaReservationConflict,
 )
 from src.contexts.identity.infrastructure.supabase_account_repository import (
     _UNLIMITED_DEV_QUOTA,
@@ -79,6 +87,38 @@ class TestSupabaseDisabled:
         )
 
 
+class TestScopedClientSelection:
+    def test_account_reads_and_writes_use_user_scoped_client(self) -> None:
+        repo = SupabaseAccountRepository()
+        user_client = MagicMock()
+
+        with (
+            patch(
+                'src.shared.infrastructure.supabase_client.is_supabase_enabled',
+                return_value=True,
+            ),
+            patch(
+                'src.shared.infrastructure.supabase_client.get_user_supabase',
+                return_value=user_client,
+            ) as get_user_client,
+        ):
+            assert repo._get_client() is user_client
+
+        get_user_client.assert_called_once_with()
+
+    def test_admin_auth_lookup_uses_explicit_service_role(self) -> None:
+        repo = SupabaseAccountRepository()
+        service_client = MagicMock()
+
+        with patch(
+            'src.shared.infrastructure.supabase_client.get_service_supabase',
+            return_value=service_client,
+        ) as get_service_client:
+            assert repo._get_admin_client() is service_client
+
+        get_service_client.assert_called_once_with()
+
+
 # ---------------------------------------------------------------------------
 # consume_quota_atomic — RPC 응답 처리
 # ---------------------------------------------------------------------------
@@ -118,8 +158,10 @@ class TestConsumeQuotaAtomic:
             read_exec.return_value = read_response
 
         repo = SupabaseAccountRepository()
-        # _get_client을 직접 패치 (lazy import 우회)
-        repo._get_client = MagicMock(return_value=mock_client)  # type: ignore[method-assign]
+        # 요청별 JWT/service-role RPC 클라이언트 경계를 직접 패치한다.
+        repo._get_usage_rpc_client = MagicMock(  # type: ignore[method-assign]
+            return_value=mock_client
+        )
         return repo, mock_client
 
     def test_success_returns_new_count(self) -> None:
@@ -129,8 +171,27 @@ class TestConsumeQuotaAtomic:
         result = repo.consume_quota_atomic(AccountId(value="user-1"))
         assert result == 5
         client.rpc.assert_called_once_with(
-            "decrement_usage_safe", {"p_user_id": "user-1"}
+            "decrement_usage_safe", {"p_user_id": "user-1", "p_amount": 1}
         )
+
+    def test_multi_amount_is_sent_in_one_rpc(self) -> None:
+        repo, client = self._make_repo_with_mock_client(
+            {"success": True, "new_count": 2}
+        )
+        result = repo.consume_quota_atomic(AccountId(value="user-1"), 3)
+        assert result == 2
+        client.rpc.assert_called_once_with(
+            "decrement_usage_safe", {"p_user_id": "user-1", "p_amount": 3}
+        )
+
+    @pytest.mark.parametrize("amount", [0, -1, True])
+    def test_invalid_amount_is_rejected_before_rpc(self, amount: int) -> None:
+        repo, client = self._make_repo_with_mock_client(
+            {"success": True, "new_count": 5}
+        )
+        with pytest.raises(ValueError, match="positive integer"):
+            repo.consume_quota_atomic(AccountId(value="user-1"), amount)
+        client.rpc.assert_not_called()
 
     def test_no_usage_left_raises_quota_exceeded(self) -> None:
         repo, _ = self._make_repo_with_mock_client(
@@ -139,52 +200,355 @@ class TestConsumeQuotaAtomic:
         with pytest.raises(QuotaExceeded):
             repo.consume_quota_atomic(AccountId(value="user-2"))
 
-    def test_unexpected_payload_raises_quota_exceeded(self) -> None:
-        # 예상치 못한 형식 — 안전을 위해 한도 초과 처리
+    def test_unexpected_payload_is_backend_unavailable(self) -> None:
+        # 계약 밖 응답은 실제 한도 초과로 가장하지 않고 차감 장애로 처리한다.
         repo, _ = self._make_repo_with_mock_client({"weird": True})
-        with pytest.raises(QuotaExceeded):
+        with pytest.raises(QuotaBackendUnavailable):
             repo.consume_quota_atomic(AccountId(value="user-3"))
 
-    def test_rpc_exception_returns_undecremented_remaining(
+    def test_rpc_exception_fails_closed(
         self, caplog: pytest.LogCaptureFixture
     ) -> None:
-        # 정책(허용 + 차감 생략): RPC 장애 시 차감하지 않고 현재 잔여 횟수를 그대로 반환.
         repo, client = self._make_repo_with_mock_client(
             None,
             raise_exc=RuntimeError("network down"),
             read_data=[{"usage_count": 7}],
         )
         with caplog.at_level(
-            logging.WARNING,
+            logging.ERROR,
             logger="src.contexts.identity.infrastructure.supabase_account_repository",
-        ):
-            result = repo.consume_quota_atomic(AccountId(value="user-4"))
-        # 가짜 999가 아니라 실제(미차감) 잔여 횟수 7을 반환해야 함
-        assert result == 7
-        # 차감 생략 정책 warning 로그가 남아야 함
-        assert any(
-            "차감을 생략" in r.message for r in caplog.records
-        )
+        ), pytest.raises(QuotaBackendUnavailable):
+            repo.consume_quota_atomic(AccountId(value="user-4"))
+        assert any("안전하게 차감할 수 없음" in r.message for r in caplog.records)
+        client.table.assert_not_called()
 
-    def test_rpc_exception_read_also_fails_falls_back_to_unlimited(
+    def test_rpc_exception_never_falls_back_to_unlimited(
         self, caplog: pytest.LogCaptureFixture
     ) -> None:
-        # RPC + 읽기 모두 실패 → 최후의 폴백으로 허용(_UNLIMITED_DEV_QUOTA).
         repo, _ = self._make_repo_with_mock_client(
             None,
             raise_exc=RuntimeError("network down"),
             read_raises=RuntimeError("read down"),
         )
         with caplog.at_level(
-            logging.WARNING,
+            logging.ERROR,
             logger="src.contexts.identity.infrastructure.supabase_account_repository",
-        ):
-            result = repo.consume_quota_atomic(AccountId(value="user-5"))
-        assert result == _UNLIMITED_DEV_QUOTA
-        # 읽기 실패 폴백 warning 로그가 남아야 함
-        assert any(
-            "잔여 횟수 읽기 실패" in r.message for r in caplog.records
+        ), pytest.raises(QuotaBackendUnavailable):
+            repo.consume_quota_atomic(AccountId(value="user-5"))
+        assert any("안전하게 차감할 수 없음" in r.message for r in caplog.records)
+
+
+# ---------------------------------------------------------------------------
+# reserve/refund — 멱등 RPC 응답 처리
+# ---------------------------------------------------------------------------
+
+
+class TestQuotaReservationRpc:
+    @staticmethod
+    def _response(data: dict) -> MagicMock:
+        response = MagicMock()
+        response.data = data
+        return response
+
+    @staticmethod
+    def _repo(client: MagicMock) -> SupabaseAccountRepository:
+        repo = SupabaseAccountRepository()
+        repo._get_usage_rpc_client = MagicMock(  # type: ignore[method-assign]
+            return_value=client
         )
+        return repo
+
+    def test_usage_rpc_client_uses_service_role_after_validated_request(self) -> None:
+        from flask import Flask, g
+
+        app = Flask(__name__)
+        service_client = MagicMock()
+        repo = SupabaseAccountRepository()
+
+        with (
+            app.test_request_context('/generate'),
+            patch(
+                'src.shared.infrastructure.supabase_client.is_supabase_enabled',
+                return_value=True,
+            ),
+            patch(
+                'src.shared.infrastructure.supabase_client.get_service_supabase',
+                return_value=service_client,
+            ) as get_service_client,
+            patch(
+                'src.shared.infrastructure.supabase_client.get_user_supabase',
+            ) as get_user_client,
+        ):
+            g.user_id = 'user-1'
+            g.access_token = 'validated-jwt'
+            assert repo._get_usage_rpc_client(AccountId('user-1')) is service_client
+
+        get_service_client.assert_called_once_with()
+        get_user_client.assert_not_called()
+
+    def test_usage_rpc_client_never_escalates_missing_request_jwt(self) -> None:
+        from flask import Flask, g
+
+        app = Flask(__name__)
+        repo = SupabaseAccountRepository()
+
+        with (
+            app.test_request_context('/generate'),
+            patch(
+                'src.shared.infrastructure.supabase_client.is_supabase_enabled',
+                return_value=True,
+            ),
+            patch(
+                'src.shared.infrastructure.supabase_client.get_service_supabase'
+            ) as service_client,
+        ):
+            g.user_id = 'user-1'
+            g.access_token = None
+            with pytest.raises(QuotaBackendUnavailable):
+                repo._get_usage_rpc_client(AccountId('user-1'))
+
+        service_client.assert_not_called()
+
+    def test_usage_rpc_client_rejects_authenticated_account_mismatch(self) -> None:
+        from flask import Flask, g
+
+        app = Flask(__name__)
+        repo = SupabaseAccountRepository()
+
+        with (
+            app.test_request_context('/generate'),
+            patch(
+                'src.shared.infrastructure.supabase_client.is_supabase_enabled',
+                return_value=True,
+            ),
+            patch(
+                'src.shared.infrastructure.supabase_client.get_service_supabase'
+            ) as service_client,
+        ):
+            g.user_id = 'user-1'
+            g.access_token = 'validated-jwt'
+            with pytest.raises(QuotaBackendUnavailable, match='does not match'):
+                repo._get_usage_rpc_client(AccountId('user-2'))
+
+        service_client.assert_not_called()
+
+    def test_usage_rpc_background_requires_explicit_service_role(self) -> None:
+        repo = SupabaseAccountRepository()
+        service_client = MagicMock()
+
+        with (
+            patch(
+                'src.shared.infrastructure.supabase_client.is_supabase_enabled',
+                return_value=True,
+            ),
+            patch(
+                'src.shared.infrastructure.supabase_client.get_service_supabase',
+                return_value=service_client,
+            ) as get_service_client,
+        ):
+            assert repo._get_usage_rpc_client(AccountId('user-1')) is service_client
+
+        get_service_client.assert_called_once_with()
+
+    def test_commit_then_response_loss_retry_reuses_same_reservation(self) -> None:
+        """첫 RPC가 커밋 후 응답 유실돼도 같은 인자로 재시도해 한 예약으로 수렴."""
+        client = MagicMock()
+        client.rpc.return_value.execute.side_effect = [
+            ConnectionError("response lost after commit"),
+            self._response({
+                "success": True,
+                "reservation_id": "reservation-1",
+                "new_count": 4,
+                "max_usage": 5,
+                "owned": True,
+                "replayed": True,
+            }),
+        ]
+        repo = self._repo(client)
+
+        result = repo.reserve_quota_atomic(
+            AccountId("user-1"),
+            "client:key",
+            "a" * 64,
+            "b" * 64,
+        )
+
+        assert result.remaining == 4
+        assert result.owned is True
+        assert result.replayed is True
+        assert client.rpc.call_count == 2
+        assert client.rpc.call_args_list[0] == client.rpc.call_args_list[1]
+
+    def test_same_key_replay_is_not_owned_by_second_http_request(self) -> None:
+        client = MagicMock()
+        client.rpc.return_value.execute.return_value = self._response({
+            "success": False,
+            "reason": "idempotency_replay",
+            "reservation_id": "reservation-1",
+            "new_count": 4,
+            "max_usage": 5,
+        })
+        repo = self._repo(client)
+
+        result = repo.reserve_quota_atomic(
+            AccountId("user-1"),
+            "client:key",
+            "a" * 64,
+            "new-owner-token".ljust(64, "0"),
+        )
+
+        assert result.remaining == 4
+        assert result.owned is False
+        assert result.replayed is True
+
+    def test_same_key_with_different_payload_is_conflict(self) -> None:
+        client = MagicMock()
+        client.rpc.return_value.execute.return_value = self._response({
+            "success": False,
+            "reason": "idempotency_conflict",
+        })
+        repo = self._repo(client)
+
+        with pytest.raises(QuotaReservationConflict):
+            repo.reserve_quota_atomic(
+                AccountId("user-1"),
+                "client:key",
+                "a" * 64,
+                "b" * 64,
+            )
+        assert client.rpc.call_count == 1
+
+    def test_two_lost_reservation_responses_trigger_owned_compensation(self) -> None:
+        client = MagicMock()
+        client.rpc.return_value.execute.side_effect = [
+            ConnectionError("first reserve response lost"),
+            ConnectionError("second reserve response lost"),
+            self._response({"success": True, "new_count": 5}),
+        ]
+        repo = self._repo(client)
+
+        with pytest.raises(QuotaBackendUnavailable):
+            repo.reserve_quota_atomic(
+                AccountId("user-1"),
+                "client:key",
+                "a" * 64,
+                "b" * 64,
+            )
+
+        assert [call.args[0] for call in client.rpc.call_args_list] == [
+            "reserve_usage_safe",
+            "reserve_usage_safe",
+            "refund_usage_reservation_safe",
+        ]
+
+    def test_refund_retries_idempotently_after_response_loss(self) -> None:
+        client = MagicMock()
+        client.rpc.return_value.execute.side_effect = [
+            ConnectionError("refund response lost"),
+            self._response({
+                "success": True,
+                "new_count": 5,
+                "refunded": False,
+                "replayed": True,
+            }),
+        ]
+        repo = self._repo(client)
+        reservation = QuotaReservation(
+            reservation_id="reservation-1",
+            idempotency_key="client:key",
+            request_fingerprint="a" * 64,
+            owner_token_hash="b" * 64,
+            amount=1,
+            remaining=4,
+            max_usage=5,
+            owned=True,
+            replayed=False,
+        )
+
+        assert repo.refund_quota_reservation(AccountId("user-1"), reservation) == 5
+        assert client.rpc.call_count == 2
+        assert client.rpc.call_args_list[0] == client.rpc.call_args_list[1]
+
+    def test_replayed_request_cannot_refund_another_owner_reservation(self) -> None:
+        client = MagicMock()
+        repo = self._repo(client)
+        reservation = QuotaReservation(
+            reservation_id="reservation-1",
+            idempotency_key="client:key",
+            request_fingerprint="a" * 64,
+            owner_token_hash="b" * 64,
+            amount=1,
+            remaining=4,
+            max_usage=5,
+            owned=False,
+            replayed=True,
+        )
+
+        assert repo.refund_quota_reservation(AccountId("user-1"), reservation) == 4
+        client.rpc.assert_not_called()
+
+    def test_known_reservation_not_found_remains_fail_closed(self) -> None:
+        client = MagicMock()
+        client.rpc.return_value.execute.return_value = self._response({
+            "success": False,
+            "reason": "reservation_not_found",
+        })
+        repo = self._repo(client)
+        reservation = QuotaReservation(
+            reservation_id="reservation-1",
+            idempotency_key="client:key",
+            request_fingerprint="a" * 64,
+            owner_token_hash="b" * 64,
+            amount=1,
+            remaining=4,
+            max_usage=5,
+            owned=True,
+            replayed=False,
+        )
+
+        with pytest.raises(QuotaBackendUnavailable):
+            repo.refund_quota_reservation(AccountId("user-1"), reservation)
+
+    def test_reservation_unexpected_payload_remains_backend_unavailable(self) -> None:
+        client = MagicMock()
+        client.rpc.return_value.execute.return_value = self._response({"weird": True})
+        repo = self._repo(client)
+
+        with pytest.raises(QuotaBackendUnavailable):
+            repo.reserve_quota_atomic(
+                AccountId("user-1"),
+                "client:key",
+                "a" * 64,
+                "b" * 64,
+            )
+        # 정상 HTTP 응답의 계약 위반은 예약으로 추측해 재시도하지
+        # 않고, 모호한 차감만 같은 소유 토큰으로 보상 환불한다.
+        assert [call.args[0] for call in client.rpc.call_args_list] == [
+            "reserve_usage_safe",
+            "refund_usage_reservation_safe",
+        ]
+
+
+def test_usage_reservation_migration_has_durable_concurrency_guards() -> None:
+    migration = (
+        Path(__file__).resolve().parents[3]
+        / "supabase"
+        / "migrations"
+        / "008_usage_reservation_idempotency.sql"
+    ).read_text(encoding="utf-8")
+
+    assert "UNIQUE (user_id, idempotency_key)" in migration
+    assert "pg_advisory_xact_lock" in migration
+    assert "FOR UPDATE" in migration
+    assert "owner_token_hash" in migration
+    assert "state = 'refunded'" in migration
+    assert "SECURITY DEFINER" in migration
+    assert "auth.jwt() ->> 'role'" in migration
+    assert "IS DISTINCT FROM p_owner_token_hash" in migration
+    assert "p_owner_token_hash IS NULL" in migration
+    assert "ON CONFLICT (user_id) DO UPDATE" in migration
+    assert "'reason', 'idempotency_replay'" in migration
+    assert "SET search_path = ''" in migration
 
 
 # ---------------------------------------------------------------------------
@@ -207,18 +571,16 @@ class TestFindById:
         *,
         usage_rows: list[dict] | None = None,
         api_key_rows: list[dict] | None = None,
-        credits_rows: list[dict] | None = None,
         admin_email: str = "user@example.com",
         is_admin_result: bool = False,
     ) -> SupabaseAccountRepository:
         mock_client = MagicMock()
 
-        # table().select().eq().limit().execute() 체인을 만든다
+        # API key table 조회 체인을 만든다. 사용량은 직접 테이블 쓰기/초기화가
+        # 아닌 get_usage_safe RPC로 조회한다.
         def table_side_effect(name: str) -> MagicMock:
             response_rows = {
-                "ie_usage": usage_rows or [],
                 "ie_api_keys": api_key_rows or [],
-                "ie_credits": credits_rows or [],
             }.get(name, [])
             response = MagicMock()
             response.data = response_rows
@@ -229,6 +591,15 @@ class TestFindById:
             return tbl
 
         mock_client.table.side_effect = table_side_effect
+        usage_response = MagicMock()
+        usage_response.data = (
+            (usage_rows or [])[0]
+            if usage_rows
+            else {"usage_count": 20, "max_usage": 20, "can_use": True}
+        )
+        usage_rpc = MagicMock()
+        usage_rpc.execute.return_value = usage_response
+        mock_client.rpc.return_value = usage_rpc
 
         # admin 클라이언트는 별도 mock
         mock_admin = MagicMock()
@@ -257,7 +628,6 @@ class TestFindById:
     def test_basic_assembly(self) -> None:
         repo = self._make_repo(
             usage_rows=[{"usage_count": 17, "max_usage": 20}],
-            credits_rows=[{"balance": 100}],
             api_key_rows=[
                 {
                     "gemini_key": "encrypted_value_xyz1234",
@@ -273,7 +643,7 @@ class TestFindById:
         assert ua.email == "user@example.com"
         assert ua.quota.daily_limit == 20
         assert ua.quota.used_today == 3  # 20 - 17
-        assert ua.credits.balance == 100
+        assert ua.credits.balance == 0
         assert len(ua.api_keys) == 1
         assert ua.api_keys[0].provider == "gemini"
         # 도메인 보호 — 평문 노출 금지, 마지막 4글자 마스킹만
@@ -299,7 +669,6 @@ class TestFindById:
     def test_default_quota_when_no_row(self) -> None:
         repo = self._make_repo(
             usage_rows=[],
-            credits_rows=[],
             api_key_rows=[],
         )
         ua = repo.find_by_id(AccountId(value="new-user"))
@@ -322,7 +691,7 @@ class TestFindById:
 
 
 class TestFindByIdAdminUnavailable:
-    """SUPABASE_SERVICE_ROLE_KEY 미설정 시 warning 로그 + None 반환."""
+    """Supabase 관리자 키 미설정 시 warning 로그 + None 반환."""
 
     def test_warning_logged_when_admin_none(
         self, caplog: pytest.LogCaptureFixture
@@ -341,7 +710,7 @@ class TestFindByIdAdminUnavailable:
         assert result is None
         # 운영자가 인지할 수 있는 warning 로그
         assert any(
-            "SUPABASE_SERVICE_ROLE_KEY 미설정" in r.message
+            "secret/service_role 키 미설정" in r.message
             for r in caplog.records
         ), f"warning 로그가 남지 않음: {[r.message for r in caplog.records]}"
 
@@ -377,7 +746,7 @@ class TestFindByEmailPagination:
 
         assert result is None
         assert any(
-            "SUPABASE_SERVICE_ROLE_KEY 미설정" in r.message
+            "secret/service_role 키 미설정" in r.message
             for r in caplog.records
         )
 
@@ -506,19 +875,18 @@ class TestFindByEmailPagination:
 
 
 class TestSave:
-    def test_save_upserts_usage_and_credits(self) -> None:
+    def test_save_uses_service_role_quota_rpc(self) -> None:
         mock_client = MagicMock()
-        # upsert chain
-        usage_tbl = MagicMock()
-        credits_tbl = MagicMock()
-
-        def table_side_effect(name: str) -> MagicMock:
-            return {"ie_usage": usage_tbl, "ie_credits": credits_tbl}[name]
-
-        mock_client.table.side_effect = table_side_effect
+        rpc_query = MagicMock()
+        rpc_query.execute.return_value.data = {
+            "success": True,
+            "usage_count": 15,
+            "max_usage": 20,
+        }
+        mock_client.rpc.return_value = rpc_query
 
         repo = SupabaseAccountRepository()
-        repo._get_client = MagicMock(return_value=mock_client)  # type: ignore[method-assign]
+        repo._get_admin_client = MagicMock(return_value=mock_client)  # type: ignore[method-assign]
 
         account = UserAccount(
             account_id="user-1",
@@ -528,14 +896,12 @@ class TestSave:
         )
         repo.save(account)
 
-        # ie_usage upsert 호출 검증
-        usage_tbl.upsert.assert_called_once()
-        usage_payload = usage_tbl.upsert.call_args[0][0]
-        assert usage_payload["user_id"] == "user-1"
-        assert usage_payload["usage_count"] == 15  # 20 - 5
-        assert usage_payload["max_usage"] == 20
-
-        # ie_credits upsert 호출 검증
-        credits_tbl.upsert.assert_called_once_with(
-            {"user_id": "user-1", "balance": 42}
+        mock_client.rpc.assert_called_once_with(
+            "set_usage_quota_admin",
+            {
+                "p_user_id": "user-1",
+                "p_usage_count": 15,
+                "p_max_usage": 20,
+            },
         )
+        mock_client.table.assert_not_called()

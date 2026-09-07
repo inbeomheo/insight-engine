@@ -47,6 +47,10 @@ def _install_fake_modules(monkeypatch):
 
 def test_transcribe_audio_uses_auto_detection_when_language_is_none(monkeypatch):
     fake_model_cls = _install_fake_modules(monkeypatch)
+    monkeypatch.setattr(
+        "services.transcript.whisper_service._is_audio_duration_allowed",
+        lambda _audio_path: True,
+    )
 
     result = transcribe_audio("/tmp/audio.wav", language=None)
 
@@ -63,6 +67,10 @@ def test_transcribe_audio_uses_auto_detection_when_language_is_none(monkeypatch)
 
 def test_transcribe_audio_forces_english_when_language_is_en(monkeypatch):
     fake_model_cls = _install_fake_modules(monkeypatch)
+    monkeypatch.setattr(
+        "services.transcript.whisper_service._is_audio_duration_allowed",
+        lambda _audio_path: True,
+    )
 
     result = transcribe_audio("/tmp/audio.wav", language="en")
 

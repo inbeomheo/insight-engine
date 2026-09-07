@@ -1,4 +1,4 @@
-import { test, expect, TEST_DATA } from '../fixtures/test-fixtures';
+import { test, expect, TEST_DATA, injectReports, makeMockReport } from '../fixtures/test-fixtures';
 
 /**
  * Phase 2: 핵심 사용자 흐름 E2E
@@ -109,17 +109,20 @@ test.describe('핵심 사용자 흐름', () => {
     await expect(page.getByRole('button', { name: /새 분석/ })).toBeVisible();
   });
 
-  test('사이드바 히스토리 검색이 동작한다', async ({ page }) => {
+  test('사이드바 히스토리 검색이 동작한다', async ({ page, mainPage }) => {
+    await injectReports(page, [
+      makeMockReport({ id: 'search-match', title: '검색할 학습 노트' }),
+      makeMockReport({ id: 'search-other', title: '다른 영상 요약' }),
+    ]);
+    await mainPage.goto();
+    const sidebar = page.getByRole('navigation', { name: '사이드바 내비게이션' });
     const searchInput = page.getByPlaceholder('히스토리 검색...');
-    // 검색 입력이 존재하면 입력 테스트
-    if (await searchInput.isVisible().catch(() => false)) {
-      await searchInput.fill('테스트');
-      await page.waitForTimeout(300);
-      // 검색 결과 또는 빈 상태
-      const hasResult = await page.getByText(/검색 결과/).isVisible().catch(() => false);
-      const hasHistory = await page.locator('aside').getByText(/분석 히스토리/).isVisible().catch(() => false);
-      expect(hasResult || hasHistory || true).toBe(true);
-    }
+    await expect(sidebar.getByRole('button', { name: '다른 영상 요약 히스토리 보기' })).toBeVisible();
+    await searchInput.fill('학습');
+    await expect(sidebar.getByRole('button', { name: '검색할 학습 노트 히스토리 보기' })).toBeVisible();
+    await expect(sidebar.getByRole('button', { name: '다른 영상 요약 히스토리 보기' })).toHaveCount(0);
+    await searchInput.fill('');
+    await expect(sidebar.getByRole('button', { name: '다른 영상 요약 히스토리 보기' })).toBeVisible();
   });
 
   // --- 2-5. 헤더 ---

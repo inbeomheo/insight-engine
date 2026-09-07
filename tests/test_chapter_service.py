@@ -1,8 +1,9 @@
 """chapter_service 단위 테스트"""
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from services.transcript.chapter_service import split_chapters, _format_time, get_total_duration
+from services.usage.usage_lock import UsageLockUnavailable
 
 
 class TestFormatTime(unittest.TestCase):
@@ -90,6 +91,26 @@ class TestSplitChapters(unittest.TestCase):
         }
         result = split_chapters('A' * 600, 'model1')
         self.assertEqual(len(result), 1)
+
+    @patch('services.transcript.chapter_service.ai_service')
+    def test_cost_callback_is_deferred_to_the_actual_ai_boundary(self, mock_ai):
+        callback = Mock()
+        mock_ai.create_content.return_value = {'content': '{"chapters": []}'}
+
+        split_chapters('A' * 600, 'model1', on_cost_start=callback)
+
+        callback.assert_not_called()
+        self.assertIs(
+            mock_ai.create_content.call_args.kwargs['on_cost_start'],
+            callback,
+        )
+
+    @patch('services.transcript.chapter_service.ai_service')
+    def test_usage_lock_failure_is_not_a_graceful_empty_chapter_result(self, mock_ai):
+        mock_ai.create_content.side_effect = UsageLockUnavailable('lease lost')
+
+        with self.assertRaises(UsageLockUnavailable):
+            split_chapters('A' * 600, 'model1', on_cost_start=Mock())
 
 
 class TestGetTotalDuration(unittest.TestCase):

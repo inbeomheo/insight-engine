@@ -20,6 +20,17 @@ class _Base(unittest.TestCase):
 @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
 class TestMindmap(_Base):
 
+    @patch('services.core.ai_service.create_content')
+    def test_mindmap_rejects_unlisted_model(self, mock_ai, _):
+        self.app.config['STYLE_PROMPTS'] = {'mindmap': 'convert'}
+        resp = self.client.post(
+            '/api/mindmap',
+            json={'content': 'test', 'model': 'attacker/model'},
+            headers=_H,
+        )
+        self.assertEqual(resp.status_code, 400)
+        mock_ai.assert_not_called()
+
     def test_mindmap_no_content(self, _):
         resp = self.client.post('/api/mindmap', json={}, headers=_H)
         self.assertIn(resp.status_code, [400, 401])
@@ -52,15 +63,28 @@ class TestMindmap(_Base):
 @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
 class TestGenerateFusion(_Base):
 
+    @patch('services.core.fusion_service.generate_fusion')
+    def test_fusion_rejects_unlisted_model(self, mock_fusion, _):
+        resp = self.client.post(
+            '/api/generate-fusion',
+            json={
+                'urls': ['http://a.com', 'http://b.com'],
+                'model': 'attacker/model',
+            },
+            headers=_H,
+        )
+        self.assertEqual(resp.status_code, 400)
+        mock_fusion.assert_not_called()
+
     def test_fusion_too_few_urls(self, _):
         resp = self.client.post('/api/generate-fusion',
-                                json={'urls': ['http://a.com'], 'model': 'gemini/test'},
+                                json={'urls': ['http://a.com'], 'model': 'chatmock/gpt-5.4-mini'},
                                 headers=_H)
         self.assertIn(resp.status_code, [400, 429])
 
     def test_fusion_too_many_urls(self, _):
         resp = self.client.post('/api/generate-fusion',
-                                json={'urls': [f'http://{i}.com' for i in range(6)], 'model': 'gemini/test'},
+                                json={'urls': [f'http://{i}.com' for i in range(6)], 'model': 'chatmock/gpt-5.4-mini'},
                                 headers=_H)
         self.assertIn(resp.status_code, [400, 429])
 
@@ -76,7 +100,7 @@ class TestGenerateFusion(_Base):
         resp = self.client.post('/api/generate-fusion',
                                 json={
                                     'urls': ['https://youtube.com/watch?v=a', 'https://youtube.com/watch?v=b'],
-                                    'model': 'gemini/test',
+                                    'model': 'chatmock/gpt-5.4-mini',
                                     'style': 'blog_seo'
                                 },
                                 headers=_H)
@@ -88,7 +112,7 @@ class TestGenerateFusion(_Base):
         resp = self.client.post('/api/generate-fusion',
                                 json={
                                     'urls': ['http://a.com', 'http://b.com'],
-                                    'model': 'gemini/test'
+                                    'model': 'chatmock/gpt-5.4-mini'
                                 },
                                 headers=_H)
         self.assertIn(resp.status_code, [400, 429, 500])
@@ -99,7 +123,7 @@ class TestGenerateFusion(_Base):
         resp = self.client.post('/api/generate-fusion',
                                 json={
                                     'urls': ['http://a.com', 'http://b.com'],
-                                    'model': 'gemini/test'
+                                    'model': 'chatmock/gpt-5.4-mini'
                                 },
                                 headers=_H)
         self.assertIn(resp.status_code, [429, 500])

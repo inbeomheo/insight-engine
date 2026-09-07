@@ -1,13 +1,12 @@
-"""R68: /generate 응답에 prompt_length 필드 테스트"""
+"""AI 생성 응답에 내부 프롬프트 메타데이터가 노출되지 않는지 검증."""
 import unittest
 from unittest.mock import patch, MagicMock
 
 
-class TestPromptLength(unittest.TestCase):
-    """prompt_length가 generate 응답의 모든 경로에 포함되는지 검증."""
+class TestPromptPrivacy(unittest.TestCase):
+    """프롬프트 본문과 길이를 클라이언트에 반환하지 않음."""
 
-    def test_prompt_length_in_save_and_respond(self):
-        """_save_and_respond 응답에 prompt_length가 포함된다."""
+    def test_prompt_metadata_removed_from_save_and_respond(self):
         from routes.generation_helpers import _save_and_respond
         from app import create_app
 
@@ -47,11 +46,10 @@ class TestPromptLength(unittest.TestCase):
                 )
 
         data = resp.get_json()
-        self.assertIn('prompt_length', data)
-        self.assertEqual(data['prompt_length'], len(used_prompt))
+        self.assertNotIn('prompt', data)
+        self.assertNotIn('prompt_length', data)
 
-    def test_prompt_length_zero_when_no_prompt(self):
-        """used_prompt가 None일 때 prompt_length는 0."""
+    def test_prompt_metadata_absent_when_no_prompt(self):
         from routes.generation_helpers import _save_and_respond
         from app import create_app
 
@@ -89,7 +87,8 @@ class TestPromptLength(unittest.TestCase):
                 )
 
         data = resp.get_json()
-        self.assertEqual(data['prompt_length'], 0)
+        self.assertNotIn('prompt', data)
+        self.assertNotIn('prompt_length', data)
 
 
 if __name__ == '__main__':

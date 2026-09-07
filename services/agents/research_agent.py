@@ -9,6 +9,7 @@ import re
 import logging
 
 from .base_agent import BaseAgent
+from services.usage.usage_lock import UsageLockUnavailable
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +85,8 @@ class ResearchAgent(BaseAgent):
         try:
             raw = self._call_ai(prompt, temperature=0.3, max_tokens=1000)
             research_data = self._parse_json(raw)
+        except UsageLockUnavailable:
+            raise
         except Exception as e:
             self._logger.error(f'[ResearchAgent] AI 분석 실패: {e}')
             research_data = {
@@ -99,12 +102,18 @@ class ResearchAgent(BaseAgent):
         web_results = []
         web_context = ''
         search_query = research_data.get('search_query', '')
-        if search_query:
+        if context.get('web_search', False) and search_query:
             try:
                 from services.data import web_search_service
-                web_results = web_search_service.search(search_query, max_results=3)
+                web_results = web_search_service.search(
+                    search_query,
+                    max_results=3,
+                    on_cost_start=self._on_cost_start,
+                )
                 if web_results:
                     web_context = self._format_web_context(web_results)
+            except UsageLockUnavailable:
+                raise
             except Exception as e:
                 self._logger.warning(f'[ResearchAgent] 웹 검색 실패 (무시): {e}')
 

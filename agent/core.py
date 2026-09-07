@@ -15,15 +15,54 @@ import json
 import logging
 import time
 import threading
+from contextlib import contextmanager
+from contextvars import ContextVar
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Sequence
 
-from agent.registry import registry
+from agent.registry import TOOL_EXECUTION_ERROR_MESSAGE, registry
 from agent.toolsets import resolve_toolsets
-from agent.memory import AgentMemoryStore, memory_store
+from agent.memory import AgentMemoryStore, SessionAccessDenied, memory_store
+from services.usage.usage_lock import UsageLockUnavailable
 
 logger = logging.getLogger(__name__)
+
+
+class AgentLLMError(RuntimeError):
+    """LLM 공급자 원문을 외부 응답/로그로 전달하지 않는 호출 실패."""
+
+    def __init__(self) -> None:
+        super().__init__("AI 모델 호출에 실패했습니다.")
+
+
+_INHERITED_AGENT_CONTEXT: ContextVar[Optional[Dict[str, Any]]] = ContextVar(
+    "inherited_agent_context", default=None,
+)
+
+
+@contextmanager
+def inherited_agent_context(
+    *,
+    user_id: Optional[str],
+    memory_store_instance: AgentMemoryStore,
+    is_admin_context: bool = False,
+    delegation_depth: int = 0,
+    blocked_tools: Optional[Sequence[str]] = None,
+):
+    """위임 자식에게 인증/메모리/정책 범위를 안전하게 상속한다."""
+    token = _INHERITED_AGENT_CONTEXT.set({
+        "user_id": user_id,
+        "memory_store": memory_store_instance,
+        "is_admin_context": bool(is_admin_context),
+        "delegation_depth": max(0, int(delegation_depth)),
+        "blocked_tools": frozenset(blocked_tools or ()),
+    })
+    try:
+        yield
+    finally:
+        _INHERITED_AGENT_CONTEXT.reset(token)
+
 
 # 병렬 실행 안전한 도구 (읽기 전용, 부작용 없음)
 PARALLEL_SAFE_TOOLS = frozenset([
@@ -113,11 +152,15 @@ class AIAgent:
         user_id: Optional[str] = None,
         session_id: Optional[str] = None,
         memory_store_instance: Optional[AgentMemoryStore] = None,
+        is_admin_context: bool = False,
+        delegation_depth: Optional[int] = None,
+        blocked_tools: Optional[Sequence[str]] = None,
         # 콜백
         on_stream_delta: Optional[Callable[[str], None]] = None,
         on_tool_start: Optional[Callable[[str, Dict], None]] = None,
         on_tool_end: Optional[Callable[[str, str, float], None]] = None,
         on_iteration: Optional[Callable[[int, int], None]] = None,
+        on_cost_start: Optional[Callable[[], None]] = None,
         # 설정
         enable_parallel_tools: bool = True,
         enable_compression: bool = True,
@@ -127,17 +170,57 @@ class AIAgent:
         self.model = model or self._get_default_model()
         self.temperature = temperature
         self.max_tokens = max_tokens
+        inherited_context = _INHERITED_AGENT_CONTEXT.get()
+        if user_id is None and inherited_context:
+            user_id = inherited_context["user_id"]
         self.user_id = user_id
+        self._is_admin_context = bool(
+            is_admin_context
+            or (inherited_context and inherited_context["is_admin_context"])
+        )
+
+        inherited_depth = (
+            inherited_context.get("delegation_depth", 0)
+            if inherited_context else 0
+        )
+        effective_depth = inherited_depth if delegation_depth is None else delegation_depth
+        self._delegation_depth = max(0, int(effective_depth))
+
+        inherited_blocked = (
+            inherited_context.get("blocked_tools", ())
+            if inherited_context else ()
+        )
+        self._blocked_tools = frozenset(inherited_blocked) | frozenset(
+            blocked_tools or (),
+        )
+
+        # 최대 깊이에서는 delegate_task를 스키마와 dispatch 양쪽에서 차단한다.
+        # 현재 정책은 모든 위임 자식에서 더 일찍 차단하지만 이 검사는 정책 변경
+        # 또는 직접 생성된 AIAgent에 대한 방어 계층이다.
+        from agent.delegate import DELEGATE_BLOCKED_TOOLS, MAX_DELEGATION_DEPTH
+        if self._delegation_depth > 0:
+            self._blocked_tools = (
+                self._blocked_tools | DELEGATE_BLOCKED_TOOLS
+            )
+        if self._delegation_depth >= MAX_DELEGATION_DEPTH:
+            self._blocked_tools = self._blocked_tools | {"delegate_task"}
 
         # 도구 설정
-        self._toolset_names = list(toolsets or ["full"])
-        self._resolved_tools = resolve_toolsets(self._toolset_names)
+        self._toolset_names = list(["full"] if toolsets is None else toolsets)
+        self._resolved_tools = [
+            name
+            for name in resolve_toolsets(self._toolset_names)
+            if name not in self._blocked_tools
+        ]
 
         # 시스템 프롬프트
         self._base_system_prompt = system_prompt or self._default_system_prompt()
 
         # 메모리
-        self._memory = memory_store_instance or memory_store
+        inherited_store = (
+            inherited_context["memory_store"] if inherited_context else None
+        )
+        self._memory = memory_store_instance or inherited_store or memory_store
 
         # 세션
         self._session_id = session_id
@@ -151,6 +234,7 @@ class AIAgent:
         self._on_tool_start = on_tool_start
         self._on_tool_end = on_tool_end
         self._on_iteration = on_iteration
+        self._on_cost_start = on_cost_start
 
         # 설정
         self._enable_parallel = enable_parallel_tools
@@ -181,7 +265,13 @@ class AIAgent:
         if not self._session:
             if self._session_id:
                 # 기존 세션 복원
-                self._session = self._memory.get_session(self._session_id)
+                self._session = self._memory.get_session(
+                    self._session_id, user_id=self.user_id,
+                )
+                if not self._session and self.user_id is not None:
+                    # 없는 세션과 타인 세션을 동일하게 거부한다. 명시적으로
+                    # 전달된 session_id를 새 세션으로 조용히 대체하지 않는다.
+                    raise SessionAccessDenied()
             if not self._session:
                 # 새 세션 생성 (동결 스냅샷)
                 self._session = self._memory.create_session(
@@ -221,17 +311,16 @@ class AIAgent:
             # LLM API 호출
             try:
                 response = self._call_llm(messages, tool_schemas)
-            except Exception as e:
-                logger.error("LLM 호출 실패: %s", e)
-                return AgentResponse(
-                    content=f"AI 호출 실패: {e}",
-                    messages=messages,
-                    tool_calls_count=tool_calls_count,
-                    iterations_used=iterations_used,
-                    elapsed_seconds=time.time() - start_time,
-                    session_id=self._session_id,
-                    metadata={"error": str(e)},
+            except UsageLockUnavailable:
+                raise
+            except Exception as exc:
+                # 공급자 예외 메시지에는 API key/요청 헤더가 포함될 수 있다.
+                # 타입만 내부 로그에 남기고 호출자에게는 정제된 예외를 올린다.
+                logger.error(
+                    "LLM 호출 실패 (공급자 상세 비공개, type=%s)",
+                    type(exc).__name__,
                 )
+                raise AgentLLMError() from None
 
             assistant_message = response.choices[0].message
 
@@ -258,6 +347,7 @@ class AIAgent:
                 # 세션에 메시지 저장
                 self._memory.add_message(
                     self._session_id, "assistant", final_content,
+                    user_id=self.user_id,
                 )
 
                 elapsed = time.time() - start_time
@@ -347,6 +437,11 @@ class AIAgent:
             kwargs["drop_params"] = True
             kwargs.pop("temperature", None)
 
+        # 공급자 호출 직전 비용 시작을 확정한다. 세션 소유권 검증과 메시지
+        # 구성은 이미 끝난 시점이므로 그 이전 실패는 예약을 환불할 수 있다.
+        if self._on_cost_start:
+            self._on_cost_start()
+
         # 스트리밍 콜백이 있으면 스트리밍 모드
         if self._on_stream_delta:
             kwargs["stream"] = True
@@ -358,7 +453,6 @@ class AIAgent:
     def _collect_stream(self, stream) -> Any:
         """스트리밍 응답을 수집하며 델타 콜백을 호출합니다."""
         from litellm import ModelResponse
-        from litellm.utils import StreamingChoices, Message, Delta
 
         collected_content = ""
         collected_tool_calls = []
@@ -464,11 +558,25 @@ class AIAgent:
                 idx = futures[future]
                 try:
                     results[idx] = future.result()
-                except Exception as e:
+                except UsageLockUnavailable:
+                    for pending in futures:
+                        if pending is not future:
+                            pending.cancel()
+                    raise
+                except Exception as exc:
+                    logger.error(
+                        "병렬 도구 실행 결과 수집 실패 "
+                        "(index=%d, type=%s)",
+                        idx,
+                        type(exc).__name__,
+                    )
                     results[idx] = {
                         "role": "tool",
                         "tool_call_id": tool_calls[idx].id,
-                        "content": json.dumps({"error": str(e)}, ensure_ascii=False),
+                        "content": json.dumps({
+                            "error": TOOL_EXECUTION_ERROR_MESSAGE,
+                            "code": "TOOL_EXECUTION_FAILED",
+                        }, ensure_ascii=False),
                     }
 
         return [r for r in results if r is not None]
@@ -490,6 +598,14 @@ class AIAgent:
             name, args,
             session_id=self._session_id,
             user_id=self.user_id,
+            is_admin_context=self._is_admin_context,
+            memory_store=self._memory,
+            parent_model=self.model,
+            parent_toolsets=self._toolset_names,
+            delegation_depth=self._delegation_depth,
+            blocked_tools=self._blocked_tools,
+            allowed_tools=self._get_allowed_tool_names(),
+            on_cost_start=self._on_cost_start,
         )
         elapsed = time.time() - start
 
@@ -539,12 +655,16 @@ class AIAgent:
 
         # 이전 세션 히스토리 복원
         if self._session_id:
-            history = self._memory.get_messages(self._session_id)
+            history = self._memory.get_messages(
+                self._session_id, user_id=self.user_id,
+            )
             messages.extend(history)
 
         # 사용자 메시지 추가
         messages.append({"role": "user", "content": user_message})
-        self._memory.add_message(self._session_id or "", "user", user_message)
+        self._memory.add_message(
+            self._session_id or "", "user", user_message, user_id=self.user_id,
+        )
 
         return messages
 
@@ -554,13 +674,36 @@ class AIAgent:
         toolsets.py의 하드코딩 이름 대신 registry의 toolset 그룹을 사용합니다.
         합성 Toolset(role_writer 등)은 leaf toolset 이름으로 풀어서 registry 조회.
         """
-        from agent.toolsets import resolve_toolset_names
-
         # 합성 Toolset → leaf toolset 이름 해석
-        leaf_names = resolve_toolset_names(self._toolset_names)
+        leaf_names = self._get_effective_toolset_names()
 
         # registry에서 해당 toolset에 속한 가용 도구 스키마 반환
-        return registry.get_schemas(toolsets=leaf_names, available_only=True)
+        return registry.get_schemas(
+            toolsets=leaf_names,
+            available_only=True,
+            excluded_tools=self._blocked_tools,
+        )
+
+    def _get_allowed_tool_names(self) -> frozenset[str]:
+        """현재 toolset과 차단 정책을 모두 만족하는 실행 가능 도구 이름."""
+        leaf_names = self._get_effective_toolset_names()
+        return frozenset(
+            entry.name
+            for entry in registry.list_tools(
+                toolsets=leaf_names,
+                available_only=True,
+                excluded_tools=self._blocked_tools,
+            )
+        )
+
+    def _get_effective_toolset_names(self) -> List[str]:
+        """합성 toolset을 펼치고 위임 자식의 제어 도구셋을 제거한다."""
+        from agent.toolsets import resolve_toolset_names
+
+        leaf_names = resolve_toolset_names(self._toolset_names)
+        if self._delegation_depth > 0:
+            return [name for name in leaf_names if name != "agent_control"]
+        return leaf_names
 
     # ── 컨텍스트 압축 ──
 
@@ -583,7 +726,11 @@ class AIAgent:
 
         try:
             from agent.compressor import compress_messages
-            return compress_messages(messages, target_tokens=threshold)
+            return compress_messages(
+                messages,
+                target_tokens=threshold,
+                on_cost_start=self._on_cost_start,
+            )
         except ImportError:
             # compressor가 아직 없으면 단순 프루닝
             return self._simple_prune(messages)

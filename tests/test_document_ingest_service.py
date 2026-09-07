@@ -1,11 +1,13 @@
 """document_ingest_service 단위 테스트"""
 import os
+import tempfile
 import unittest
+import zipfile
 from unittest.mock import patch, MagicMock
 
 from services.content.document_ingest_service import (
     ALLOWED_MIME_TYPES, EXTENSION_TO_MIME, MAX_FILE_SIZE,
-    extract_text,
+    _extract_pdf, _extract_pdf_payload, _validate_ooxml_archive, extract_text,
 )
 
 
@@ -71,6 +73,93 @@ class TestExtractText(unittest.TestCase):
         )
         mock_pptx.assert_called_once_with('/fake/pres.pptx')
         self.assertEqual(result['title'], 'P')
+
+
+class TestOoxmlArchiveSafety(unittest.TestCase):
+
+    def _make_archive(self, entries):
+        tmp = tempfile.NamedTemporaryFile(suffix='.docx', delete=False)
+        tmp.close()
+        with zipfile.ZipFile(tmp.name, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
+            for name, content in entries:
+                archive.writestr(name, content)
+        self.addCleanup(lambda: os.path.exists(tmp.name) and os.unlink(tmp.name))
+        return tmp.name
+
+    def test_rejects_extreme_compression_ratio(self):
+        path = self._make_archive([('word/document.xml', b'A' * (1024 * 1024))])
+
+        with self.assertRaisesRegex(ValueError, '압축률'):
+            _validate_ooxml_archive(path)
+
+    def test_rejects_excessive_entry_count(self):
+        path = self._make_archive([
+            ('word/a.xml', b'a'),
+            ('word/b.xml', b'b'),
+            ('word/c.xml', b'c'),
+        ])
+
+        with patch('services.content.document_ingest_service.MAX_OOXML_ENTRIES', 2):
+            with self.assertRaisesRegex(ValueError, '파일 수'):
+                _validate_ooxml_archive(path)
+
+    def test_rejects_parent_directory_member(self):
+        path = self._make_archive([('../outside.xml', b'x')])
+
+        with self.assertRaisesRegex(ValueError, '경로'):
+            _validate_ooxml_archive(path)
+
+
+class TestPdfSafety(unittest.TestCase):
+
+    def _empty_file(self):
+        tmp = tempfile.NamedTemporaryFile(suffix='.pdf', delete=False)
+        tmp.write(b'%PDF-test')
+        tmp.close()
+        self.addCleanup(lambda: os.path.exists(tmp.name) and os.unlink(tmp.name))
+        return tmp.name
+
+    @patch('pypdf.PdfReader')
+    def test_rejects_excessive_page_count_before_extraction(self, reader):
+        reader.return_value.is_encrypted = False
+        reader.return_value.pages = [MagicMock(), MagicMock(), MagicMock()]
+
+        with patch('services.content.document_ingest_service.MAX_PDF_PAGES', 2):
+            with self.assertRaisesRegex(ValueError, '페이지 수'):
+                _extract_pdf_payload(self._empty_file())
+
+        for page in reader.return_value.pages:
+            page.extract_text.assert_not_called()
+
+    @patch('pypdf.PdfReader')
+    def test_rejects_extracted_text_growth(self, reader):
+        page_one = MagicMock()
+        page_one.extract_text.return_value = 'a' * 100
+        page_two = MagicMock()
+        page_two.extract_text.return_value = 'b' * 100
+        reader.return_value.is_encrypted = False
+        reader.return_value.pages = [page_one, page_two]
+
+        with patch(
+            'services.content.document_ingest_service.MAX_EXTRACTED_TEXT_CHARS',
+            150,
+        ):
+            with self.assertRaisesRegex(ValueError, '추출 텍스트'):
+                _extract_pdf_payload(self._empty_file())
+
+    def test_untrusted_pdf_runs_in_worker_and_returns_sanitized_error(self):
+        from pypdf import PdfWriter
+
+        tmp = tempfile.NamedTemporaryFile(suffix='.pdf', delete=False)
+        tmp.close()
+        writer = PdfWriter()
+        writer.add_blank_page(width=72, height=72)
+        with open(tmp.name, 'wb') as handle:
+            writer.write(handle)
+        self.addCleanup(lambda: os.path.exists(tmp.name) and os.unlink(tmp.name))
+
+        with self.assertRaisesRegex(ValueError, '텍스트를 추출'):
+            _extract_pdf(tmp.name)
 
 
 class TestExtractFromUpload(unittest.TestCase):

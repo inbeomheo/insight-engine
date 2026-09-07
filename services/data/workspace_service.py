@@ -2,7 +2,13 @@
 워크스페이스 서비스
 팀 협업을 위한 워크스페이스 CRUD 및 멤버 관리
 """
-from services.data.supabase_service import get_supabase, is_supabase_enabled
+from datetime import datetime, timezone
+
+from src.shared.infrastructure.supabase_client import (
+    get_service_supabase,
+    get_user_supabase,
+    is_supabase_enabled,
+)
 from services.core.logging_config import ServiceLogger
 import logging
 
@@ -27,7 +33,7 @@ class WorkspaceService:
             return {'error': 'Supabase 연결이 필요합니다.'}
 
         try:
-            supabase = get_supabase()
+            supabase = get_user_supabase()
             if not supabase:
                 return {'error': 'Supabase 클라이언트 초기화 실패'}
 
@@ -63,7 +69,7 @@ class WorkspaceService:
             return []
 
         try:
-            supabase = get_supabase()
+            supabase = get_user_supabase()
             if not supabase:
                 return []
 
@@ -105,7 +111,7 @@ class WorkspaceService:
             return None
 
         try:
-            supabase = get_supabase()
+            supabase = get_user_supabase()
             if not supabase:
                 return None
 
@@ -128,7 +134,7 @@ class WorkspaceService:
             return False
 
         try:
-            supabase = get_supabase()
+            supabase = get_user_supabase()
             if not supabase:
                 return False
 
@@ -152,7 +158,7 @@ class WorkspaceService:
             return []
 
         try:
-            supabase = get_supabase()
+            supabase = get_user_supabase()
             if not supabase:
                 return []
 
@@ -178,7 +184,7 @@ class WorkspaceService:
             if role not in ('editor', 'viewer'):
                 return {'error': '유효하지 않은 역할입니다. (editor, viewer)'}
 
-            supabase = get_supabase()
+            supabase = get_user_supabase()
             if not supabase:
                 return {'error': 'Supabase 클라이언트 초기화 실패'}
 
@@ -213,7 +219,7 @@ class WorkspaceService:
             return False
 
         try:
-            supabase = get_supabase()
+            supabase = get_user_supabase()
             if not supabase:
                 return False
 
@@ -250,7 +256,7 @@ class WorkspaceService:
             if new_role not in ('editor', 'viewer'):
                 return False
 
-            supabase = get_supabase()
+            supabase = get_user_supabase()
             if not supabase:
                 return False
 
@@ -284,7 +290,7 @@ class WorkspaceService:
             return False
 
         try:
-            supabase = get_supabase()
+            supabase = get_user_supabase()
             if not supabase:
                 return False
 
@@ -316,22 +322,11 @@ class WorkspaceService:
         if not is_supabase_enabled():
             return None
 
-        supabase = get_supabase()
-        if not supabase:
-            return None
-
+        # 다른 계정의 이메일 조회는 사용자 RLS 범위를 벗어나는 서버 작업이다.
+        # anon/user 클라이언트로 먼저 시도하거나 자동 폴백하지 않고 service_role을
+        # 명시적으로 요구한다.
         try:
-            # ie_usage 테이블에서 이메일로 직접 조회 (전체 로드 방지)
-            result = supabase.table('ie_usage').select('user_id').eq('email', email).limit(1).execute()
-            if result.data:
-                return result.data[0]['user_id']
-        except Exception:
-            pass
-
-        # 폴백: admin API로 조회
-        try:
-            from services.data.supabase_service import _get_admin_client
-            admin = _get_admin_client()
+            admin = get_service_supabase()
             if not admin:
                 return None
             users = admin.auth.admin.list_users()
@@ -364,7 +359,7 @@ class ContentApprovalService:
 
     def _get_content(self, content_id: str) -> dict | None:
         """콘텐츠 단건 조회"""
-        supabase = get_supabase()
+        supabase = get_user_supabase()
         if not supabase:
             return None
 
@@ -377,7 +372,7 @@ class ContentApprovalService:
 
     def _get_member_role(self, workspace_id: str, user_id: str) -> str | None:
         """워크스페이스에서 사용자의 역할 조회"""
-        supabase = get_supabase()
+        supabase = get_user_supabase()
         if not supabase:
             return None
 
@@ -408,8 +403,11 @@ class ContentApprovalService:
         if not role or role not in required_roles:
             return {'error': '이 작업을 수행할 권한이 없습니다.'}
 
-        supabase = get_supabase()
-        update_data = {'status': target_status, 'updated_at': 'now()'}
+        supabase = get_user_supabase()
+        update_data = {
+            'status': target_status,
+            'updated_at': datetime.now(timezone.utc).isoformat(),
+        }
         if extra_fields:
             update_data.update(extra_fields)
 
@@ -417,8 +415,11 @@ class ContentApprovalService:
             result = supabase.table('ie_workspace_contents') \
                 .update(update_data) \
                 .eq('id', content_id) \
+                .eq('status', current) \
                 .execute()
-            return result.data[0] if result.data else {'error': '상태 변경에 실패했습니다.'}
+            return result.data[0] if result.data else {
+                'error': '콘텐츠 상태가 이미 변경되었습니다. 새로고침 후 다시 시도해주세요.'
+            }
 
         return _db_operation('Content transition', {'error': '상태 변경 중 오류'}, operation)
 
@@ -432,7 +433,7 @@ class ContentApprovalService:
             if not role or role not in ('owner', 'editor'):
                 return {'error': '콘텐츠를 추가할 권한이 없습니다.'}
 
-            supabase = get_supabase()
+            supabase = get_user_supabase()
             if not supabase:
                 return {'error': 'Supabase 클라이언트 초기화 실패'}
 
@@ -505,7 +506,7 @@ class ContentApprovalService:
             return []
 
         try:
-            supabase = get_supabase()
+            supabase = get_user_supabase()
             if not supabase:
                 return []
 

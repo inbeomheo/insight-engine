@@ -12,7 +12,9 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
+
+from services.usage.usage_lock import UsageLockUnavailable
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +32,7 @@ def compress_messages(
     messages: List[Dict[str, Any]],
     target_tokens: int,
     model: Optional[str] = None,
+    on_cost_start: Optional[Callable[[], None]] = None,
 ) -> List[Dict[str, Any]]:
     """메시지 리스트를 압축합니다.
 
@@ -37,6 +40,7 @@ def compress_messages(
         messages: 원본 메시지 리스트
         target_tokens: 목표 토큰 수
         model: 요약에 사용할 모델 (None이면 기본값)
+        on_cost_start: 실제 LiteLLM 호출 직전 실행할 비용 콜백
 
     Returns:
         압축된 메시지 리스트
@@ -62,7 +66,12 @@ def compress_messages(
 
     # 4단계: 미들 턴 구조화 요약
     existing_summary = _find_existing_summary(middle)
-    summary = _summarize_middle(middle, existing_summary, model)
+    summary = _summarize_middle(
+        middle,
+        existing_summary,
+        model,
+        on_cost_start=on_cost_start,
+    )
 
     # 요약 메시지로 교체
     summary_msg = {
@@ -168,6 +177,7 @@ def _summarize_middle(
     middle: List[Dict],
     existing_summary: Optional[str] = None,
     model: Optional[str] = None,
+    on_cost_start: Optional[Callable[[], None]] = None,
 ) -> str:
     """미들 턴을 구조화 요약합니다 (LLM 호출).
 
@@ -211,6 +221,8 @@ def _summarize_middle(
         from litellm import completion
 
         summary_model = model or "gemini/gemini-3.1-flash-lite-preview"
+        if on_cost_start is not None:
+            on_cost_start()
         resp = completion(
             model=summary_model,
             messages=[{"role": "user", "content": prompt}],
@@ -219,8 +231,15 @@ def _summarize_middle(
             timeout=60,
         )
         return resp.choices[0].message.content or "요약 생성 실패"
-    except Exception as e:
-        logger.error("컨텍스트 요약 실패: %s", e)
+    except UsageLockUnavailable:
+        # 비용 잠금 소유권을 잃은 뒤 무비용 폴백 성공으로
+        # 처리하면 상위 예약이 잘못 환불될 수 있다.
+        raise
+    except Exception as exc:
+        logger.error(
+            "컨텍스트 요약 실패 (type=%s)",
+            type(exc).__name__,
+        )
         # 폴백: 단순 텍스트 추출
         return _fallback_summary(middle)
 

@@ -1,4 +1,5 @@
 import type { NoteReviewGrade, NoteReviewSchedule } from './note-review-schedule';
+import { getAccountStorageKey } from './storage';
 
 export interface NoteReviewHistoryEntry {
   id: string;
@@ -30,6 +31,10 @@ type ReviewHistoryStorage = Pick<Storage, 'getItem' | 'setItem'>;
 
 const MAX_HISTORY_ENTRIES = 200;
 export const NOTE_REVIEW_HISTORY_STORAGE_KEY = 'ie_note_review_history';
+
+export function getNoteReviewHistoryStorageKey(namespace?: string): string {
+  return getAccountStorageKey(NOTE_REVIEW_HISTORY_STORAGE_KEY, namespace);
+}
 
 function resolveStorage(storage?: ReviewHistoryStorage): ReviewHistoryStorage | null {
   if (storage) return storage;
@@ -172,7 +177,7 @@ export function readNoteReviewHistory(storage?: ReviewHistoryStorage): NoteRevie
   const target = resolveStorage(storage);
   if (!target) return [];
   try {
-    const raw = target.getItem(NOTE_REVIEW_HISTORY_STORAGE_KEY);
+    const raw = target.getItem(getNoteReviewHistoryStorageKey());
     return normalizeNoteReviewHistory(raw ? JSON.parse(raw) : null);
   } catch {
     return [];
@@ -196,7 +201,7 @@ export function recordNoteReviewCompletion(
     ...(target ? readNoteReviewHistory(target) : []),
     nextEntry,
   ]);
-  target?.setItem(NOTE_REVIEW_HISTORY_STORAGE_KEY, JSON.stringify(next));
+  target?.setItem(getNoteReviewHistoryStorageKey(), JSON.stringify(next));
   return next;
 }
 

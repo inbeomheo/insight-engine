@@ -28,7 +28,13 @@ def test_transcribe_audio_retries_on_cpu_when_cuda_model_init_fails():
     mock_torch = MagicMock()
     mock_torch.cuda.is_available.return_value = True
 
-    with patch.dict("sys.modules", {"faster_whisper": mock_whisper, "torch": mock_torch}):
+    with patch.dict(
+        "sys.modules",
+        {"faster_whisper": mock_whisper, "torch": mock_torch},
+    ), patch(
+        "services.transcript.whisper_service._is_audio_duration_allowed",
+        return_value=True,
+    ):
         result = transcribe_audio("/tmp/audio.wav", model_size="base", language="ko")
 
     assert result == "fallback transcript"
