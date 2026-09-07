@@ -4,7 +4,7 @@
  * 병렬 실행: ✅ (상태 공유 없음, 완전 독립적)
  * 인증 필요: ❌
  *
- * 주의: /generate 요청은 오프라인 전환 또는 page.route 가로채기로 차단되므로
+ * 주의: 생성 요청은 오프라인 전환 또는 page.route 가로채기로 차단되므로
  * 실제 백엔드/AI 호출은 발생하지 않는다.
  */
 import { test, expect, TEST_DATA } from '../fixtures/test-fixtures';
@@ -37,8 +37,8 @@ test.describe('네트워크 에러 처리 @parallel', () => {
     await mainPage.goto();
     await urlInput.addUrl(TEST_DATA.VALID_URLS[0]);
 
-    // /generate 응답을 지연시킨 뒤 504로 종료 — 백엔드에 요청이 도달하지 않음
-    await page.route('**/generate', async (route) => {
+    // 일반/스트림 생성 모두 지연 후 504로 종료 — 실제 AI에는 도달하지 않음
+    await page.route(/\/generate(?:-stream)?(?:\?.*)?$/, async (route) => {
       await new Promise((resolve) => setTimeout(resolve, 3000));
       await route.fulfill({
         status: 504,
