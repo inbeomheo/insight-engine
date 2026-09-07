@@ -1,17 +1,35 @@
 """R137: datetime.utcnow() deprecated 수정 검증 — 전체 코드베이스에서 완전 제거 확인"""
 import ast
 import os
+import sys
 import unittest
 
 
 class TestNoUtcnowUsage(unittest.TestCase):
     """프로젝트 전체에서 deprecated datetime.utcnow() 사용이 없는지 확인"""
 
+    def _venv_excludes(self):
+        """프로젝트 루트 내부에 있는 실행 중인 가상환경 경로 전체를 제외 목록에 추가한다.
+
+        가상환경 디렉토리 이름(.venv 등)에 의존하면 다른 이름(예: .venv-pipeline)의
+        가상환경에서 site-packages의 서드파티 utcnow() 사용이 오탐으로 잡힌다.
+        """
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        excludes = set()
+        for prefix in {sys.prefix, getattr(sys, 'base_prefix', sys.prefix)}:
+            if prefix and prefix != root:
+                prefix_real = os.path.realpath(prefix)
+                root_real = os.path.realpath(root)
+                if prefix_real != root_real and prefix_real.startswith(root_real + os.sep):
+                    excludes.add(os.path.basename(prefix.rstrip(os.sep)))
+        return excludes
+
     def _collect_python_files(self):
-        """프로젝트 루트의 .py 파일 수집 (tests/, .venv/ 제외)"""
+        """프로젝트 루트의 .py 파일 수집 (tests/, 가상환경, node_modules 등 제외)"""
         root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         py_files = []
         exclude = {'.venv', 'node_modules', '.git', '__pycache__', 'tests'}
+        exclude.update(self._venv_excludes())
         for dirpath, dirnames, filenames in os.walk(root):
             dirnames[:] = [d for d in dirnames if d not in exclude]
             for f in filenames:
