@@ -16,7 +16,6 @@ const mocks = vi.hoisted(() => ({
   settings: {
     providers: {} as Record<string, {
       name: string;
-      api_base: string;
       models: Array<{
         id: string;
         name: string;
@@ -66,18 +65,18 @@ vi.mock('@/hooks/useTranslation', () => ({
       'onboarding.title': '시작하기',
       'onboarding.description': '학습을 시작하세요',
       'onboarding.modelCount': `${values?.count ?? 0}개 모델`,
-      'onboarding.serviceInfoLabel': 'ChatMock 서비스 정보',
+      'onboarding.serviceInfoLabel': 'CLIProxyAPI 서비스 정보',
       'onboarding.singleService': '단일 AI 서비스',
-      'onboarding.noModels': '사용 가능한 ChatMock 모델이 없습니다',
+      'onboarding.noModels': '사용 가능한 CLIProxyAPI 모델이 없습니다',
       'onboarding.noServer': 'AI 서버에 연결할 수 없습니다',
       'onboarding.start': '시작',
       'settings.title': '설정',
       'settings.aiServiceDescription': 'AI 서비스 설정',
       'settings.aiService': 'AI 서비스',
-      'settings.serviceInfoLabel': 'ChatMock 서비스 정보',
+      'settings.serviceInfoLabel': 'CLIProxyAPI 서비스 정보',
       'settings.singleServiceActive': '단일 AI 서비스 사용 중',
       'settings.modelSelectLabel': 'AI 모델 선택',
-      'settings.noModels': '사용 가능한 ChatMock 모델이 없습니다',
+      'settings.noModels': '사용 가능한 CLIProxyAPI 모델이 없습니다',
       'settings.noProviders': '사용 가능한 AI 서비스가 없습니다',
       'settings.selectModel': '모델 선택',
       'language.label': '언어',
@@ -115,7 +114,7 @@ vi.mock('@/components/ui/select', () => ({
     onValueChange: (value: string) => void;
   }) => (
     <div data-testid="select-control" data-value={value}>
-      <button type="button" aria-label="테스트 모델 변경" onClick={() => onValueChange('chatmock/gpt-5.4')}>
+      <button type="button" aria-label="테스트 모델 변경" onClick={() => onValueChange('cliproxyapi/gpt-5.3-codex-spark')}>
         모델 변경
       </button>
       {children}
@@ -145,18 +144,17 @@ async function render(component: ReactNode) {
   return container;
 }
 
-function setChatMockProvider() {
+function setCLIProxyAPIProvider() {
   mocks.settings.providers = {
-    chatmock: {
-      name: 'ChatMock (OpenAI 호환)',
-      api_base: 'http://127.0.0.1:8000/v1',
+    cliproxyapi: {
+      name: 'CLIProxyAPI (OpenAI 호환)',
       models: [
-        { id: 'chatmock/gpt-5.4-mini', name: 'GPT-5.4 Mini', max_input_tokens: 128000, price_input: 0, price_output: 0 },
-        { id: 'chatmock/gpt-5.4', name: 'GPT-5.4', max_input_tokens: 128000, price_input: 0, price_output: 0 },
+        { id: 'cliproxyapi/gpt-5.5', name: 'GPT-5.5', max_input_tokens: 128000, price_input: 0, price_output: 0 },
+        { id: 'cliproxyapi/gpt-5.3-codex-spark', name: 'GPT-5.3 Codex Spark', max_input_tokens: 128000, price_input: 0, price_output: 0 },
       ],
     },
   };
-  mocks.settings.selectedModel = 'chatmock/gpt-5.4-mini';
+  mocks.settings.selectedModel = 'cliproxyapi/gpt-5.5';
 }
 
 function findButton(view: HTMLElement, text: string) {
@@ -200,7 +198,7 @@ function styleProfile(label: string) {
   };
 }
 
-describe('단일 ChatMock 서비스 UI', () => {
+describe('단일 CLIProxyAPI 서비스 UI', () => {
   beforeEach(() => {
     mocks.ui.activeModal = 'onboarding';
     mocks.settings.providers = {};
@@ -225,11 +223,11 @@ describe('단일 ChatMock 서비스 UI', () => {
   });
 
   it('온보딩에서 고정 서비스 정보를 보여주고 시작 동작을 유지한다', async () => {
-    setChatMockProvider();
+    setCLIProxyAPIProvider();
     const view = await render(<OnboardingModal />);
 
-    expect(view.querySelector('[aria-label="ChatMock 서비스 정보"]')?.textContent)
-      .toContain('ChatMock (OpenAI 호환)');
+    expect(view.querySelector('[aria-label="CLIProxyAPI 서비스 정보"]')?.textContent)
+      .toContain('CLIProxyAPI (OpenAI 호환)');
     expect(view.textContent).toContain('단일 AI 서비스 · 2개 모델');
     expect(view.querySelector('[aria-label*="프로바이더 선택"]')).toBeNull();
 
@@ -251,11 +249,11 @@ describe('단일 ChatMock 서비스 UI', () => {
   });
 
   it('온보딩에서 모델이 없으면 안내하고 시작으로 닫을 수 있다', async () => {
-    setChatMockProvider();
-    mocks.settings.providers.chatmock.models = [];
+    setCLIProxyAPIProvider();
+    mocks.settings.providers.cliproxyapi.models = [];
     const view = await render(<OnboardingModal />);
 
-    expect(view.textContent).toContain('사용 가능한 ChatMock 모델이 없습니다');
+    expect(view.textContent).toContain('사용 가능한 CLIProxyAPI 모델이 없습니다');
 
     const startButton = findButton(view, '시작');
     expect(startButton?.disabled).toBe(false);
@@ -265,39 +263,50 @@ describe('단일 ChatMock 서비스 UI', () => {
 
   it('설정에서 서비스 정보와 단일 모델 선택 동작만 제공한다', async () => {
     mocks.ui.activeModal = 'settings';
-    setChatMockProvider();
+    setCLIProxyAPIProvider();
     const view = await render(<SettingsModal />);
 
-    expect(view.querySelector('[aria-label="ChatMock 서비스 정보"]')?.textContent)
+    expect(view.querySelector('[aria-label="CLIProxyAPI 서비스 정보"]')?.textContent)
       .toContain('단일 AI 서비스 사용 중');
     expect(view.querySelector('[aria-label="AI 모델 선택"]')).not.toBeNull();
     expect(view.querySelectorAll('[data-testid="select-control"]')).toHaveLength(1);
-    expect(view.textContent).toContain('GPT-5.4 Mini');
+    expect(view.textContent).toContain('GPT-5.5');
 
     await act(async () => view.querySelector<HTMLButtonElement>('[aria-label="테스트 모델 변경"]')?.click());
-    expect(mocks.settings.setSelectedModel).toHaveBeenCalledWith('chatmock/gpt-5.4');
+    expect(mocks.settings.setSelectedModel).toHaveBeenCalledWith('cliproxyapi/gpt-5.3-codex-spark');
   });
 
-  it('\uc800\uc7a5\ub41c \ubaa8\ub378\uc774 \uc720\ud6a8\ud558\uc9c0 \uc54a\uc544\ub3c4 \uccab ChatMock \ubaa8\ub378\ub85c \ubcf5\uad6c\ud55c\ub2e4', async () => {
+  it('\uc800\uc7a5\ub41c \ubaa8\ub378\uc774 \uc720\ud6a8\ud558\uc9c0 \uc54a\uc544\ub3c4 \uccab CLIProxyAPI \ubaa8\ub378\ub85c \ubcf5\uad6c\ud55c\ub2e4', async () => {
     mocks.ui.activeModal = 'settings';
-    setChatMockProvider();
+    setCLIProxyAPIProvider();
     mocks.settings.selectedModel = 'removed-model';
     const view = await render(<SettingsModal />);
 
-    expect(view.querySelector('[aria-label="ChatMock 서비스 정보"]')?.textContent)
-      .toContain('ChatMock (OpenAI 호환)');
+    expect(view.querySelector('[aria-label="CLIProxyAPI 서비스 정보"]')?.textContent)
+      .toContain('CLIProxyAPI (OpenAI 호환)');
     expect(view.querySelector('[data-testid="select-control"]')?.getAttribute('data-value'))
-      .toBe('chatmock/gpt-5.4-mini');
+      .toBe('cliproxyapi/gpt-5.5');
   });
 
   it('설정에서 모델이 없으면 빈 선택기 대신 안내를 보여준다', async () => {
     mocks.ui.activeModal = 'settings';
-    setChatMockProvider();
-    mocks.settings.providers.chatmock.models = [];
+    setCLIProxyAPIProvider();
+    mocks.settings.providers.cliproxyapi.models = [];
     const view = await render(<SettingsModal />);
 
-    expect(view.textContent).toContain('사용 가능한 ChatMock 모델이 없습니다');
+    expect(view.textContent).toContain('사용 가능한 CLIProxyAPI 모델이 없습니다');
     expect(view.querySelector('[data-testid="select-control"]')).toBeNull();
+  });
+
+  it('설정에서 이전 ChatMock 선택과 동일한 지원 모델을 표시한다', async () => {
+    mocks.ui.activeModal = 'settings';
+    setCLIProxyAPIProvider();
+    mocks.settings.selectedModel = 'chatmock/gpt-5.3-codex-spark';
+    const view = await render(<SettingsModal />);
+
+    expect(view.querySelector('[data-testid="select-control"]')?.getAttribute('data-value'))
+      .toBe('cliproxyapi/gpt-5.3-codex-spark');
+    expect(mocks.settings.setSelectedModel).not.toHaveBeenCalled();
   });
 
   it('설정에서 서비스가 없으면 사용 불가 안내를 보여준다', async () => {
@@ -309,7 +318,7 @@ describe('단일 ChatMock 서비스 UI', () => {
 
   it('A → 로그아웃 → B 전환 즉시 프로필 폼을 비우고 B 로드 전까지 저장을 잠극니다', async () => {
     mocks.ui.activeModal = 'settings';
-    setChatMockProvider();
+    setCLIProxyAPIProvider();
     mocks.auth.session = authSession('account-a');
     const profileA = deferred<ReturnType<typeof styleProfile>>();
     const profileB = deferred<ReturnType<typeof styleProfile>>();

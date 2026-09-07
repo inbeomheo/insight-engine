@@ -12,7 +12,7 @@ const mocks = vi.hoisted(() => ({
     setOnboardingOpen: vi.fn(),
   },
   settings: {
-    providers: {} as Record<string, { name: string; api_base: string; models: Array<{ id: string }> }>,
+    providers: {} as Record<string, { name: string; models: Array<{ id: string }> }>,
   },
 }));
 
@@ -81,10 +81,9 @@ describe('온보딩 모달 잠금 회귀 방어', () => {
 
   it('사용 가능한 모델이 있을 때 시작 버튼으로 완료할 수 있다', async () => {
     mocks.settings.providers = {
-      chatmock: {
-        name: 'ChatMock',
-        api_base: '/v1',
-        models: [{ id: 'chatmock/test-model' }],
+      cliproxyapi: {
+        name: 'CLIProxyAPI',
+        models: [{ id: 'cliproxyapi/test-model' }],
       },
     };
     const view = await render(<OnboardingModal />);

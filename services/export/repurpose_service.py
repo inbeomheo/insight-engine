@@ -75,7 +75,7 @@ class RepurposeService:
 
     DEFAULT_MODEL = os.getenv(
         'REPURPOSE_MODEL',
-        'chatmock/gpt-5.4-mini'
+        'cliproxyapi/gpt-5.5'
     )
 
     def repurpose(

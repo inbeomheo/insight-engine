@@ -24,7 +24,7 @@ _GRADE_ORDER = {'D': 0, 'C': 1, 'B': 2, 'A': 3}
 
 # 기본 평가 모델
 _EVAL_MODEL_CANDIDATES = [
-    'chatmock/gpt-5.4-mini',
+    'cliproxyapi/gpt-5.5',
 ]
 
 
@@ -109,14 +109,8 @@ def _build_eval_kwargs(eval_model: str, eval_prompt: str) -> Dict:
         "timeout": 60,
     }
 
-    if eval_model.startswith("chatmock/"):
-        import os
-
-        kwargs["model"] = eval_model.replace("chatmock/", "")
-        kwargs["api_base"] = os.getenv("CHATMOCK_BASE_URL", "http://127.0.0.1:8000/v1")
-        kwargs["api_key"] = "dummy"
-        kwargs["drop_params"] = True
-        kwargs.pop("temperature", None)
+    from services.core.gateway_service import apply_gateway_kwargs
+    apply_gateway_kwargs(kwargs, eval_model)
 
     return kwargs
 

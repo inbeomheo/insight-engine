@@ -28,8 +28,8 @@ export const TEST_DATA = {
 
   // 저비용 프리셋 (API 테스트용)
   CHEAP_PRESET: {
-    provider: 'chatmock',
-    model: 'chatmock/gpt-5.4-mini',
+    provider: 'cliproxyapi',
+    model: 'cliproxyapi/gpt-5.5',
     style: 'summary',
     length: 'short' as const,
   },
@@ -141,20 +141,17 @@ class ContentGeneratorHelper {
     await this.page.waitForTimeout(200);
   }
 
-  /** 저비용 프리셋 적용 (ChatMock Mini, 요약, 짧게) */
+  /** 저비용 프리셋 적용 (CLIProxyAPI GPT-5.5, 요약, 짧게) */
   async applyCheapPreset() {
     await this.openSettings();
     const popover = this.settingsPopover();
 
-    // 모델 선택 (ChatMock 단일 서비스)
+    // 모델 선택 (CLIProxyAPI 단일 서비스)
     const modelTrigger = popover.locator('[role="combobox"]').first();
     await modelTrigger.click();
     const options = this.page.getByRole('option');
     await options.first().waitFor({ state: 'visible', timeout: 3000 }).catch(() => {});
-    const miniOption = options.filter({ hasText: /Mini/i }).first();
-    if (await miniOption.isVisible().catch(() => false)) {
-      await miniOption.click();
-    }
+    await this.page.getByRole('option', { name: 'GPT-5.5', exact: true }).click();
 
     // Select 옵션이 포털에 렌더되어 옵션 클릭이 외부 클릭으로 인식됨 → 팝오버가 닫히면 재오픈
     if (!(await popover.isVisible().catch(() => false))) {

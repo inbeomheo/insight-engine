@@ -9,9 +9,9 @@ class TestGetModelDisplayName(unittest.TestCase):
 
     def test_known_model_returns_name(self):
         """등록된 모델 ID → 표시명 반환"""
-        name = get_model_display_name('chatmock/gpt-5.4-mini')
+        name = get_model_display_name('cliproxyapi/gpt-5.5')
         self.assertIn('GPT', name)
-        self.assertNotEqual(name, 'chatmock/gpt-5.4-mini')
+        self.assertNotEqual(name, 'cliproxyapi/gpt-5.5')
 
     def test_unknown_model_returns_id(self):
         """미등록 모델 ID → ID 그대로 반환"""
@@ -20,7 +20,7 @@ class TestGetModelDisplayName(unittest.TestCase):
 
     def test_chatmock_model(self):
         """ChatMock 모델 표시명"""
-        name = get_model_display_name('chatmock/gpt-5.4')
+        name = get_model_display_name('cliproxyapi/gpt-5.5')
         self.assertIn('GPT', name)
 
     def test_empty_string(self):

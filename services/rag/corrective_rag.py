@@ -17,11 +17,12 @@ from typing import Any, Callable, Dict, List, Optional
 import litellm
 
 from services.usage.usage_lock import UsageLockUnavailable
+from services.core.gateway_service import apply_gateway_kwargs
 
 logger = logging.getLogger(__name__)
 
 # 품질 평가 및 쿼리 재구성에 사용할 빠른 모델
-_DEFAULT_MODEL = "chatmock/gpt-5.4-mini"
+_DEFAULT_MODEL = "cliproxyapi/gpt-5.5"
 
 # 품질 결정 임계값
 _SCORE_CORRECT_THRESHOLD = 0.7    # 이상이면 correct
@@ -114,15 +115,17 @@ def evaluate_retrieval_quality(
 
     chunk_scores = []
     feedback = ""
+    completion_kwargs = {
+        'model': eval_model,
+        'messages': [{'role': 'user', 'content': prompt}],
+        'temperature': 0.0,
+        'max_tokens': 300,
+    }
+    apply_gateway_kwargs(completion_kwargs, eval_model)
     try:
         if callable(on_cost_start):
             on_cost_start()
-        response = litellm.completion(
-            model=eval_model,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.0,
-            max_tokens=300,
-        )
+        response = litellm.completion(**completion_kwargs)
         raw = response.choices[0].message.content.strip()
 
         json_match = re.search(r'\{.*\}', raw, re.DOTALL)
@@ -204,16 +207,18 @@ def reformulate_query(
         original_query=original_query,
         feedback=feedback or "관련 문서를 찾지 못했습니다.",
     )
+    completion_kwargs = {
+        'model': reformat_model,
+        'messages': [{'role': 'user', 'content': prompt}],
+        'temperature': 0.3,
+        'max_tokens': 150,
+    }
+    apply_gateway_kwargs(completion_kwargs, reformat_model)
 
     try:
         if callable(on_cost_start):
             on_cost_start()
-        response = litellm.completion(
-            model=reformat_model,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,
-            max_tokens=150,
-        )
+        response = litellm.completion(**completion_kwargs)
         raw = response.choices[0].message.content.strip()
 
         json_match = re.search(r'\{.*\}', raw, re.DOTALL)

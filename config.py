@@ -1,6 +1,6 @@
 """
 스마트 콘텐츠 생성기 설정 파일
-ChatMock(OpenAI 호환) 서비스, 스타일 옵션 정의
+CLIProxyAPI(OpenAI 호환) 서비스, 스타일 옵션 정의
 프롬프트 템플릿은 prompts/ 패키지에서 관리
 
 v3.0 업데이트:
@@ -12,6 +12,9 @@ from typing import Dict, List, Any, Tuple
 import functools
 import os
 import time
+from services.core.gateway_service import (
+    DEFAULT_GATEWAY_MODEL, canonical_gateway_model, gateway_connection,
+)
 
 # prompts 패키지에서 가져오기
 from prompts import (
@@ -27,7 +30,7 @@ from prompts import (
 YOUTUBE_API_KEY: str = os.getenv('YOUTUBE_API_KEY', '')
 
 PROVIDER_API_KEYS: Dict[str, str] = {
-    'chatmock': os.getenv('CHATMOCK_API_KEY', 'dummy'),
+    'cliproxyapi': gateway_connection()[1],
 }
 
 SUPADATA_API_KEY: str = os.getenv('SUPADATA_API_KEY', '')
@@ -61,7 +64,7 @@ CRAG_QUALITY_THRESHOLD: float = float(os.environ.get('CRAG_QUALITY_THRESHOLD', '
 
 AGENT_MODE_ENABLED: bool = os.getenv('AGENT_MODE_ENABLED', 'false').lower() == 'true'
 AGENT_MAX_ITERATIONS: int = int(os.getenv('AGENT_MAX_ITERATIONS', '5'))
-AGENT_DEFAULT_MODEL: str = os.getenv('AGENT_DEFAULT_MODEL', 'chatmock/gpt-5.4-mini')
+AGENT_DEFAULT_MODEL: str = os.getenv('AGENT_DEFAULT_MODEL', DEFAULT_GATEWAY_MODEL)
 
 # === Whisper (음성 인식 자막 폴백) ===
 
@@ -133,8 +136,8 @@ AI_CACHE_MAX_SIZE_MB = 512
 # === AI Model & Fallback ===
 
 FALLBACK_CHAIN = [
-    'chatmock/gpt-5.4-mini',
-    'chatmock/gpt-5.4',
+    DEFAULT_GATEWAY_MODEL,
+    'cliproxyapi/gpt-5.3-codex-spark',
 ]
 MAX_FALLBACK_ATTEMPTS = 3
 
@@ -175,15 +178,24 @@ DETAIL_PRESETS: Dict[str, Dict[str, Any]] = {
 
 # === Providers ===
 
+_GATEWAY_MODEL_NAMES = dict.fromkeys([
+    'gpt-5.5',
+    'gpt-5.3-codex-spark',
+    *(model.strip() for model in os.getenv('CLIPROXYAPI_MODELS', '').split(',') if model.strip()),
+])
+_GATEWAY_DISPLAY_NAMES = {
+    'gpt-5.5': 'GPT-5.5',
+    'gpt-5.3-codex-spark': 'GPT-5.3 Codex Spark',
+}
+
 SUPPORTED_PROVIDERS: Dict[str, Dict[str, Any]] = {
-    'chatmock': {
-        'name': 'ChatMock (OpenAI 호환)',
-        'api_base': os.getenv('CHATMOCK_BASE_URL', 'http://127.0.0.1:8000/v1'),
+    'cliproxyapi': {
+        'name': 'CLIProxyAPI (OpenAI 호환)',
+        'api_base': gateway_connection()[0],
         'models': [
-            {'id': 'chatmock/gpt-5.4-mini', 'name': 'GPT-5.4 Mini', 'max_input_tokens': 128000, 'price_input': 0, 'price_output': 0},
-            {'id': 'chatmock/gpt-5.4', 'name': 'GPT-5.4', 'max_input_tokens': 128000, 'price_input': 0, 'price_output': 0},
-            {'id': 'chatmock/gpt-5.5', 'name': 'GPT-5.5', 'max_input_tokens': 128000, 'price_input': 0, 'price_output': 0},
-            {'id': 'chatmock/gpt-5.3-codex-spark', 'name': 'GPT-5.3 Codex Spark', 'max_input_tokens': 128000, 'price_input': 0, 'price_output': 0},
+            {'id': canonical_gateway_model(model), 'name': _GATEWAY_DISPLAY_NAMES.get(model, model),
+             'max_input_tokens': 128000, 'price_input': 0, 'price_output': 0}
+            for model in _GATEWAY_MODEL_NAMES
         ],
     },
 }
@@ -203,7 +215,7 @@ def get_available_providers() -> Dict[str, Dict[str, Any]]:
 
     available = {}
     for provider_id, api_key in PROVIDER_API_KEYS.items():
-        if api_key and provider_id in SUPPORTED_PROVIDERS:
+        if provider_id == 'cliproxyapi' or (api_key and provider_id in SUPPORTED_PROVIDERS):
             available[provider_id] = SUPPORTED_PROVIDERS[provider_id]
 
     _providers_cache = available
@@ -214,9 +226,7 @@ def get_available_providers() -> Dict[str, Dict[str, Any]]:
 @functools.lru_cache(maxsize=128)
 def get_provider_from_model(model_id: str) -> str:
     """모델 ID에서 프로바이더를 추출합니다."""
-    if model_id.startswith('chatmock/') or model_id.startswith('gpt-'):
-        return 'chatmock'
-    return 'chatmock'  # 기본값 (ChatMock/OpenAI 호환)
+    return 'cliproxyapi'
 
 
 # === Styles & Modifiers ===
@@ -236,6 +246,7 @@ STYLE_MODIFIERS: Dict[str, Dict[str, str]] = MODIFIERS
 @functools.lru_cache(maxsize=128)
 def get_model_max_tokens(model_id: str) -> int:
     """모델 ID로 최대 입력 토큰 수를 반환합니다."""
+    model_id = canonical_gateway_model(model_id)
     for provider in SUPPORTED_PROVIDERS.values():
         for model in provider.get('models', []):
             if model['id'] == model_id:
@@ -246,12 +257,13 @@ def get_model_max_tokens(model_id: str) -> int:
 def get_model_display_name(model_id: str) -> str:
     """모델 ID로 사용자 표시용 이름을 반환합니다.
 
-    예: 'chatmock/gpt-5.4-mini' → 'GPT-5.4 Mini'
+    예: 'cliproxyapi/gpt-5.5' → 'GPT-5.5'
     매칭 실패 시 모델 ID를 그대로 반환합니다.
     """
+    canonical_id = canonical_gateway_model(model_id)
     for provider in SUPPORTED_PROVIDERS.values():
         for model in provider.get('models', []):
-            if model['id'] == model_id:
+            if model['id'] == canonical_id:
                 return model.get('name', model_id)
     return model_id
 
@@ -308,7 +320,7 @@ RUNWAY_API_KEY: str = os.getenv('RUNWAY_API_KEY', '')
 DEEPL_API_KEY: str = os.getenv('DEEPL_API_KEY', '')
 TRANSLATION_MODEL: str = os.getenv(
     'TRANSLATION_MODEL',
-    'chatmock/gpt-5.4-mini'
+    DEFAULT_GATEWAY_MODEL
 )
 
 # 임베딩 모델 (RAG)

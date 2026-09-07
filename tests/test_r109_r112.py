@@ -29,7 +29,7 @@ class TestR109MindmapUsage(unittest.TestCase):
         }
         with self.app.test_request_context():
             resp = self.client.post('/api/mindmap',
-                                   json={'content': 'Test content', 'model': 'chatmock/gpt-5.4-mini'},
+                                   json={'content': 'Test content', 'model': 'cliproxyapi/gpt-5.5'},
                                    headers={'X-User-Id': 'test-user'})
         data = resp.get_json()
         self.assertTrue(data.get('success'))

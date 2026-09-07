@@ -91,7 +91,7 @@ def _translate_with_ai(
     prompt = _TRANSLATE_PROMPTS.get(target_lang, _TRANSLATE_PROMPTS['en'])
     target_model = resolve_public_model(
         model,
-        os.getenv('TRANSLATION_MODEL', 'chatmock/gpt-5.4-mini'),
+        os.getenv('TRANSLATION_MODEL', 'cliproxyapi/gpt-5.5'),
     )
 
     messages = [

@@ -16,7 +16,7 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 
 ## Project Overview
 
-**Insight Engine** - 영상·글·오디오·문서를 ChatMock(OpenAI 호환) 단일 AI 서비스로 학습 가능한 노트와 다국어(ko/en/ja) 콘텐츠로 구조화하는 Flask + Next.js 웹 앱. LiteLLM은 ChatMock 호출 어댑터로 사용하며, RAG 지식 참조와 지식위키·복습 흐름을 지원.
+**Insight Engine** - 영상·글·오디오·문서를 CLIProxyAPI(OpenAI 호환) 단일 AI 서비스로 학습 가능한 노트와 다국어(ko/en/ja) 콘텐츠로 구조화하는 Flask + Next.js 웹 앱. LiteLLM은 CLIProxyAPI 호출 어댑터로 사용하며, RAG 지식 참조와 지식위키·복습 흐름을 지원.
 
 ## Commands
 
@@ -250,13 +250,12 @@ UI에 표시되는 15개 스타일: `blog_seo`, `summary`, `tutorial`, `qna`, `a
 
 | 서비스 | 모델 ID | 특이사항 |
 |--------|---------|---------|
-| ChatMock | `chatmock/gpt-5.4-mini` | 기본 모델 |
-| ChatMock | `chatmock/gpt-5.4` | OpenAI 호환 로컬 게이트웨이 |
-| ChatMock | `chatmock/gpt-5.5` | OpenAI 호환 로컬 게이트웨이 |
-| ChatMock | `chatmock/gpt-5.3-codex-spark` | OpenAI 호환 로컬 게이트웨이 |
+| CLIProxyAPI | `cliproxyapi/gpt-5.5` | 기본 모델 |
+| CLIProxyAPI | `cliproxyapi/gpt-5.3-codex-spark` | OpenAI 호환 로컬 게이트웨이 |
 
-- 모델 추가 시 `config.py`의 `SUPPORTED_PROVIDERS['chatmock']['models']`에 `price_input`, `price_output`을 함께 정의한다.
-- 프로바이더 선택 상태를 다시 추가하지 않는다. UI는 ChatMock 서비스 안내와 모델 선택만 제공한다.
+- 모델 추가 시 `config.py`의 `SUPPORTED_PROVIDERS['cliproxyapi']['models']`에 `price_input`, `price_output`을 함께 정의한다. 운영자 추가 모델은 `CLIPROXYAPI_MODELS`로 지정할 수 있다.
+- 모든 AI 텍스트 호출은 `services/core/gateway_service.py`의 공통 연결 설정을 사용한다. `OPENAI_API_KEY`나 이전 `CHATMOCK_*` 값으로 대체하지 않는다.
+- 프로바이더 선택 상태를 다시 추가하지 않는다. UI는 CLIProxyAPI 서비스 안내와 모델 선택만 제공한다.
 ### 스타일 프롬프트 규칙 (`prompts/styles/`)
 
 모든 스타일 프롬프트에 공통 적용:
@@ -322,7 +321,7 @@ Playwright 기반. `playwright.config.ts`에서 webServer가 Flask 앱 자동 �
 
 `.env.example` → `.env` 복사. 상세 환경변수 설명은 `README.md` 참조.
 
-**필수**: `chatmock login` 후 `chatmock serve` 실행. `CHATMOCK_BASE_URL` 기본값은 `http://127.0.0.1:8000/v1`, `CHATMOCK_API_KEY`는 로컬 호환용 `dummy`를 사용한다.
+**필수**: CLIProxyAPI v7.2.152를 설치하고 `scripts/cliproxyapi_runtime.py login` 후 `serve` 실행(상세 경로/환경변수는 README). `CLIPROXYAPI_BASE_URL` 기본값은 `http://127.0.0.1:8317/v1`, `CLIPROXYAPI_API_KEY`는 서버와 동일한 새 난수 키를 필수 설정한다. 로컬 실행은 `CLIPROXYAPI_BINARY`와 새 전용 `CLIPROXYAPI_AUTH_DIR` 절대 경로를 지정한다. 기존 인증 파일·볼륨과 저장 결과는 변환하거나 삭제하지 않는다.
 
 **선택**: `SUPADATA_API_KEY` (자막 마지막 폴백 - 유료), `YOUTUBE_API_KEY` (댓글), `SUPABASE_URL` + `SUPABASE_ANON_KEY` (클라우드 저장), `YT_HTTP_PROXY` / `YT_HTTPS_PROXY` (차단 우회), `SCHEDULER_ENABLED=false` (APScheduler 기동 끄기 — 테스트/스크립트용, 기본 true)
 
