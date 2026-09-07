@@ -3,7 +3,7 @@ from flask import Blueprint, current_app, g, jsonify, request
 
 from extensions import limiter
 from routes.blog_routes import DEFAULT_MODEL
-from services.content import note_index_service, note_service
+from services.content import note_graph_service, note_index_service, note_service
 from services.usage import require_usage
 from services.usage.usage_lock import UsageLockUnavailable
 from src.contexts.identity.interface.auth_decorators import require_auth
@@ -118,6 +118,54 @@ def search_notes():
     except Exception as exc:
         current_app.logger.error("Knowledge note search failed: %s", exc, exc_info=True)
         return api_error("[검색 실패] 노트 검색 중 오류가 발생했습니다.", 500)
+
+
+@notes_bp.route("/graph", methods=["GET"])
+@limiter.limit("12/minute")
+@require_auth
+def get_note_graph():
+    """Return a bounded directed graph built from the current similarity index."""
+    try:
+        graph = note_graph_service.build_note_graph(
+            node_limit=request.args.get("nodes"),
+            edge_limit=request.args.get("edges"),
+            related_limit=request.args.get("related"),
+            min_score=request.args.get("min_score"),
+        )
+        return jsonify(graph)
+    except Exception as exc:
+        current_app.logger.error(
+            "Knowledge note graph lookup failed: %s",
+            exc,
+            exc_info=True,
+        )
+        return api_error("[관계 그래프 조회 실패] 노트 관계를 불러오지 못했습니다.", 500)
+
+
+@notes_bp.route("/<note_id>/backlinks", methods=["GET"])
+@limiter.limit("20/minute")
+@require_auth
+def get_note_backlinks(note_id):
+    """Return reverse top-K relations that currently point at one note."""
+    note = note_service.load_note(note_id)
+    if note is None:
+        return api_error("[노트 조회 실패] 노트를 찾을 수 없습니다.", 404)
+    try:
+        backlinks = note_graph_service.get_note_backlinks(
+            note_id,
+            scan_limit=request.args.get("scan"),
+            related_limit=request.args.get("related"),
+            result_limit=request.args.get("limit"),
+            min_score=request.args.get("min_score"),
+        )
+        return jsonify({"notes": backlinks})
+    except Exception as exc:
+        current_app.logger.error(
+            "Knowledge note backlink lookup failed: %s",
+            exc,
+            exc_info=True,
+        )
+        return api_error("[역방향 연결 조회 실패] 노트 연결을 불러오지 못했습니다.", 500)
 
 
 @notes_bp.route("/<note_id>", methods=["GET"])
