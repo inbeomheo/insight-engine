@@ -646,7 +646,7 @@ def _call_ai_with_comments(truncated_content, model, style_prompt, params,
     if comments:
         app = current_app._get_current_object()
 
-        # 단일 ChatMock 경로: 메인 생성과 댓글 요약을 병렬 실행
+        # 단일 CLIProxyAPI 경로: 메인 생성과 댓글 요약을 병렬 실행
         with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
             main_future = executor.submit(
                 _generate_main_content_with_web_search, app, truncated_content,

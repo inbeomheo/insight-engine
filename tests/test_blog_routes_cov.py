@@ -159,7 +159,7 @@ class TestGetRequestData(_Base):
         from routes.blog_routes import _get_request_data
         with self.app.test_request_context(
             json={'url': 'https://youtube.com/watch?v=123',
-                  'model': 'chatmock/gpt-5.4-mini',
+                  'model': 'cliproxyapi/gpt-5.5',
                   'style': 'summary'},
             content_type='application/json'
         ):
@@ -888,7 +888,7 @@ class TestExtractEventsRoute(_Base):
 
         self.assertEqual(resp.status_code, 200)
         mock_ext.assert_called_once_with(
-            'URL에서 얻은 자막', model='chatmock/gpt-5.4-mini'
+            'URL에서 얻은 자막', model='cliproxyapi/gpt-5.5'
         )
 
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)

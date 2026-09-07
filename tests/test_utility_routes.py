@@ -124,7 +124,7 @@ class TestHealthAndHome(_BaseTestCase):
 
     def test_ready_skips_external_probes_outside_production(self):
         with patch.dict('os.environ', {'FLASK_ENV': 'testing'}, clear=False), \
-                patch('routes.utility.operations._check_chatmock_ready') as chatmock, \
+                patch('routes.utility.operations._check_cliproxyapi_ready') as chatmock, \
                 patch('routes.utility.operations._check_full_stack_frontend_ready') as frontend, \
                 patch('routes.utility.operations._check_redis_ready') as redis, \
                 patch(
@@ -148,7 +148,7 @@ class TestHealthAndHome(_BaseTestCase):
     def test_ready_fails_closed_when_production_dependency_is_down(self):
         schema_status = {'ready': True, 'current_version': 9}
         with patch.dict('os.environ', {'FLASK_ENV': 'production'}, clear=False), \
-                patch('routes.utility.operations._check_chatmock_ready', return_value=True), \
+                patch('routes.utility.operations._check_cliproxyapi_ready', return_value=True), \
                 patch(
                     'routes.utility.operations._check_full_stack_frontend_ready',
                     return_value=None,
@@ -164,7 +164,7 @@ class TestHealthAndHome(_BaseTestCase):
         self.assertEqual(resp.get_json(), {
             'status': 'not_ready',
             'dependencies': {
-                'chatmock': True,
+                'cliproxyapi': True,
                 'frontend': 'not_required',
                 'redis': False,
                 'supabase_schema': schema_status,
@@ -174,7 +174,7 @@ class TestHealthAndHome(_BaseTestCase):
     def test_ready_accepts_traffic_when_production_dependencies_are_live(self):
         schema_status = {'ready': True, 'current_version': 9}
         with patch.dict('os.environ', {'FLASK_ENV': 'production'}, clear=False), \
-                patch('routes.utility.operations._check_chatmock_ready', return_value=True), \
+                patch('routes.utility.operations._check_cliproxyapi_ready', return_value=True), \
                 patch(
                     'routes.utility.operations._check_full_stack_frontend_ready',
                     return_value=True,
@@ -192,7 +192,7 @@ class TestHealthAndHome(_BaseTestCase):
     def test_ready_fails_closed_when_full_stack_frontend_is_down(self):
         schema_status = {'ready': True, 'current_version': 9}
         with patch.dict('os.environ', {'FLASK_ENV': 'production'}, clear=False), \
-                patch('routes.utility.operations._check_chatmock_ready', return_value=True), \
+                patch('routes.utility.operations._check_cliproxyapi_ready', return_value=True), \
                 patch(
                     'routes.utility.operations._check_full_stack_frontend_ready',
                     return_value=False,

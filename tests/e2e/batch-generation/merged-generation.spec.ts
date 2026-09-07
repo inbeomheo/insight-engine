@@ -1,7 +1,7 @@
 /**
  * 통합 생성 (Merged) 테스트
  *
- * - 2개 URL 통합 생성 → 통합 카드 (통합 뱃지) (API — ChatMock 필요)
+ * - 2개 URL 통합 생성 → 통합 카드 (통합 뱃지) (API — CLIProxyAPI 필요)
  * - 통합 모드 CTA는 URL 2개 이상일 때만 활성화 (UI)
  */
 import { test, expect, TEST_DATA } from '../fixtures/test-fixtures';
@@ -20,9 +20,9 @@ test.describe('통합 생성 (Merged)', () => {
   }) => {
     test.skip(
       process.env.E2E_LIVE_GENERATION !== '1',
-      '실제 ChatMock/YouTube 연동은 E2E_LIVE_GENERATION=1에서만 실행',
+      '실제 CLIProxyAPI/YouTube 연동은 E2E_LIVE_GENERATION=1에서만 실행',
     );
-    // 설정: 저비용 프리셋 (ChatMock Mini · 요약 · 짧게)
+    // 설정: 저비용 프리셋 (CLIProxyAPI GPT-5.5 · 요약 · 짧게)
     await contentGenerator.applyCheapPreset();
 
     // URL 2개 추가

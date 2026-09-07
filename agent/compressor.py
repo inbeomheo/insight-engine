@@ -15,6 +15,9 @@ import logging
 from typing import Any, Callable, Dict, List, Optional
 
 from services.usage.usage_lock import UsageLockUnavailable
+from services.core.gateway_service import (
+    DEFAULT_GATEWAY_MODEL, GatewayConfigurationError, apply_gateway_kwargs,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -220,18 +223,20 @@ def _summarize_middle(
     try:
         from litellm import completion
 
-        summary_model = model or "gemini/gemini-3.1-flash-lite-preview"
+        summary_model = model or DEFAULT_GATEWAY_MODEL
+        kwargs = {
+            'model': summary_model,
+            'messages': [{'role': 'user', 'content': prompt}],
+            'max_tokens': MAX_SUMMARY_TOKENS,
+            'temperature': 0.3,
+            'timeout': 60,
+        }
+        apply_gateway_kwargs(kwargs, summary_model)
         if on_cost_start is not None:
             on_cost_start()
-        resp = completion(
-            model=summary_model,
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=MAX_SUMMARY_TOKENS,
-            temperature=0.3,
-            timeout=60,
-        )
+        resp = completion(**kwargs)
         return resp.choices[0].message.content or "요약 생성 실패"
-    except UsageLockUnavailable:
+    except (UsageLockUnavailable, GatewayConfigurationError):
         # 비용 잠금 소유권을 잃은 뒤 무비용 폴백 성공으로
         # 처리하면 상위 예약이 잘못 환불될 수 있다.
         raise

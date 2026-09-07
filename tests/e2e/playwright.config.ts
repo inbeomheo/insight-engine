@@ -68,6 +68,7 @@ export default defineConfig({
         '**/accessibility/**/*.spec.ts',
         '**/responsive/**/*.spec.ts',
         '**/settings-modals/**/*.spec.ts',
+        '**/settings/api-keys.spec.ts', // 단일 AI 서비스/모델 설정은 인증 불필요
         '**/history-usage/**/*.spec.ts',
         '**/core-flow/**/*.spec.ts',
         '**/result-card/**/*.spec.ts',
@@ -110,6 +111,7 @@ export default defineConfig({
     },
     {
       name: 'authenticated-tests',
+      testIgnore: '**/settings/api-keys.spec.ts',
       testMatch: [
         '**/settings/**/*.spec.ts',
         '**/history/**/*.spec.ts',

@@ -59,13 +59,19 @@ def test_build_and_runtime_validation_precede_optional_external_actions():
     assert DOCKER["needs"] == ["backend-test", "frontend-test", "e2e-no-auth"]
     steps = DOCKER["steps"]
     guard = _step(DOCKER, "Docker 게시 설정 확인")
-    for name in ("Docker 이미지 빌드 및 로컬 로드", "Docker full-stack 런타임 스모크", "ChatMock 1.40 이미지 빌드 검증"):
+    for name in (
+        "Docker 이미지 빌드 및 로컬 로드", "Docker full-stack 런타임 스모크",
+        "CLIProxyAPI 7.2.152 이미지 빌드 검증", "CLIProxyAPI 인증 런타임 스모크",
+    ):
         validation = _step(DOCKER, name)
         assert "if" not in validation
         assert steps.index(validation) < steps.index(guard)
     assert _step(DOCKER, "Docker 이미지 빌드 및 로컬 로드")["with"]["push"] is False
     assert _step(DOCKER, "Docker 이미지 빌드 및 로컬 로드")["with"]["load"] is True
-    assert _step(DOCKER, "ChatMock 1.40 이미지 빌드 검증")["with"]["push"] is False
+    gateway_build = _step(DOCKER, "CLIProxyAPI 7.2.152 이미지 빌드 검증")
+    assert gateway_build["with"]["push"] is False
+    assert gateway_build["with"]["load"] is True
+    assert steps.index(gateway_build) < steps.index(_step(DOCKER, "CLIProxyAPI 인증 런타임 스모크"))
     assert steps.index(guard) < steps.index(_step(DOCKER, "Docker Hub 로그인"))
 
 

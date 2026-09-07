@@ -416,7 +416,7 @@ class TestPersistGenerationResult(unittest.TestCase):
             ) as mock_history:
                 _persist_generation_result(
                     'private-key', 'video',
-                    {'model': 'chatmock/gpt-5.4-mini', 'style': 'summary', 'modifiers': {}},
+                    {'model': 'cliproxyapi/gpt-5.5', 'style': 'summary', 'modifiers': {}},
                     'https://youtu.be/video', 'YT',
                     {'title': 'private', 'content': 'RAG secret', 'html': '<p>RAG secret</p>'},
                     'private prompt', None, 'transcript', 'api', [], 1.0, 'report-id',

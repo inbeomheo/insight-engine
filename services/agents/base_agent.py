@@ -9,6 +9,7 @@ from typing import Any, Callable, Optional
 import logging
 
 from services.usage.usage_lock import UsageLockUnavailable
+from services.core.gateway_service import DEFAULT_GATEWAY_MODEL, apply_gateway_kwargs
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +18,7 @@ class BaseAgent(ABC):
     """모든 에이전트의 기반 추상 클래스.
 
     Args:
-        model: 사용할 AI 모델 ID (예: 'chatmock/gpt-5.4-mini').
+        model: 사용할 AI 모델 ID (예: 'cliproxyapi/gpt-5.5').
                None이면 기본 모델 자동 선택.
     """
 
@@ -65,7 +66,7 @@ class BaseAgent(ABC):
             return AGENT_DEFAULT_MODEL
         except Exception:
             pass
-        return 'chatmock/gpt-5.4-mini'
+        return DEFAULT_GATEWAY_MODEL
 
     def _call_ai(self, prompt: str, temperature: float = 0.7, max_tokens: int = 4000) -> str:
         """AI 모델을 호출하여 응답을 반환하는 헬퍼.
@@ -78,7 +79,6 @@ class BaseAgent(ABC):
         Returns:
             AI 응답 텍스트. 오류 발생 시 빈 문자열 반환.
         """
-        import os
         from litellm import completion
 
         model = self.model or self._get_default_model()
@@ -91,13 +91,7 @@ class BaseAgent(ABC):
             'timeout': 180,
         }
 
-        if model.startswith('chatmock/') or model.startswith('gpt-'):
-            kwargs['model'] = model.replace('chatmock/', '', 1)
-            kwargs['api_base'] = os.getenv('CHATMOCK_BASE_URL', 'http://127.0.0.1:8000/v1')
-            kwargs['api_key'] = os.getenv('CHATMOCK_API_KEY', 'dummy') or 'dummy'
-            kwargs['reasoning_effort'] = 'medium'
-            kwargs['drop_params'] = True
-            kwargs.pop('temperature', None)
+        apply_gateway_kwargs(kwargs, model)
 
         try:
             if callable(self._on_cost_start):

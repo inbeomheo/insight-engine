@@ -1,6 +1,6 @@
 """
 AI 콘텐츠 생성 서비스
-LiteLLM을 사용한 ChatMock(OpenAI 호환) 호출 지원
+LiteLLM을 사용한 CLIProxyAPI(OpenAI 호환) 호출 지원
 """
 import functools
 import html as html_lib
@@ -12,6 +12,10 @@ from zoneinfo import ZoneInfo
 from flask import current_app
 
 from services.usage.usage_lock import UsageLockUnavailable
+from services.core.gateway_service import (
+    DEFAULT_GATEWAY_MODEL, apply_gateway_kwargs, canonical_gateway_model,
+    require_gateway_connection,
+)
 
 # SEO/GEO/FAQ/CTA 메타데이터 추출은 별도 모듈로 분리됨.
 # 외부 호환을 위해 동일 이름으로 re-export.
@@ -30,10 +34,10 @@ def _get_completion():
     return completion
 
 DEFAULT_LANGUAGE_INSTRUCTION = '결과는 반드시 한국어로 작성해주세요.'
-CHATMOCK_CONNECTION_HINT = (
-    "[ChatMock 연결 실패] ChatMock 서버에 연결할 수 없습니다. "
-    "터미널에서 `chatmock login` 후 `chatmock serve`를 실행하고 "
-    "CHATMOCK_BASE_URL=http://127.0.0.1:8000/v1 설정을 확인해주세요."
+CLIPROXYAPI_CONNECTION_HINT = (
+    "[CLIProxyAPI 연결 실패] CLIProxyAPI 서버에 연결할 수 없습니다. "
+    "CLIProxyAPI의 로그인과 서버 실행 상태를 확인하고 "
+    "CLIPROXYAPI_BASE_URL=http://127.0.0.1:8317/v1 및 CLIPROXYAPI_API_KEY 설정을 확인해주세요."
 )
 
 
@@ -51,7 +55,7 @@ def get_public_model_allowlist() -> frozenset[str]:
 
 def resolve_public_model(
     model: Optional[str],
-    default: str = 'chatmock/gpt-5.4-mini',
+    default: str = DEFAULT_GATEWAY_MODEL,
     *,
     allow_auto: bool = False,
 ) -> str:
@@ -67,6 +71,8 @@ def resolve_public_model(
         if allow_auto:
             return candidate
         candidate = default
+    if candidate.startswith('chatmock/'):
+        candidate = canonical_gateway_model(candidate)
     allowed = get_public_model_allowlist()
     if candidate not in allowed:
         raise ValueError('지원하지 않는 AI 모델입니다.')
@@ -199,15 +205,7 @@ def _build_completion_kwargs(model, prompt, style_id=None, modifiers=None, strea
     base_tokens = LENGTH_MAX_TOKENS.get(length, 4000)
     kwargs["max_tokens"] = int(base_tokens * detail['max_tokens_multiplier'])
 
-    # ChatMock → OpenAI 호환 프록시 (ChatGPT 구독 기반)
-    if model.startswith("chatmock/") or model.startswith("gpt-"):
-        actual_model = model.replace("chatmock/", "", 1)
-        kwargs["model"] = actual_model
-        kwargs["api_base"] = os.getenv("CHATMOCK_BASE_URL", "http://127.0.0.1:8000/v1")
-        kwargs["api_key"] = os.getenv("CHATMOCK_API_KEY", "dummy") or "dummy"
-        kwargs["reasoning_effort"] = "medium"
-        kwargs.pop("temperature", None)
-        kwargs["drop_params"] = True
+    apply_gateway_kwargs(kwargs, model)
 
     return kwargs
 
@@ -220,13 +218,13 @@ def call_litellm(
     *,
     on_cost_start: Optional[Callable[[], None]] = None,
 ) -> Any:
-    """Call the shared ChatMock/LiteLLM boundary for legacy AI services.
+    """Call the shared CLIProxyAPI/LiteLLM boundary for legacy AI services.
 
     Repurposing and realtime translation historically imported this helper.
     Keeping them on the same boundary preserves proxy configuration and usage
     lease validation instead of letting each service call LiteLLM directly.
     """
-    target_model = model or 'chatmock/gpt-5.4-mini'
+    target_model = model or DEFAULT_GATEWAY_MODEL
     completion_kwargs = _build_completion_kwargs(
         target_model,
         "",
@@ -249,7 +247,7 @@ def _call_completion_with_model_retry(
     completion_kwargs: Dict[str, Any],
     on_cost_start: Optional[Callable[[], None]] = None,
 ) -> Any:
-    """LiteLLM completion을 호출합니다. 단일 ChatMock 경로라 별도 프로바이더 재시도 분기는 없습니다."""
+    """LiteLLM completion을 호출합니다. 단일 CLIProxyAPI 경로를 사용합니다."""
     completion = _get_completion()
 
     # 함수 로딩·인자 구성 실패는 무비용으로 남기고, 실제 외부 AI
@@ -280,14 +278,14 @@ def _convert_error_message(error_msg, model=None):
     error_lower = error_msg.lower()
     model_info = f" (모델: {model})" if model else ""
 
-    if model and model.startswith("chatmock/") and any(
+    if model and any(
         marker in error_lower
         for marker in (
             "connection", "connect", "refused", "winerror 10061",
             "failed to establish", "httpconnectionpool", "server disconnected",
         )
     ):
-        return CHATMOCK_CONNECTION_HINT
+        return CLIPROXYAPI_CONNECTION_HINT
 
     # 인증 관련
     if 'invalid_api_key' in error_lower or 'authentication' in error_lower or 'unauthorized' in error_lower:
@@ -333,12 +331,12 @@ def create_content(content: str, model: str, style_prompt: Optional[str] = None,
                    web_search: bool = False, detail_level: Optional[str] = None,
                    on_cost_start: Optional[Callable[[], None]] = None) -> Union[Dict[str, Any], Tuple[Dict[str, Any], str]]:
     """
-    LiteLLM을 사용하여 ChatMock(OpenAI 호환)으로 AI 콘텐츠를 생성합니다.
-    ChatMock 서버 기본 URL은 CHATMOCK_BASE_URL 환경변수로 조정할 수 있습니다.
+    LiteLLM을 사용하여 CLIProxyAPI(OpenAI 호환)로 AI 콘텐츠를 생성합니다.
+    CLIProxyAPI 서버 기본 URL은 CLIPROXYAPI_BASE_URL 환경변수로 조정할 수 있습니다.
 
     Args:
         content: 분석할 콘텐츠 (자막 + 댓글)
-        model: 모델 ID (예: 'chatmock/gpt-5.4-mini')
+        model: 모델 ID (예: 'cliproxyapi/gpt-5.5')
         style_prompt: 스타일 프롬프트
         return_prompt: 사용된 프롬프트 반환 여부
         modifiers: 세부 옵션 딕셔너리 (length, writing_style)
@@ -353,6 +351,7 @@ def create_content(content: str, model: str, style_prompt: Optional[str] = None,
     """
     try:
         # 독립적인 컨텍스트 빌드들을 병렬 실행 (150-600ms 절감)
+        require_gateway_connection()
         from services.core.ai_prompt_context import build_optional_prompt_contexts
         rag_context, web_context, web_sources, style_memory_context, memory_context = (
             build_optional_prompt_contexts(
@@ -551,7 +550,7 @@ def create_content_with_fallback(content: str, models: List[str], style_prompt: 
     raise Exception(f"[AI 오류] 모든 모델이 실패했습니다. ({error_detail})")
 
 
-def create_full_blog_post(content: str, model_name: str = 'chatmock/gpt-5.4-mini', style_prompt: Optional[str] = None, return_prompt: bool = False) -> Dict[str, Any]:
+def create_full_blog_post(content: str, model_name: str = DEFAULT_GATEWAY_MODEL, style_prompt: Optional[str] = None, return_prompt: bool = False) -> Dict[str, Any]:
     """
     하위 호환성을 위한 래퍼 함수입니다.
     API 키는 환경변수에서 자동으로 로드됩니다.

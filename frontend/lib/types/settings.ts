@@ -22,7 +22,6 @@ export interface StyleOption {
 
 export interface ProviderInfo {
   name: string;
-  api_base: string;
   models: ModelInfo[];
 }
 

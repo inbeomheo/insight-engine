@@ -26,7 +26,7 @@ async function renderPanel(props: Partial<ComponentProps<typeof ResultChatPanel>
     root!.render(
       <ResultChatPanel
         context="자막 본문"
-        model="chatmock/gpt-5.4-mini"
+        model="cliproxyapi/gpt-5.5"
         {...props}
       />
     );

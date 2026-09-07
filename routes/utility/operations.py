@@ -1,6 +1,6 @@
 """운영/모니터링 라우트 — utility_routes.py에서 분리.
 
-헬스체크, 클라이언트 트래커(heartbeat/close), ChatMock 프로바이더 조회.
+헬스체크, 클라이언트 트래커(heartbeat/close), CLIProxyAPI 프로바이더 조회.
 카운터 변수와 헬퍼는 utility_routes.py에서 import하여 사용 (외부 patch 호환성).
 """
 import os
@@ -32,14 +32,17 @@ _CLIENT_ID_RE = re.compile(r'^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$')
 _FULL_STACK_FRONTEND_URL = 'http://127.0.0.1:3000/'
 
 
-def _check_chatmock_ready() -> bool:
-    base_url = (os.getenv('CHATMOCK_BASE_URL') or '').strip().rstrip('/')
-    if not base_url:
+def _check_cliproxyapi_ready() -> bool:
+    from services.core.gateway_service import (
+        GatewayConfigurationError, require_gateway_connection, gateway_model_name,
+    )
+    from services.core.ai_service import get_public_model_allowlist
+
+    try:
+        base_url, api_key = require_gateway_connection()
+    except GatewayConfigurationError:
         return False
-    request_headers = {}
-    api_key = (os.getenv('CHATMOCK_API_KEY') or '').strip()
-    if api_key:
-        request_headers['Authorization'] = f'Bearer {api_key}'
+    request_headers = {'Authorization': f'Bearer {api_key}'}
     try:
         response = requests.get(
             f'{base_url}/models',
@@ -47,8 +50,18 @@ def _check_chatmock_ready() -> bool:
             timeout=3,
             allow_redirects=False,
         )
-        return 200 <= response.status_code < 300
-    except requests.RequestException:
+        if not 200 <= response.status_code < 300:
+            return False
+        payload = response.json()
+        if not isinstance(payload, dict) or not isinstance(payload.get('data'), list):
+            return False
+        advertised = {
+            model['id'] for model in payload['data']
+            if isinstance(model, dict) and isinstance(model.get('id'), str)
+        }
+        allowed = {gateway_model_name(model) for model in get_public_model_allowlist()}
+        return bool(advertised & allowed)
+    except (requests.RequestException, ValueError):
         return False
 
 
@@ -199,7 +212,7 @@ def ready():
         return jsonify({
             'status': 'ready',
             'dependencies': {
-                'chatmock': 'skipped',
+                'cliproxyapi': 'skipped',
                 'frontend': 'skipped',
                 'redis': 'skipped',
                 'supabase_schema': _supabase_schema_status(skipped=True),
@@ -209,13 +222,13 @@ def ready():
     supabase_schema = _supabase_schema_status()
     frontend = _check_full_stack_frontend_ready()
     dependencies = {
-        'chatmock': _check_chatmock_ready(),
+        'cliproxyapi': _check_cliproxyapi_ready(),
         'frontend': frontend if frontend is not None else 'not_required',
         'redis': _check_redis_ready(),
         'supabase_schema': supabase_schema,
     }
     ready_for_traffic = (
-        dependencies['chatmock'] is True
+        dependencies['cliproxyapi'] is True
         and frontend is not False
         and dependencies['redis'] is True
         and supabase_schema['ready'] is True
@@ -258,7 +271,7 @@ def api_providers():
     for pid, pdata in providers.items():
         models = pdata.get('models', [])
         enriched[pid] = {
-            **pdata,
+            'name': pdata.get('name', pid),
             'models': models,
             'model_count': len(models),
             'default_model': models[0]['id'] if models else None,

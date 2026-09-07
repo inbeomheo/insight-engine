@@ -29,8 +29,8 @@ class TestBaseAgent(unittest.TestCase):
     # --- 초기화 ---
 
     def test_init_with_model(self):
-        agent = ConcreteAgent(model='chatmock/gpt-5.4-mini')
-        self.assertEqual(agent.model, 'chatmock/gpt-5.4-mini')
+        agent = ConcreteAgent(model='cliproxyapi/gpt-5.5')
+        self.assertEqual(agent.model, 'cliproxyapi/gpt-5.5')
 
     def test_init_without_model(self):
         agent = ConcreteAgent()
@@ -45,9 +45,9 @@ class TestBaseAgent(unittest.TestCase):
 
     @patch('services.agents.base_agent.BaseAgent._get_default_model')
     def test_get_default_model_chatmock(self, mock_default):
-        mock_default.return_value = 'chatmock/gpt-5.4-mini'
+        mock_default.return_value = 'cliproxyapi/gpt-5.5'
         agent = ConcreteAgent()
-        self.assertEqual(agent._get_default_model(), 'chatmock/gpt-5.4-mini')
+        self.assertEqual(agent._get_default_model(), 'cliproxyapi/gpt-5.5')
 
     def test_get_default_model_no_config(self):
         """config import 실패 시 기본 모델 반환"""
@@ -65,7 +65,7 @@ class TestBaseAgent(unittest.TestCase):
         mock_resp.choices[0].message.content = '응답 텍스트'
         mock_llm.return_value = mock_resp
 
-        agent = ConcreteAgent(model='chatmock/gpt-5.4-mini')
+        agent = ConcreteAgent(model='cliproxyapi/gpt-5.5')
         result = agent._call_ai('테스트 프롬프트')
         self.assertEqual(result, '응답 텍스트')
 
@@ -77,12 +77,12 @@ class TestBaseAgent(unittest.TestCase):
         mock_resp.choices[0].message.content = '응답'
         mock_llm.return_value = mock_resp
 
-        agent = ConcreteAgent(model='chatmock/gpt-5.4-mini')
+        agent = ConcreteAgent(model='cliproxyapi/gpt-5.5')
         agent._call_ai('prompt')
 
         kwargs = mock_llm.call_args[1]
-        self.assertEqual(kwargs['model'], 'gpt-5.4-mini')
-        self.assertEqual(kwargs['api_key'], 'dummy')
+        self.assertEqual(kwargs['model'], 'gpt-5.5')
+        self.assertEqual(kwargs['api_key'], 'test-gateway-key')
         self.assertIn('api_base', kwargs)
         self.assertEqual(kwargs['reasoning_effort'], 'medium')
         self.assertTrue(kwargs['drop_params'])
@@ -94,12 +94,12 @@ class TestBaseAgent(unittest.TestCase):
         mock_resp.choices[0].message.content = '응답'
         mock_llm.return_value = mock_resp
 
-        agent = ConcreteAgent(model='gpt-5.4')
+        agent = ConcreteAgent(model='gpt-5.5')
         agent._call_ai('prompt')
 
         kwargs = mock_llm.call_args[1]
-        self.assertEqual(kwargs['model'], 'gpt-5.4')
-        self.assertEqual(kwargs['api_key'], 'dummy')
+        self.assertEqual(kwargs['model'], 'gpt-5.5')
+        self.assertEqual(kwargs['api_key'], 'test-gateway-key')
         self.assertIn('api_base', kwargs)
 
     # --- _call_ai: 오류 ---
@@ -110,7 +110,7 @@ class TestBaseAgent(unittest.TestCase):
         mock_resp.choices[0].message.content = '잘린 본문'
         mock_resp.choices[0].finish_reason = 'length'
         mock_llm.return_value = mock_resp
-        agent = ConcreteAgent(model='chatmock/gpt-5.4-mini')
+        agent = ConcreteAgent(model='cliproxyapi/gpt-5.5')
         with self.assertRaisesRegex(RuntimeError, '출력 길이 제한'):
             agent._call_ai('prompt')
 
@@ -122,7 +122,7 @@ class TestBaseAgent(unittest.TestCase):
             raise Exception('timeout')
 
         mock_llm.side_effect = fail_after_provider_start
-        agent = ConcreteAgent(model='chatmock/gpt-5.4-mini')
+        agent = ConcreteAgent(model='cliproxyapi/gpt-5.5')
         with self.assertRaises(Exception) as ctx:
             agent._call_ai('prompt')
         self.assertIn('timeout', str(ctx.exception))
@@ -140,7 +140,7 @@ class TestBaseAgent(unittest.TestCase):
 
         mock_llm.side_effect = complete_after_callback
         agent = ConcreteAgent(
-            model='chatmock/gpt-5.4-mini',
+            model='cliproxyapi/gpt-5.5',
             on_cost_start=callback,
         )
 
@@ -150,7 +150,7 @@ class TestBaseAgent(unittest.TestCase):
     def test_call_ai_lock_loss_stops_provider_and_preserves_exception(self, mock_llm):
         callback = MagicMock(side_effect=UsageLockUnavailable('lease lost'))
         agent = ConcreteAgent(
-            model='chatmock/gpt-5.4-mini',
+            model='cliproxyapi/gpt-5.5',
             on_cost_start=callback,
         )
 

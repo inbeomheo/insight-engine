@@ -1,9 +1,9 @@
 # Insight Engine
 
 YouTube/문서/텍스트를 학습하고 LLMWiki형 지식 위키로 쌓는 AI 학습 엔진.
-ChatMock(OpenAI 호환) 기반 생성, 다국어(한/영/일) 지원, RAG 지식 참조, 팀 워크스페이스까지.
+CLIProxyAPI(OpenAI 호환) 기반 생성, 다국어(한/영/일) 지원, RAG 지식 참조, 팀 워크스페이스까지.
 
-Flask + Next.js 풀스택 · LiteLLM · ChatMock 호환 · pytest + Vitest + Playwright
+Flask + Next.js 풀스택 · LiteLLM · CLIProxyAPI 호환 · pytest + Vitest + Playwright
 
 ---
 
@@ -11,7 +11,7 @@ Flask + Next.js 풀스택 · LiteLLM · ChatMock 호환 · pytest + Vitest + Pla
 
 ### Core
 - **4가지 출력 스타일** — 요약, Q&A, 퀴즈, 리텐션 카드
-- **ChatMock 단일 프로바이더** — ChatGPT 계정을 OpenAI 호환 API로 사용하는 로컬 프록시
+- **CLIProxyAPI 단일 연결** — 로그인한 AI 서비스를 OpenAI 호환 API(공통 호출 형식)로 연결하는 로컬 게이트웨이
 - **다국어 출력** — 한국어, 영어, 일본어
 - **4단계 자막 폴백** — youtube-transcript-api → watch 페이지 파싱 → Supadata API → Whisper 로컬 음성인식
 
@@ -50,7 +50,7 @@ Flask + Next.js 풀스택 · LiteLLM · ChatMock 호환 · pytest + Vitest + Pla
 ### 요구사항
 - Python 3.11+
 - Node.js 22.19+
-- ChatMock 서버
+- CLIProxyAPI 7.2.152 서버
 
 ### 설치
 
@@ -73,27 +73,44 @@ npm --prefix tests/e2e ci
 ### 환경변수
 
 ```bash
+# 최초 설정에만 실행합니다. 기존 .env는 덮어쓰지 마세요.
 cp .env.example .env
 ```
 
-ChatMock을 설치·로그인·실행하고 `.env`에 base URL을 설정하세요:
-
-```bash
-pipx install chatmock              # 또는 brew tap RayBytes/chatmock && brew install chatmock
-chatmock login
-chatmock serve                     # 기본 API: http://127.0.0.1:8000/v1
-```
+공식 [CLIProxyAPI v7.2.152 릴리스](https://github.com/router-for-me/CLIProxyAPI/releases/tag/v7.2.152)에서
+운영체제에 맞는 바이너리와 체크섬(파일 변조 확인값)을 내려받아 검증하세요.
+백엔드와 게이트웨이에 동일한 **새 난수 키**를 설정합니다. 실제 키는 커밋하거나 채팅에 공유하지 마세요.
+기존 `.env`가 있다면 복사해서 덮어쓰지 말고 아래 새 항목만 로컬에서 추가하세요.
 
 ```env
 FLASK_ENV=development
-CHATMOCK_BASE_URL=http://127.0.0.1:8000/v1
-CHATMOCK_API_KEY=dummy
+CLIPROXYAPI_BASE_URL=http://127.0.0.1:8317/v1
+CLIPROXYAPI_API_KEY=<로컬에서 생성한 새 난수 키>
 
 # 선택
 YOUTUBE_API_KEY=...             # 댓글 수집
 SUPADATA_API_KEY=...            # 자막 백업 서비스
 TAVILY_API_KEY=...              # 웹 검색 보강
 ```
+
+로컬 게이트웨이는 다음처럼 실행합니다. `CLIPROXYAPI_API_KEY`는 로컬 비밀 설정 관리 도구로
+현재 터미널에도 주입하세요. 실행 스크립트는 `.env`를 자동으로 읽지 않습니다.
+
+```bash
+# 실제 설치 경로와 새 전용 인증 디렉터리의 절대 경로로 바꾸세요.
+export CLIPROXYAPI_BINARY=/absolute/path/to/cli-proxy-api
+export CLIPROXYAPI_AUTH_DIR=/absolute/path/to/insight-cliproxyapi-auth
+python scripts/cliproxyapi_runtime.py login
+python scripts/cliproxyapi_runtime.py serve  # http://127.0.0.1:8317/v1
+```
+
+`login`은 Codex 브라우저 로그인 승인을 요구합니다. 사용 가능한 모델과 호출 한도는
+로그인 계정에 따릅니다. CLIProxyAPI는 공식 유료 API 이용 권한이나 무제한 사용을 보장하지 않습니다.
+서버 설정은 권한 `0600`의 새 임시 파일로 생성되며 관리 API와 관리 화면은 비활성화됩니다.
+실행 스크립트는 상속된 관리 비밀번호·원격 인증 저장소·클러스터 설정을 제외합니다.
+상태 검사는 인증 요청 성공뿐 아니라 관리 경로의 `404` 응답도 확인합니다.
+기존 ChatMock/Codex 인증 파일은 복사·이동·삭제하지 않습니다.
+기존 `CHATMOCK_*` 설정은 새 연결에 사용하지 않으며, 키가 비어 있으면 AI 호출을 차단합니다.
 
 > 전체 환경변수 목록은 [.env.example](.env.example) 참조
 
@@ -120,13 +137,13 @@ cd frontend && npm run dev       # → http://localhost:3000
 │  Next.js 16 Frontend      │────▶│  Flask Backend           │
 │  React 19 + Tailwind v4   │     │  Port 5001               │
 │  Zustand + TanStack Query │     │                           │
-│  Port 3000                │◀────│  LiteLLM + ChatMock      │
+│  Port 3000                │◀────│  LiteLLM + CLIProxyAPI   │
 └───────────────────────────┘     └────────┬────────────────┘
                                            │
                     ┌──────────────────────┼──────────────────────┐
                     ▼                      ▼                      ▼
              ┌─────────────┐      ┌──────────────┐      ┌──────────────┐
-             │ YouTube API  │      │ ChatMock      │      │ Supabase     │
+             │ YouTube API  │      │ CLIProxyAPI   │      │ Supabase     │
              │ Transcript   │      │ OpenAI Compat │      │ Auth, DB     │
              │ Comments     │      │ Local Proxy   │      │ Usage        │
              └─────────────┘      └──────────────┘      └──────────────┘
@@ -184,7 +201,22 @@ insight-engine/
 
 | Provider | Models | Notes |
 |----------|--------|-------|
-| **ChatMock** (기본) | gpt-5.4-mini, gpt-5.4, gpt-5.5, gpt-5.3-codex-spark | OpenAI 호환 로컬 프록시 |
+| **CLIProxyAPI** | gpt-5.5 (기본), gpt-5.3-codex-spark | OpenAI 호환 로컬 게이트웨이 |
+
+앱 모델 ID는 `cliproxyapi/gpt-5.5` 형식입니다. v7.2.152에서 제거된 `gpt-5.4`와
+`gpt-5.4-mini`는 기본 목록에 넣지 않습니다. 추가 모델은 서버에 실제로 등록한 후
+`CLIPROXYAPI_MODELS`에 쉼표로 구분해 지정하세요. 추가 모델도 같은 게이트웨이를 통해 호출됩니다.
+브라우저의 과거 모델 선택은 지원되는 같은 모델이면 유지하고, 미지원 선택은 기본 모델로
+표시합니다. 기존 노트·결과·사용량 기록은 일괄 변환하거나 삭제하지 않습니다.
+
+실제 바이너리의 통신 형식은 외부 계정 없이 로컬 가짜 공급자로 검증할 수 있습니다.
+아래 검사는 일반 응답·도구 호출·스트리밍(응답 조각 연속 전송)·최종 사용량을 확인하며,
+실제 Codex 로그인과 모델 생성 검증을 대신하지 않습니다.
+
+```bash
+CLIPROXYAPI_TEST_BINARY=/absolute/path/to/cli-proxy-api \
+  node scripts/run_python.cjs -m pytest tests/test_cliproxyapi_protocol.py -v
+```
 
 ---
 
@@ -242,8 +274,9 @@ insight-engine/
 
 | Variable | Provider | Get Key |
 |----------|----------|---------|
-| `CHATMOCK_BASE_URL` | ChatMock | `http://127.0.0.1:8000/v1` |
-| `CHATMOCK_API_KEY` | ChatMock | `dummy` |
+| `CLIPROXYAPI_BASE_URL` | CLIProxyAPI | 기본 `http://127.0.0.1:8317/v1` |
+| `CLIPROXYAPI_API_KEY` | CLIProxyAPI | 서버와 동일한 새 난수 키, 필수 |
+| `CLIPROXYAPI_MODELS` | CLIProxyAPI | 선택: 서버에 등록한 추가 모델명, 쉼표 구분 |
 
 ### 주요 설정
 
@@ -352,13 +385,17 @@ docker compose ps
 staging 디렉터리에서 검증한 다음 대상 디렉터리를 원자적으로 교체합니다. 검증이나
 교체가 실패하면 기존 대상을 유지하거나 되돌리며, archive는 복원 대상 밖에 두세요.
 
-운영 Compose의 ChatMock은 빌드 시 `1.40`으로 고정되며 비루트 사용자로 실행됩니다.
-호스트의 `.codex`를 마운트하지 않고 `insight_chatmock_credentials` 전용 named volume을
-사용하므로, 최초 로그인과 토큰 갱신은 다음 명령으로 수행하세요.
+운영 Compose의 CLIProxyAPI는 공식 `v7.2.152` 커밋으로 고정 빌드되며 비루트 사용자로 실행됩니다.
+`CLIPROXYAPI_API_KEY`를 설정한 뒤 최초 로그인과 토큰 갱신은 다음 명령으로 수행하세요.
 
 ```bash
-docker compose -f docker-compose.deploy.yml --profile chatmock-login run --rm chatmock-login
+docker compose -f docker-compose.deploy.yml --profile cliproxyapi-login run --rm --build --service-ports cliproxyapi-login
 ```
+
+새 `insight_cliproxyapi_auth` 전용 볼륨의 `/data/cliproxyapi/auth`에 로그인 정보를 저장합니다.
+호스트 `.codex`와 기존 `insight_chatmock_credentials` 볼륨을 마운트하거나 변경하지 않습니다.
+인증 없는 `/v1/models` 요청은 거부하며, 서버 자체 상태 검사와 별도로 백엔드 `/ready`가
+실제 사용 가능한 모델 목록을 확인합니다. 로그인 전에는 서버가 살아 있어도 AI 준비 검사가 실패합니다.
 
 Caddy 보호 영역은 사용자명과 비밀번호 해시를 필수 Secret으로 받습니다. 평문 비밀번호는
 저장하지 말고 아래처럼 bcrypt 해시를 만든 뒤 주입하세요. 해시에 포함된 `$`가 Compose에
@@ -373,7 +410,7 @@ CADDY_BASIC_AUTH_HASH='<caddy hash-password 출력값>'
 docker compose -f docker-compose.deploy.yml up --build -d
 ```
 
-운영 백엔드 healthcheck는 `/ready`를 사용하며 ChatMock, Redis, Supabase, Next.js를 실제 호출합니다.
+운영 백엔드 healthcheck는 `/ready`를 사용하며 CLIProxyAPI, Redis, Supabase, Next.js를 실제 호출합니다.
 필수 의존성 중 하나라도 응답하지 않으면 `503`으로 실패 폐쇄됩니다. `/health`는 프로세스 생존만
 확인하는 liveness(프로세스 생존 검사)로 유지됩니다.
 
@@ -398,7 +435,7 @@ GitHub 저장소의 **Settings → Secrets and variables → Actions**에서 다
    이후 CI는 Railway CLI의 `service source connect --image`로 이 참조를 매
    릴리스의 고유 SHA 태그로 갱신합니다. 비공개 Docker Hub 저장소라면 Source의
    Registry Credentials에는 배포 전용 read-only 토큰을 설정하세요.
-2. Variables 탭에서 `FLASK_ENV=production`, 외부 ChatMock의 `CHATMOCK_BASE_URL`,
+2. Variables 탭에서 `FLASK_ENV=production`, 외부 CLIProxyAPI의 `CLIPROXYAPI_BASE_URL`과 `CLIPROXYAPI_API_KEY`,
    Redis·Supabase·CORS·보안·백업 관련 필수 환경변수를 설정합니다.
    `RAILWAY_RUN_UID=0`을 필수로 설정하고 서비스에 **하나의 영속 볼륨만**
    `/app/persist`에 마운트하세요. Railway 볼륨은 root 소유로 마운트되므로 시작
@@ -436,7 +473,7 @@ mutable `production` 태그만 재배포하면 CI에서 검증·게시한 이미
 Docker 빌드 검증만 수행하며 프로덕션 이미지를 게시하거나 배포하지 않습니다.
 `railway.json`은 GitHub-source 배포를 위한 별도 안전망으로 Dockerfile builder,
 `/ready`, `/app/persist` 필수 mount, 630초 draining을 선언합니다. Docker Image
-Source에서는 위 Settings 값이 실제 계약입니다. `/ready`는 ChatMock·Redis·Supabase
+Source에서는 위 Settings 값이 실제 계약입니다. `/ready`는 CLIProxyAPI·Redis·Supabase
 스키마뿐 아니라 동일 컨테이너의 Next.js 응답도 확인하므로 모두 준비된 뒤에만 새
 배포가 트래픽을 받습니다.
 
@@ -454,7 +491,7 @@ gunicorn app:app -b 0.0.0.0:5001
 
 | 문제 | 해결 |
 |------|------|
-| AI 서비스가 표시되지 않음 | `chatmock login` 후 `chatmock serve` 실행 및 `CHATMOCK_BASE_URL` 확인 |
+| AI 호출 실패 또는 `/ready` 실패 | CLIProxyAPI 로그인·실행, `CLIPROXYAPI_BASE_URL`과 서버 인증 키 일치, `/v1/models`의 사용 가능 모델 확인 |
 | YouTube 자막 수집 실패 | `SUPADATA_API_KEY` 설정 또는 프록시(`YT_HTTP_PROXY`) 사용 |
 | 댓글이 수집되지 않음 | `YOUTUBE_API_KEY` 설정 + YouTube Data API v3 활성화 확인 |
 | 프론트엔드 빈 화면 | 백엔드(`python app.py`)가 실행 중인지 확인 |

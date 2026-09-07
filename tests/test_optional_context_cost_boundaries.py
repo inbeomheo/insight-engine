@@ -150,7 +150,7 @@ def test_sync_web_context_lock_loss_stops_tavily_and_main_llm():
     ) as main_provider, pytest.raises(UsageLockUnavailable):
         ai_service.create_content(
             "content",
-            "chatmock/gpt-5.4-mini",
+            "cliproxyapi/gpt-5.5",
             web_search=True,
             on_cost_start=_reject_cost_start,
         )
@@ -181,7 +181,7 @@ def test_stream_rag_context_lock_loss_stops_rag_and_main_llm():
     ) as main_provider:
         stream = ai_service.create_content_stream(
             "content",
-            "chatmock/gpt-5.4-mini",
+            "cliproxyapi/gpt-5.5",
             user_id="user-1",
             on_cost_start=_reject_cost_start,
         )
@@ -198,7 +198,7 @@ def test_quality_evaluation_lock_loss_stops_judge_provider():
     app = _app()
     with app.app_context(), patch(
         "services.quality.quality_service._get_eval_model",
-        return_value="chatmock/gpt-5.4-mini",
+        return_value="cliproxyapi/gpt-5.5",
     ), patch("litellm.completion") as provider, pytest.raises(
         UsageLockUnavailable
     ):
