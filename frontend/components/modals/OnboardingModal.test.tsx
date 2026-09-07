@@ -68,16 +68,18 @@ describe('온보딩 모달 잠금 회귀 방어', () => {
     document.body.innerHTML = '';
   });
 
-  it('프로바이더를 못 불러오면 시작 버튼은 비활성 상태를 유지한다', async () => {
+  it('모델 목록 조회 실패 후에도 시작 버튼으로 안내를 닫을 수 있다', async () => {
     const view = await render(<OnboardingModal />);
     const start = Array.from(view.querySelectorAll('button'))
       .find((b) => b.textContent?.includes('onboarding.start'));
     expect(start).toBeDefined();
-    expect(start!.disabled).toBe(true);
-    expect(mocks.setOnboardingDone).not.toHaveBeenCalled();
+    expect(start!.disabled).toBe(false);
+    await act(async () => start?.click());
+    expect(mocks.setOnboardingDone).toHaveBeenCalledOnce();
+    expect(mocks.ui.setOnboardingOpen).toHaveBeenCalledWith(false);
   });
 
-  it('사용 가능한 모델이 있을 때만 시작 버튼으로 완료할 수 있다', async () => {
+  it('사용 가능한 모델이 있을 때 시작 버튼으로 완료할 수 있다', async () => {
     mocks.settings.providers = {
       chatmock: {
         name: 'ChatMock',

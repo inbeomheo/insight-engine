@@ -33,6 +33,7 @@ describe('내보내기 보안 유틸리티', () => {
   it('다운로드 파일명에서 제어문자와 경로문자를 제거한다', () => {
     expect(createDownloadFilename('../폴더\\제목:\u0000*?"<>|', 'html')).toBe('_폴더_제목________.html');
     expect(createDownloadFilename('  ...  ', 'md')).toBe('report.md');
+    expect(createDownloadFilename('../퀴즈/덱', 'apkg')).toBe('_퀴즈_덱.apkg');
   });
 });
 

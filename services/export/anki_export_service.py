@@ -41,6 +41,8 @@ class AnkiCard:
     back: str
     chapter: str = ""
     tags: tuple[str, ...] = ()
+    # 표시 앞면에 보기를 추가해도 기존 퀴즈 노트의 식별자는 유지한다.
+    identity_front: str = ""
 
 
 class _StableNote(genanki.Note):
@@ -104,27 +106,31 @@ def _parse_quiz(content: str) -> list[AnkiCard]:
             r"(?ms)^\s*\*\*해설\*\*\s*[:：]\s*(.+?)(?=^\s*#{1,6}\s|\Z)",
             block,
         )
-        options = _option_lines(block)
+        options = _option_lines(block[:answer.start()]) if answer else []
         if not answer or len(options) < 2:
             continue
         answer_label = answer.group(1).upper()
+        labels = [label for label, _ in options]
+        if answer_label not in labels or len(labels) != len(set(labels)):
+            continue
         answer_text = next(
             (text for label, text in options if label == answer_label),
             _clean_field(answer.group(2)),
         )
         option_text = "\n".join(f"{label}. {text}" for label, text in options)
         explanation_text = _clean_field(explanation.group(1)) if explanation else ""
-        back_parts = [option_text, f"정답: {answer_label}. {answer_text}".rstrip()]
+        back_parts = [f"정답: {answer_label}. {answer_text}".rstrip()]
         if explanation_text:
             back_parts.append(f"해설: {explanation_text}")
         front = _clean_field(match.group(2))
         if front:
             cards.append(
                 AnkiCard(
-                    front=front,
+                    front=f"{front}\n\n{option_text}",
                     back="\n\n".join(part for part in back_parts if part),
                     chapter=_nearest_heading(content, match.start()),
                     tags=("quiz", f"question-{match.group(1)}"),
+                    identity_front=front,
                 )
             )
     return cards
@@ -176,6 +182,8 @@ def _field_key(label: str) -> str | None:
 
 
 def _extract_labeled_fields(block: str) -> dict[str, str]:
+    # 다음 설명 섹션이 마지막 카드의 정답에 섞이지 않도록 한다.
+    block = re.split(r"(?m)^[ \t]*#{1,6}[ \t]+", block, maxsplit=1)[0]
     matches = list(_FIELD_RE.finditer(block))
     fields: dict[str, str] = {}
     for index, match in enumerate(matches):
@@ -341,10 +349,9 @@ def parse_anki_cards(
                 parsed = _parse_retention(normalized)
 
     unique: list[AnkiCard] = []
-    seen: set[str] = set()
+    seen: set[tuple[str, str]] = set()
     for card in parsed:
-        key = unicodedata.normalize("NFC", f"{card.front}\n{card.back}").casefold()
-        key = re.sub(r"\s+", " ", key).strip()
+        key = _card_content_key(card)
         if key in seen:
             continue
         seen.add(key)
@@ -358,6 +365,41 @@ def parse_anki_cards(
     if len(unique) > MAX_CARDS:
         raise AnkiExportError(f"한 번에 최대 {MAX_CARDS}장까지 내보낼 수 있습니다.")
     return unique
+
+
+def _identity_text(value: str) -> str:
+    return re.sub(r"\s+", " ", unicodedata.normalize("NFC", value).casefold()).strip()
+
+
+def _card_content_key(card: AnkiCard) -> tuple[str, str]:
+    # 필드 경계를 보존해야 ('a b', 'c')와 ('a', 'b c')를 구분할 수 있다.
+    return _identity_text(card.front), _identity_text(card.back)
+
+
+def _note_guids(cards: Sequence[AnkiCard], source: str) -> list[str]:
+    """보통은 기존 ID를 보존하고, 동일 질문의 복수 카드만 내용으로 구분한다.
+
+    답만 수정한 일반 노트는 Anki에서 업데이트된다. 동일 질문이 여러 장이면
+    영구 카드 ID가 없는 입력 특성상 앞·뒷면 내용이 식별 기준이 되며, 순서가
+    바뀌어도 같은 ID를 만든다. 복수 카드의 내용 변경/단일↔복수 전환은 새
+    노트가 될 수 있다. 기존에 충돌하던 ID를 어느 답에 배정할지 추측하지 않는다.
+    """
+    base_guids = [
+        genanki.guid_for(
+            source,
+            unicodedata.normalize("NFC", card.chapter).casefold(),
+            unicodedata.normalize("NFC", card.identity_front or card.front).casefold(),
+        )
+        for card in cards
+    ]
+    counts: dict[str, int] = {}
+    for guid in base_guids:
+        counts[guid] = counts.get(guid, 0) + 1
+    return [
+        genanki.guid_for("insight-engine:card-variant:v1", guid, *_card_content_key(card))
+        if counts[guid] > 1 else guid
+        for card, guid in zip(cards, base_guids)
+    ]
 
 
 def _stable_numeric_id(namespace: str) -> int:
@@ -436,14 +478,10 @@ def build_anki_package(
     )
     deck = genanki.Deck(deck_id, clean_title)
     base_tags = _global_tags(style, tags or [])
-    for card in parsed_cards:
+    note_guids = _note_guids(parsed_cards, safe_source or clean_title)
+    for card, stable_guid in zip(parsed_cards, note_guids):
         source_html = (
             f'<a href="{escape(safe_source, quote=True)}">원문 보기</a>' if safe_source else ""
-        )
-        stable_guid = genanki.guid_for(
-            safe_source or clean_title,
-            unicodedata.normalize("NFC", card.chapter).casefold(),
-            unicodedata.normalize("NFC", card.front).casefold(),
         )
         note_tags = list(base_tags)
         for value in card.tags:

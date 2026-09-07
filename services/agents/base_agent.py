@@ -106,7 +106,9 @@ class BaseAgent(ABC):
                 from services.usage.usage_decorator import mark_usage_charge_committed
                 mark_usage_charge_committed()
             resp = completion(**kwargs)
-
+            if getattr(resp.choices[0], 'finish_reason', None) == 'length':
+                # 교정 단계는 이 실패를 받아 온전한 초안을 보존한다.
+                raise RuntimeError('AI 응답이 출력 길이 제한으로 중단되었습니다.')
             return resp.choices[0].message.content or ''
         except UsageLockUnavailable:
             raise

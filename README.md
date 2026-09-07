@@ -379,6 +379,20 @@ docker compose -f docker-compose.deploy.yml up --build -d
 
 ### Railway
 
+CI(자동 빌드·테스트)는 배포 설정 없이도 백엔드·프론트엔드·브라우저 테스트,
+Docker 이미지 빌드와 실행 검증을 모두 수행합니다. 외부 게시·배포는 기본적으로 꺼져 있습니다.
+GitHub 저장소의 **Settings → Secrets and variables → Actions**에서 다음 항목을
+설정하면 `master` push에 한해 활성화됩니다.
+
+| 기능 | Variables(저장소 변수) | Secrets(비밀 설정) |
+|------|----------------------|-------------------|
+| Docker Hub 이미지 게시 | `ENABLE_DOCKER_PUBLISH=true` | `DOCKER_USERNAME`, `DOCKER_PASSWORD` |
+| Railway 배포 | 위 게시 설정 + `ENABLE_RAILWAY_DEPLOY=true` | 위 게시 자격증명 + `RAILWAY_TOKEN` |
+
+변수가 없거나 `true`가 아니면 해당 외부 작업만 건너뜁니다. 활성화한 기능의 필수
+자격증명이 없으면 CI가 설정 오류로 실패하며, Railway만 켜고 Docker 게시를 끈 경우도
+실패합니다. Railway는 같은 CI 실행에서 검증·게시가 완료된 이미지에만 연결됩니다.
+
 1. Railway의 `insight-engine` 서비스 Source를 Docker Image로 한 번 설정하고,
    초기 이미지 이름에 `<DOCKER_USERNAME>/insight-engine:<git-sha>`를 입력합니다.
    이후 CI는 Railway CLI의 `service source connect --image`로 이 참조를 매
@@ -403,7 +417,7 @@ docker compose -f docker-compose.deploy.yml up --build -d
    위의 ZIP 백업은 다른 플랫폼으로 이전할 때를 위한 보조 기능이며 Railway
    볼륨 백업을 대체하지 않습니다. 같은 볼륨의 ZIP만으로는 운영 준비 검사를
    통과하지 않습니다.
-5. 기본 브랜치 `master`에 push하면 CI가 로컬 런타임 스모크를 통과한 동일
+5. 위 게시·배포 설정을 활성화하고 기본 브랜치 `master`에 push하면 CI가 로컬 런타임 스모크를 통과한 동일
    이미지를 커밋 SHA 태그와 편의용 mutable `production` 태그로 게시합니다.
    배포에는 mutable 태그를 사용하지 않고 Railway CLI `5.45.2`로 서비스 Source를
    `<DOCKER_USERNAME>/insight-engine:<git-sha>`에 직접 갱신합니다. CI는 새

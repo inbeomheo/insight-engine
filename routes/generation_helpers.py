@@ -600,7 +600,7 @@ def _handle_cache_hit(
 
 def _generate_main_content_with_web_search(
     app, content, model, style_prompt, modifiers, style_id=None,
-    web_search=False, detail_level=None, on_cost_start=None,
+    web_search=False, detail_level=None, on_cost_start=None, user_id=None,
 ):
     """스레드에서 메인 콘텐츠를 생성합니다 (웹 검색 지원).
 
@@ -614,6 +614,7 @@ def _generate_main_content_with_web_search(
             style_id=style_id, web_search=web_search,
             detail_level=detail_level,
             on_cost_start=on_cost_start,
+            user_id=user_id,
         )
 
 
@@ -653,6 +654,7 @@ def _call_ai_with_comments(truncated_content, model, style_prompt, params,
                 style_id=params['style'], web_search=web_search,
                 detail_level=detail_level,
                 on_cost_start=on_cost_start,
+                user_id=user_id,
             )
             comment_future = executor.submit(
                 _generate_comment_summary, app, comments, model,
@@ -938,71 +940,129 @@ def _save_and_respond(result, used_prompt, comment_result, cache_key,
 
 def _process_single_url(
     app, url, model, style, modifiers, custom_prompt, on_cost_start=None,
+    *, detail_level='standard', transcript_language=None, web_search=False,
+    agent_mode=False, user_id=None,
 ):
     """배치 처리에서 단일 URL을 처리하는 헬퍼 함수입니다.
     API 키는 서버 환경변수에서 자동으로 로드됩니다.
     """
     from routes.blog_routes import _get_style_prompt
+    from services.content.multi_source_collector import (
+        collect_content, detect_source_type, SOURCE_WEBPAGE, SOURCE_YOUTUBE,
+    )
 
     with app.app_context():
+        # Flask의 새 앱 컨텍스트에는 요청 사용자 정보가 복사되지 않는다.
+        # 인증을 마친 라우트가 캡처한 ID만 사용하며 요청 본문의 ID는 받지 않는다.
+        g.user_id = user_id
         try:
+            start_time = time.time()
             current_app.logger.info(f"Processing URL: {url}")
-
-            if not content_service.is_youtube_url(url):
-                return {
-                    'success': False,
-                    'url': url,
-                    'title': 'URL 오류',
-                    'error': '유효한 YouTube URL이 아닙니다.'
+            # 단일 생성과 동일하게 URL을 서버에서 판별한다. 클라이언트의
+            # source_type 힌트로 검증이 다른 수집기를 강제할 수 없게 한다.
+            source_type = detect_source_type(url)
+            comments = []
+            source_fields = {}
+            if source_type == SOURCE_YOUTUBE:
+                if not content_service.is_youtube_url(url):
+                    raise ValueError('유효한 YouTube URL을 입력해주세요.')
+                video_id = content_service.get_video_id(url)
+                if not video_id:
+                    raise ValueError('유효하지 않은 YouTube URL입니다.')
+                title = content_service.get_content_title(
+                    url, on_cost_start=on_cost_start,
+                ) or 'YouTube 영상'
+                source_content, comments, error, raw_transcript, transcript_source, segments = _fetch_youtube_content(
+                    video_id, transcript_language=transcript_language,
+                    on_cost_start=on_cost_start,
+                )
+                if error:
+                    return {'success': False, 'url': url, 'title': title, 'error': error}
+                content_label = '영상 자막'
+                source_meta = {'source_type': 'youtube', 'transcript_source': transcript_source}
+                source_fields = {
+                    'youtube_title': title, 'video_id': video_id,
+                    'transcript': raw_transcript, 'transcript_segments': segments or [],
                 }
+            elif source_type == SOURCE_WEBPAGE:
+                # 기존 아티클 수집기가 URL/리다이렉트/연결 주소를 검증한다.
+                from services.content.article_service import fetch_article
+                collected = fetch_article(url)
+                title = collected.get('title') or url
+                source_content = collected.get('text', '')
+                source_type = transcript_source = 'article'
+                source_meta = {**(collected.get('source_meta') or {}), 'source_type': 'article'}
+                content_label = '아티클 본문'
+            else:
+                collected = collect_content(
+                    url, source_type=source_type, on_cost_start=on_cost_start,
+                )
+                title = collected.get('title') or url
+                source_content = collected.get('content', '')
+                transcript_source = collected.get('transcript_source') or source_type
+                source_meta = {**(collected.get('source_meta') or {}), 'source_type': source_type}
+                content_label = {
+                    'rss': 'RSS 피드 내용', 'arxiv': 'arXiv 논문 초록',
+                    'twitter': 'Twitter 게시물', 'reddit': 'Reddit 포스트',
+                    'github': 'GitHub README', 'hackernews': 'Hacker News 게시물',
+                    'podcast': '팟캐스트 전사',
+                }.get(source_type, '본문')
 
-            video_id = content_service.get_video_id(url)
-            if not video_id:
-                return {
-                    'success': False,
-                    'url': url,
-                    'title': 'YouTube 영상',
-                    'error': '유효하지 않은 YouTube URL입니다'
-                }
-
-            title = content_service.get_content_title(
-                url,
-                on_cost_start=on_cost_start,
-            ) or 'YouTube 영상'
-            current_app.logger.info(f"Content title: {title}")
-
-            transcript_text, comments, error, raw_transcript, transcript_source, _ = _fetch_youtube_content(
-                video_id,
-                on_cost_start=on_cost_start,
-            )
-            if error:
-                return {
-                    'success': False,
-                    'url': url,
-                    'title': title,
-                    'error': error
-                }
-
-            # 배치 처리: 기존 방식(자막+댓글 합성)으로 처리
-            content = _build_combined_content(transcript_text, comments)
+            if not source_content or not source_content.strip():
+                raise ValueError('콘텐츠를 추출할 수 없습니다. URL을 확인해주세요.')
             max_tokens = get_model_max_tokens(model)
-            content = content_service.truncate_text(content, max_tokens)
+            content = _truncate_for_model(model, content_label, source_content)
             style_prompt = _get_style_prompt(style, custom_prompt)
-
-            result, used_prompt = ai_service.create_content(
-                content, model, style_prompt,
-                return_prompt=True, modifiers=modifiers,
-                style_id=style,
-                on_cost_start=on_cost_start,
-            )
+            params = {'model': model, 'style': style, 'modifiers': modifiers, 'detail_level': detail_level}
+            agent_meta = {}
+            result = None
+            comment_result = None
+            if agent_mode:
+                try:
+                    from services.agents import Orchestrator
+                    orchestrator = Orchestrator(model=model, on_cost_start=on_cost_start)
+                    agent_output = orchestrator.run(
+                        transcript=source_content, style=style, style_prompt=style_prompt,
+                        url=url, modifiers=modifiers or {}, user_id=user_id,
+                        detail_level=detail_level, web_search=web_search,
+                    )
+                    result = {
+                        key: agent_output.get(key)
+                        for key in ('title', 'content', 'html', 'usage')
+                    }
+                    agent_meta = {
+                        'agent_mode': True,
+                        'quality': agent_output.get('quality'),
+                        'seo': agent_output.get('seo'),
+                    }
+                except UsageLockUnavailable:
+                    raise
+                except Exception as exc:
+                    current_app.logger.warning('배치 에이전트 실패, 일반 생성으로 전환: %s', type(exc).__name__)
+            if result is None:
+                result, _, comment_result = _call_ai_with_comments(
+                    content, model, style_prompt, params, comments, source_content,
+                    max_tokens, web_search=web_search, on_cost_start=on_cost_start,
+                )
 
             return {
+                **result,
+                **source_fields,
+                **agent_meta,
                 'success': True,
+                'id': str(uuid.uuid4()),
                 'url': url,
-                'title': result.get('title', title),
+                'title': result.get('title') or title,
                 'content': result.get('content', ''),
                 'html': result.get('html', ''),
-                'transcript_source': transcript_source
+                'transcript_source': transcript_source,
+                'source_type': source_type,
+                'source_title': title,
+                'source_meta': source_meta,
+                'style_label': _get_style_label(style),
+                'elapsed_time': round(time.time() - start_time, 2),
+                'cached': False,
+                'comment_summary_included': bool(comment_result),
             }
 
         except UsageLockUnavailable:

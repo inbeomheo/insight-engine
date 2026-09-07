@@ -6,8 +6,14 @@ import { Network, RefreshCw } from 'lucide-react';
 import { NoteRelationGraph } from '@/components/note-relation-graph';
 import { Button } from '@/components/ui/button';
 import { getNoteGraph, type NoteGraphResponse } from '@/lib/note-graph';
+import { useAuthUserId } from '@/hooks/useAuthUserId';
 
 export default function NoteGraphPage() {
+  const authUserId = useAuthUserId();
+  return <AccountNoteGraphPage key={authUserId ? `user:${authUserId}` : 'anonymous'} />;
+}
+
+function AccountNoteGraphPage() {
   const [graph, setGraph] = useState<NoteGraphResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -15,8 +21,6 @@ export default function NoteGraphPage() {
 
   useEffect(() => {
     let alive = true;
-    setLoading(true);
-    setError(null);
     getNoteGraph()
       .then((result) => {
         if (alive) setGraph(result);
@@ -44,14 +48,18 @@ export default function NoteGraphPage() {
           </div>
           <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">지식 노트 관계 그래프</h1>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            최근 노트의 현재 유사도 연결을 bounded graph(상한이 있는 그래프)로 표시합니다.
+            최근 노트와 서로 비슷한 내용을 한눈에 살펴보세요.
             노드를 선택하면 기존 노트 상세로 이동합니다.
           </p>
         </div>
         <Button
           type="button"
           variant="outline"
-          onClick={() => setReloadKey((value) => value + 1)}
+          onClick={() => {
+            setLoading(true);
+            setError(null);
+            setReloadKey((value) => value + 1);
+          }}
           disabled={loading}
         >
           <RefreshCw className="h-4 w-4" />

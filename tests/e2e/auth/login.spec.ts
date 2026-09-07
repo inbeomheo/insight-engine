@@ -1,65 +1,90 @@
-/**
- * 로그인 테스트
- *
- * 병렬 실행: ✅
- * 인증 필요: ❌ (로그인 테스트 자체)
- */
+import { randomUUID } from 'node:crypto';
 import { test, expect } from '../fixtures/test-fixtures';
 
-test.describe('로그인 @parallel @no-auth', () => {
-  test.beforeEach(async ({ mainPage }) => {
-    await mainPage.goto();
-  });
+const AUTH_KEY = 'insight-engine-auth-session';
 
-  test('로그인 버튼/링크가 표시됨', async ({ page }) => {
-    const loginLink = page.locator('a:has-text("로그인"), button:has-text("로그인"), [data-testid="login-link"]');
-    const isVisible = await loginLink.isVisible().catch(() => false);
+test.describe('설정의 계정 인증 @parallel @no-auth', () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
 
-    // 인증이 비활성화된 경우 스킵
-    test.skip(!isVisible, '인증이 비활성화된 환경');
-  });
-
-  test('로그인 폼이 표시됨', async ({ page }) => {
-    const loginLink = page.locator('a:has-text("로그인"), button:has-text("로그인")');
-    const isVisible = await loginLink.isVisible().catch(() => false);
-
-    if (!isVisible) {
-      test.skip(true, '인증이 비활성화된 환경');
-      return;
-    }
-
-    await loginLink.click();
-
-    // 로그인 폼 요소 확인
-    await expect(page.locator('input[type="email"], [data-testid="email-input"]')).toBeVisible();
-    await expect(page.locator('input[type="password"], [data-testid="password-input"]')).toBeVisible();
-    await expect(page.locator('button:has-text("로그인"), [data-testid="login-button"]')).toBeVisible();
-  });
-
-  test('빈 폼 제출 시 유효성 검사', async ({ page }) => {
-    const loginLink = page.locator('a:has-text("로그인"), button:has-text("로그인")');
-    const isVisible = await loginLink.isVisible().catch(() => false);
-
-    if (!isVisible) {
-      test.skip(true, '인증이 비활성화된 환경');
-      return;
-    }
-
-    await loginLink.click();
-    await page.waitForTimeout(500);
-
-    // 빈 상태로 제출
-    const submitBtn = page.locator('button:has-text("로그인"), [data-testid="login-button"]');
-    await submitBtn.click();
-
-    // 에러 메시지 또는 HTML5 유효성 검사
-    const hasValidation = await page.evaluate(() => {
-      const emailInput = document.querySelector('input[type="email"]') as HTMLInputElement;
-      return emailInput?.validity?.valueMissing || false;
+  test.beforeEach(async ({ page, mainPage }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('insight-engine-onboarding-done', 'true');
     });
+    // 개인 기능의 외부 저장소 요청은 테스트 브라우저에서 종료한다.
+    await page.route('**/api/workspaces', route => route.fulfill({ json: { workspaces: [] } }));
+    await page.route('**/api/user/style-memory', route => route.fulfill({
+      status: 503, json: { error: '테스트에서는 개인 저장소를 연결하지 않습니다.' },
+    }));
+    await mainPage.goto();
+    await page.getByRole('button', { name: '설정 열기', exact: true }).click();
+    await expect(page.getByRole('dialog', { name: '설정', exact: true })).toBeVisible();
+  });
 
-    const hasErrorMsg = await page.locator('.error, [role="alert"]').isVisible().catch(() => false);
+  test('이메일과 비밀번호를 모두 입력해야 로그인할 수 있다', async ({ page }) => {
+    const settings = page.getByRole('dialog', { name: '설정', exact: true });
+    const login = settings.getByRole('button', { name: '로그인', exact: true });
+    await expect(settings.getByRole('heading', { name: '계정', exact: true })).toBeVisible();
+    await expect(settings.getByLabel('이메일', { exact: true })).toBeVisible();
+    await expect(settings.getByLabel('비밀번호', { exact: true })).toHaveAttribute('type', 'password');
+    await expect(login).toBeDisabled();
+    await settings.getByLabel('이메일', { exact: true }).fill('browser-test@example.invalid');
+    await expect(login).toBeDisabled();
+    await settings.getByLabel('비밀번호', { exact: true }).fill(randomUUID());
+    await expect(login).toBeEnabled();
+  });
 
-    expect(hasValidation || hasErrorMsg || true).toBeTruthy();
+  test('로그인 응답에서 갱신 토큰을 제외하고 저장하며 로그아웃 시 세션을 비운다', async ({ page }) => {
+    const email = 'browser-test@example.invalid';
+    const password = randomUUID();
+    const accessToken = randomUUID();
+    const userId = randomUUID();
+    const expiresAt = Math.floor(Date.now() / 1000) + 3600;
+    await page.route('**/api/auth/login', async route => {
+      expect(route.request().method()).toBe('POST');
+      expect(route.request().postDataJSON()).toEqual({ email, password });
+      expect(route.request().headers()['x-auth-transport']).toBe('cookie');
+      await route.fulfill({ json: {
+        user: { id: userId, email },
+        session: { access_token: accessToken, refresh_token: randomUUID(), expires_at: expiresAt },
+      } });
+    });
+    let logoutCalls = 0;
+    await page.route('**/api/auth/logout', async route => {
+      logoutCalls += 1;
+      expect(route.request().method()).toBe('POST');
+      expect(route.request().headers().authorization).toBe('Bearer ' + accessToken);
+      await route.fulfill({ json: { success: true } });
+    });
+    const settings = page.getByRole('dialog', { name: '설정', exact: true });
+    await settings.getByLabel('이메일', { exact: true }).fill(email);
+    await settings.getByLabel('비밀번호', { exact: true }).fill(password);
+    await settings.getByRole('button', { name: '로그인', exact: true }).click();
+    await expect(settings.getByText(email, { exact: true })).toBeVisible();
+    await expect(settings.getByText('인증됨', { exact: true })).toBeVisible();
+    await expect.poll(() => page.evaluate(key => JSON.parse(localStorage.getItem(key) ?? 'null'), AUTH_KEY))
+      .toEqual({ user: { id: userId, email }, session: { access_token: accessToken, expires_at: expiresAt } });
+
+    await page.reload();
+    await page.getByRole('button', { name: '설정 열기', exact: true }).click();
+    await expect(settings.getByText(email, { exact: true })).toBeVisible();
+    await settings.getByRole('button', { name: '로그아웃', exact: true }).click();
+    await expect(settings.getByLabel('이메일', { exact: true })).toBeVisible();
+    await expect(settings.getByRole('button', { name: '로그인', exact: true })).toBeDisabled();
+    await expect.poll(() => page.evaluate(key => localStorage.getItem(key), AUTH_KEY)).toBeNull();
+    expect(logoutCalls).toBe(1);
+  });
+
+  test('인증 실패 메시지를 표시하고 로그인 상태를 만들지 않는다', async ({ page }) => {
+    await page.route('**/api/auth/login', route => route.fulfill({
+      status: 401, json: { error: '이메일 또는 비밀번호가 올바르지 않습니다.' },
+    }));
+    const settings = page.getByRole('dialog', { name: '설정', exact: true });
+    await settings.getByLabel('이메일', { exact: true }).fill('browser-test@example.invalid');
+    await settings.getByLabel('비밀번호', { exact: true }).fill(randomUUID());
+    await settings.getByRole('button', { name: '로그인', exact: true }).click();
+    await expect(page.getByText('이메일 또는 비밀번호가 올바르지 않습니다.', { exact: true })).toBeVisible();
+    await expect(settings.getByRole('button', { name: '로그인', exact: true })).toBeEnabled();
+    await expect(settings.getByRole('button', { name: '로그아웃', exact: true })).toHaveCount(0);
+    expect(await page.evaluate(key => localStorage.getItem(key), AUTH_KEY)).toBeNull();
   });
 });

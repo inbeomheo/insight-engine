@@ -3,8 +3,8 @@
 #   - 이 레포의 기본 브랜치는 master이며 모든 PR이 master를 대상으로 한다.
 #     master가 빠져 있어 PR CI가 한 번도 실행되지 않던 문제를 수정.
 #   - Docker 이미지는 모든 대상 브랜치/PR에서 빌드 검증한다.
-#   - 기본 브랜치 master의 push만 immutable SHA/production 이미지를 게시하고
-#     Railway는 테스트를 통과한 정확한 SHA 이미지를 배포한다.
+#   - 명시적으로 활성화한 master push만 SHA/production 이미지를 게시하고
+#     Railway는 게시까지 성공한 정확한 SHA 이미지를 배포한다.
 
 name: CI/CD
 
@@ -226,19 +226,14 @@ jobs:
     runs-on: ubuntu-latest
     needs: [backend-test, frontend-test, e2e-no-auth]
     timeout-minutes: 30
+    outputs:
+      image-published: ${{ steps.publish.outputs.published }}
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Docker Buildx 설정
         uses: docker/setup-buildx-action@v3
-
-      - name: Docker Hub 로그인
-        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Docker 이미지 빌드 및 로컬 로드
         uses: docker/build-push-action@v5
@@ -256,17 +251,6 @@ jobs:
           DOCKER_SMOKE_TIMEOUT_SECONDS: "180"
         run: python scripts/ci_docker_smoke.py
 
-      - name: 검증된 프로덕션 이미지 게시
-        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
-        env:
-          DOCKER_REPOSITORY: ${{ secrets.DOCKER_USERNAME }}/insight-engine
-          IMAGE_SHA: ${{ github.sha }}
-        run: |
-          docker tag insight-engine:ci "$DOCKER_REPOSITORY:$IMAGE_SHA"
-          docker push "$DOCKER_REPOSITORY:$IMAGE_SHA"
-          docker tag insight-engine:ci "$DOCKER_REPOSITORY:production"
-          docker push "$DOCKER_REPOSITORY:production"
-
       - name: ChatMock 1.40 이미지 빌드 검증
         uses: docker/build-push-action@v5
         with:
@@ -276,15 +260,55 @@ jobs:
           tags: insight-engine-chatmock:ci
           cache-from: type=gha
 
+      - name: Docker 게시 설정 확인
+        if: github.ref == 'refs/heads/master' && github.event_name == 'push' && vars.ENABLE_DOCKER_PUBLISH == 'true'
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+        run: |
+          : "${DOCKER_USERNAME:?ENABLE_DOCKER_PUBLISH=true requires the DOCKER_USERNAME secret}"
+          : "${DOCKER_PASSWORD:?ENABLE_DOCKER_PUBLISH=true requires the DOCKER_PASSWORD secret}"
+
+      - name: Docker Hub 로그인
+        if: github.ref == 'refs/heads/master' && github.event_name == 'push' && vars.ENABLE_DOCKER_PUBLISH == 'true'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: 검증된 프로덕션 이미지 게시
+        id: publish
+        if: github.ref == 'refs/heads/master' && github.event_name == 'push' && vars.ENABLE_DOCKER_PUBLISH == 'true'
+        env:
+          DOCKER_REPOSITORY: ${{ secrets.DOCKER_USERNAME }}/insight-engine
+          IMAGE_SHA: ${{ github.sha }}
+        run: |
+          docker tag insight-engine:ci "$DOCKER_REPOSITORY:$IMAGE_SHA"
+          docker push "$DOCKER_REPOSITORY:$IMAGE_SHA"
+          docker tag insight-engine:ci "$DOCKER_REPOSITORY:production"
+          docker push "$DOCKER_REPOSITORY:production"
+          echo "published=true" >> "$GITHUB_OUTPUT"
+
   # ── 프로덕션 배포 ─────────────────────────────────────────────────────────────
   deploy:
     name: Deploy (Railway)
     runs-on: ubuntu-latest
     needs: docker-build
-    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push' && vars.ENABLE_RAILWAY_DEPLOY == 'true'
     environment: production
 
     steps:
+      - name: Railway 배포 설정 확인
+        env:
+          IMAGE_PUBLISHED: ${{ needs.docker-build.outputs.image-published }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          if [[ "$IMAGE_PUBLISHED" != "true" ]]; then
+            echo "::error::ENABLE_RAILWAY_DEPLOY=true requires ENABLE_DOCKER_PUBLISH=true and a successfully published image"
+            exit 1
+          fi
+          : "${RAILWAY_TOKEN:?ENABLE_RAILWAY_DEPLOY=true requires the RAILWAY_TOKEN secret}"
+
       - uses: actions/checkout@v4
 
       - name: Node.js 설정

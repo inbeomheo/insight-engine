@@ -127,6 +127,7 @@ def get_note_graph():
     """Return a bounded directed graph built from the current similarity index."""
     try:
         graph = note_graph_service.build_note_graph(
+            owner_id=g.get("user_id"),
             node_limit=request.args.get("nodes"),
             edge_limit=request.args.get("edges"),
             related_limit=request.args.get("related"),
@@ -147,12 +148,14 @@ def get_note_graph():
 @require_auth
 def get_note_backlinks(note_id):
     """Return reverse top-K relations that currently point at one note."""
-    note = note_service.load_note(note_id)
+    owner_id = g.get("user_id")
+    note = note_service.load_note(note_id, owner_id=owner_id)
     if note is None:
         return api_error("[노트 조회 실패] 노트를 찾을 수 없습니다.", 404)
     try:
         backlinks = note_graph_service.get_note_backlinks(
             note_id,
+            owner_id=owner_id,
             scan_limit=request.args.get("scan"),
             related_limit=request.args.get("related"),
             result_limit=request.args.get("limit"),

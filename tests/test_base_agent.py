@@ -104,6 +104,16 @@ class TestBaseAgent(unittest.TestCase):
 
     # --- _call_ai: 오류 ---
 
+    @patch('litellm.completion')
+    def test_call_ai_rejects_truncated_response(self, mock_llm):
+        mock_resp = MagicMock()
+        mock_resp.choices[0].message.content = '잘린 본문'
+        mock_resp.choices[0].finish_reason = 'length'
+        mock_llm.return_value = mock_resp
+        agent = ConcreteAgent(model='chatmock/gpt-5.4-mini')
+        with self.assertRaisesRegex(RuntimeError, '출력 길이 제한'):
+            agent._call_ai('prompt')
+
     @patch('services.usage.usage_decorator.mark_usage_charge_committed')
     @patch('litellm.completion')
     def test_call_ai_failure_raises_after_charge_commit(self, mock_llm, mock_mark):

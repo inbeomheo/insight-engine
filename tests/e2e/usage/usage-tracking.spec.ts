@@ -1,51 +1,42 @@
-/**
- * 사용량 추적 테스트
- *
- * 병렬 실행: ✅
- * 인증 필요: ✅ (storageState 사용)
- */
-import { test, expect } from '../fixtures/test-fixtures';
+import { test, expect, injectReports, makeMockReport } from '../fixtures/test-fixtures';
 
-test.describe('사용량 추적 @parallel @auth-required', () => {
-  test.beforeEach(async ({ mainPage, page }) => {
-    await mainPage.goto();
+test.describe('로컬 사용량 집계 @parallel @no-auth', () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
 
-    // Supabase 비활성화 환경에서는 인증 기능 없음 - 사용량 기능도 비활성화됨
-    // 하지만 사용량 UI는 존재할 수 있으므로 테스트는 계속 진행
+  test('빈 브라우저의 생성 결과와 누적 토큰은 0이다', async ({ page }) => {
+    await injectReports(page, []);
+    await page.goto('/dashboard');
+    await expect(page.getByRole('heading', { name: '내 작업 요약', exact: true })).toBeVisible();
+    const metric = (label: string) => page.locator('[data-slot="card"]')
+      .filter({ has: page.locator('[data-slot="card-title"]').getByText(label, { exact: true }) })
+      .locator('[data-slot="card-content"]');
+    await expect(metric('저장된 결과')).toHaveText('0개');
+    await expect(metric('누적 토큰')).toHaveText('0');
+    await expect(metric('평균 길이')).toHaveText('0자');
+    await expect(metric('저장 공간')).toHaveText('0/20');
+    await expect(page.getByText('홈에서 URL이나 텍스트를 생성하면 여기에 쌓입니다.', { exact: true })).toBeVisible();
   });
 
-  test('사용량 표시 요소가 존재함', async ({ page }) => {
-    // 사용량 표시 찾기
-    const usageDisplay = page.locator(
-      ':has-text("사용량"), :has-text("남은"), :has-text("크레딧"), [data-testid="usage-display"]'
-    );
-    const isVisible = await usageDisplay.first().isVisible().catch(() => false);
-
-    // 사용량 표시가 있으면 확인
-    if (isVisible) {
-      const text = await usageDisplay.first().textContent();
-      expect(text).toBeTruthy();
-    } else {
-      // 사용량 기능이 없어도 OK
-      test.skip(true, '사용량 표시 기능 없음');
-    }
-  });
-
-  test('사용량 패널 열기', async ({ page }) => {
-    // 사용량 버튼 찾기 (nav-icon-btn with data-section="usage")
-    const usageToggle = page.locator('button[data-section="usage"]');
-
-    if (!(await usageToggle.isVisible().catch(() => false))) {
-      test.skip(true, '사용량 토글 버튼 없음');
-      return;
-    }
-
-    await usageToggle.click();
-    await page.waitForTimeout(500);
-
-    // 사용량 뷰 확인 (#usage-view)
-    const usageView = page.locator('#usage-view');
-    const visible = await usageView.isVisible().catch(() => false);
-    expect(visible).toBeTruthy();
+  test('저장된 결과에서 토큰·길이·저장 공간을 합산하고 최근 결과에 연결한다', async ({ page }) => {
+    await injectReports(page, [
+      makeMockReport({ id: 'usage-latest', title: '최근 사용량 결과', content: '가'.repeat(120), usage: { total_tokens: 1200 }, createdAt: Date.now() }),
+      makeMockReport({ id: 'usage-earlier', title: '이전 사용량 결과', content: '나'.repeat(80), usage: { total_tokens: 300 }, createdAt: Date.now() - 1000 }),
+    ]);
+    await page.goto('/dashboard');
+    const metric = (label: string) => page.locator('[data-slot="card"]')
+      .filter({ has: page.locator('[data-slot="card-title"]').getByText(label, { exact: true }) })
+      .locator('[data-slot="card-content"]');
+    await expect(metric('저장된 결과')).toHaveText('2개');
+    await expect(metric('누적 토큰')).toHaveText('1,500');
+    await expect(metric('평균 길이')).toHaveText('100자');
+    await expect(metric('저장 공간')).toHaveText('2/20');
+    await expect(page.getByText('여유 있음 · 10% 사용 중', { exact: true })).toBeVisible();
+    const recent = page.locator('[data-slot="card"]')
+      .filter({ has: page.locator('[data-slot="card-title"]').getByText('최근 로컬 결과', { exact: true }) });
+    await expect(recent.getByRole('link')).toHaveCount(2);
+    await expect(recent.getByRole('link').first()).toHaveAttribute('href', '/?report=usage-latest');
+    await recent.getByRole('link').first().click();
+    await expect(page).toHaveURL(/\?report=usage-latest$/);
+    await expect(page.locator('[data-report-id="usage-latest"]')).toBeVisible();
   });
 });

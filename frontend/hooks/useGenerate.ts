@@ -17,6 +17,10 @@ interface GenerateState {
   error: string | null;
 }
 
+export interface BatchGenerationOutcome {
+  succeededUrls: string[];
+}
+
 const LOADING_TITLE = '생성 중...';
 const FAILED_TITLE = '생성 실패';
 const NO_RESULT_MESSAGE = '생성 결과를 받지 못했습니다.';
@@ -316,55 +320,64 @@ export function useGenerate() {
   );
 
   const generateBatchUrls = useCallback(
-    async (urls: string[]): Promise<boolean> => {
+    async (urls: string[]): Promise<BatchGenerationOutcome> => {
       if (!selectedModel) {
         setState((s) => ({ ...s, error: 'AI 모델을 선택해주세요.' }));
-        return false;
+        return { succeededUrls: [] };
       }
-      if (urls.length === 0) return false;
+      if (urls.length === 0) return { succeededUrls: [] };
 
       // 단일 URL이면 일반 생성
       if (urls.length === 1) {
-        return await generateSingle(urls[0], false);
+        const succeeded = await generateSingle(urls[0], false);
+        return { succeededUrls: succeeded ? [urls[0]] : [] };
       }
 
       const requestUserId = currentAuthUserId();
       setState((s) => ({ ...s, activeCount: s.activeCount + 1, isLoading: true, error: null }));
 
       try {
-        const res = await generateBatch(urls, selectedModel, selectedStyle, modifiers);
-        if (!isCurrentAuthUser(requestUserId)) return false;
+        const res = await generateBatch(urls, selectedModel, selectedStyle, modifiers, undefined, {
+          detail_level: detailLevel,
+          transcript_language: transcriptLanguage,
+          enable_web_search: enableWebSearch,
+          enable_agent_mode: enableAgentMode,
+        });
+        if (!isCurrentAuthUser(requestUserId)) return { succeededUrls: [] };
         let ts = Date.now();
-        const failedUrls: string[] = [];
+        const succeededUrls: string[] = [];
+        const failures: string[] = [];
 
-        for (const item of res.results) {
-          if (item.success) {
+        for (const url of urls) {
+          const item = res.results.find((result) => result.url === url);
+          if (item?.success) {
             const report = responseToReport(item, item.url, selectedStyle, { createdAt: ts++ });
             addReport(report);
+            succeededUrls.push(url);
           } else {
-            failedUrls.push(item.url);
+            failures.push(`${url}: ${item?.error || NO_RESULT_MESSAGE}`);
           }
         }
 
-        if (failedUrls.length > 0 && failedUrls.length < urls.length) {
-          toast.warning(`${failedUrls.length}개 URL 처리 실패`, {
-            description: failedUrls.map((u) => u.slice(0, 60)).join('\n'),
+        if (failures.length > 0 && succeededUrls.length > 0) {
+          toast.warning(`${failures.length}개 URL 처리 실패`, {
+            description: failures.join('\n'),
           });
-        } else if (failedUrls.length === urls.length) {
-          settleGeneration(setState, requestUserId, '모든 URL 처리에 실패했습니다.');
-          return false;
+        } else if (succeededUrls.length === 0) {
+          settleGeneration(setState, requestUserId, `모든 URL 처리에 실패했습니다.\n${failures.join('\n')}`);
+          return { succeededUrls: [] };
         }
 
         settleGeneration(setState, requestUserId, null);
-        return true;
+        return { succeededUrls };
       } catch (err) {
-        if (!isCurrentAuthUser(requestUserId)) return false;
+        if (!isCurrentAuthUser(requestUserId)) return { succeededUrls: [] };
         const message = err instanceof Error ? err.message : '배치 생성 실패';
         settleGeneration(setState, requestUserId, message);
-        return false;
+        return { succeededUrls: [] };
       }
     },
-    [selectedModel, selectedStyle, modifiers, addReport, generateSingle]
+    [selectedModel, selectedStyle, modifiers, detailLevel, transcriptLanguage, enableWebSearch, enableAgentMode, addReport, generateSingle]
   );
 
   const generateMergedUrls = useCallback(
@@ -382,7 +395,7 @@ export function useGenerate() {
       setState((s) => ({ ...s, activeCount: s.activeCount + 1, isLoading: true, error: null }));
 
       try {
-        const res = await generateMerged(urls, selectedModel, selectedStyle, modifiers);
+        const res = await generateMerged(urls, selectedModel, selectedStyle, modifiers, undefined, transcriptLanguage);
         if (!isCurrentAuthUser(requestUserId)) return false;
         const report = responseToReport(res, urls[0], selectedStyle, {
           id: res.id || crypto.randomUUID(),
@@ -401,7 +414,7 @@ export function useGenerate() {
         return false;
       }
     },
-    [selectedModel, selectedStyle, modifiers, addReport]
+    [selectedModel, selectedStyle, modifiers, transcriptLanguage, addReport]
   );
 
   const generateFusionUrls = useCallback(

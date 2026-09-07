@@ -68,7 +68,7 @@ test.describe('온보딩 모달 @parallel @no-auth', () => {
     const modal = page.getByRole('dialog', { name: '환영합니다!' });
     await expect(modal).toBeVisible({ timeout: 10000 });
 
-    // 1. 온보딩 모달에서 시작하기 버튼 클릭 (모델 로딩 전에는 disabled → 클릭이 자동 대기)
+    // 모델 연결 상태와 관계없이 안내를 완료할 수 있다.
     await modal.getByRole('button', { name: '시작하기' }).click();
 
     // Expected: 모달 닫힘
@@ -79,7 +79,7 @@ test.describe('온보딩 모달 @parallel @no-auth', () => {
     expect(completed).toBe('true');
   });
 
-  for (const closePath of ['X', 'Escape', 'overlay'] as const) {
+  for (const closePath of ['시작하기', 'X', 'Escape', 'overlay'] as const) {
     test(`TC-1.2-${closePath}: 모델이 없어도 ${closePath} 닫기는 완료를 저장한다`, async ({ page }) => {
       await page.route('**/api/providers', async (route) => {
         await route.fulfill({
@@ -95,9 +95,11 @@ test.describe('온보딩 모달 @parallel @no-auth', () => {
 
       const modal = page.getByRole('dialog', { name: '환영합니다!' });
       await expect(modal).toBeVisible({ timeout: 10000 });
-      await expect(modal.getByRole('button', { name: '시작하기' })).toBeDisabled();
+      await expect(modal.getByRole('button', { name: '시작하기' })).toBeEnabled();
 
-      if (closePath === 'X') {
+      if (closePath === '시작하기') {
+        await modal.getByRole('button', { name: '시작하기' }).click();
+      } else if (closePath === 'X') {
         await modal.getByRole('button', { name: 'Close' }).click();
       } else if (closePath === 'Escape') {
         await page.keyboard.press('Escape');

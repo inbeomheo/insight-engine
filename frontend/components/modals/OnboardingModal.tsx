@@ -72,7 +72,6 @@ export default function OnboardingModal() {
         <Button
           className="w-full h-12 gradient-primary hover:opacity-90 transition-opacity rounded-xl text-base font-medium shadow-md shadow-indigo-200/30"
           onClick={dismiss}
-          disabled={!hasModels}
         >
           <Check className="h-4 w-4 mr-2" />
           {t('onboarding.start')}

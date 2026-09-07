@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import io
+import sqlite3
 import zipfile
 
+import genanki
 import pytest
 
 from services.export.anki_export_service import (
@@ -73,8 +75,12 @@ STANDARD_RETENTION = """
 def test_parse_quiz_cards_preserves_options_answer_and_explanation():
     cards = parse_anki_cards(QUIZ, style="quiz")
     assert len(cards) == 2
-    assert cards[0].front == "에이전트의 핵심 반복 구조는 무엇인가?"
-    assert "B. 관찰하고 행동한 뒤 다시 평가한다" in cards[0].back
+    assert cards[0].front.startswith("에이전트의 핵심 반복 구조는 무엇인가?\n\nA.")
+    assert "B. 관찰하고 행동한 뒤 다시 평가한다" in cards[0].front
+    assert "D. 메모리를 삭제한다" in cards[0].front
+    assert "정답:" not in cards[0].front
+    assert "해설:" not in cards[0].front
+    assert "A. 계획만 세운다" not in cards[0].back
     assert "정답: B." in cards[0].back
     assert "해설:" in cards[0].back
     assert "quiz" in cards[0].tags
@@ -157,3 +163,99 @@ def test_unsafe_source_scheme_is_not_embedded():
         source_url="javascript:alert(1)",
     )
     assert b"javascript:alert" not in buffer.getvalue()
+
+
+def _package_notes(buffer):
+    with zipfile.ZipFile(buffer) as archive:
+        collection = archive.read("collection.anki2")
+    connection = sqlite3.connect(":memory:")
+    try:
+        connection.deserialize(collection)
+        return [
+            (guid, fields.split("\x1f"))
+            for guid, fields in connection.execute("SELECT guid, flds FROM notes")
+        ]
+    finally:
+        connection.close()
+
+
+def test_packaged_quiz_front_has_options_and_preserves_existing_note_identity():
+    buffer, count = build_anki_package(title="학습", content=QUIZ, style="quiz")
+    notes = _package_notes(buffer)
+    assert count == len(notes) == 2
+    guid, fields = notes[0]
+    assert "A. 계획만 세운다" in fields[0]
+    assert "D. 메모리를 삭제한다" in fields[0]
+    assert "정답:" not in fields[0]
+    assert "정답: B." in fields[1]
+    assert "해설:" in fields[1]
+    assert guid == genanki.guid_for(
+        "학습", "AI 에이전트 학습 퀴즈".casefold(), "에이전트의 핵심 반복 구조는 무엇인가?"
+    )
+
+
+def test_same_question_different_answers_have_unique_repeatable_package_guids():
+    cards = [
+        {"front": "같은 질문", "back": "첫 번째 답", "chapter": "같은 장"},
+        {"front": "같은 질문", "back": "두 번째 답", "chapter": "같은 장"},
+    ]
+    exports = []
+    for ordered in (cards, cards, list(reversed(cards))):
+        buffer, count = build_anki_package(title="반복 검증", content="", cards=ordered)
+        notes = _package_notes(buffer)
+        assert count == len(notes) == 2
+        assert len({guid for guid, _ in notes}) == 2
+        exports.append({fields[1]: guid for guid, fields in notes})
+    assert exports[0] == exports[1] == exports[2]
+
+
+def test_answer_revision_updates_the_existing_single_note_identity():
+    guids = []
+    for answer in ("원래 답", "수정된 답"):
+        buffer, _ = build_anki_package(
+            title="정답 수정", content="",
+            cards=[{"front": "질문", "back": answer, "chapter": "1장"}],
+        )
+        guids.append(_package_notes(buffer)[0][0])
+    assert guids[0] == guids[1] == genanki.guid_for("정답 수정", "1장", "질문")
+
+
+def test_deduplication_keeps_front_and_back_boundaries():
+    cards = parse_anki_cards("", cards=[
+        {"front": "a b", "back": "c"},
+        {"front": "a", "back": "b c"},
+        {"front": "A B", "back": " C "},
+    ])
+    assert len(cards) == 2
+
+
+def test_retention_answer_does_not_include_following_section():
+    cards = parse_anki_cards(
+        STANDARD_RETENTION + "\n### 추가 학습\n카드에 들어가면 안 되는 설명",
+        style="retention_cards",
+    )
+    assert len(cards) == 2
+    assert "추가 학습" not in cards[-1].back
+    assert "카드에 들어가면 안 되는 설명" not in cards[-1].back
+
+
+@pytest.mark.parametrize("choices,answer", [
+    ("A. 하나\nB. 둘", "D"),
+    ("A. 하나\nA. 둘", "A"),
+])
+def test_invalid_quiz_choices_do_not_create_unanswerable_cards(choices, answer):
+    with pytest.raises(AnkiExportError, match="카드를 찾지 못했습니다"):
+        parse_anki_cards(
+            f"1. **질문**: 문제\n{choices}\n**정답**: {answer}\n**해설**: 설명",
+            style="quiz",
+        )
+
+
+def test_explanation_list_is_not_mistaken_for_question_choices():
+    cards = parse_anki_cards(
+        "1. **질문**: 문제\nA. 하나\nB. 둘\n**정답**: A\n"
+        "**해설**: 이유\nA. 해설 항목\nB. 추가 해설",
+        style="quiz",
+    )
+    assert "해설 항목" not in cards[0].front
+    assert "해설 항목" in cards[0].back

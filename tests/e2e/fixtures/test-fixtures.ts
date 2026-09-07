@@ -56,19 +56,14 @@ class MainPageHelper {
     await this.dismissOnboarding();
   }
 
-  /** 온보딩 모달이 보이면 모델 유무에 따라 시작하거나 영속적으로 닫는다. */
+  /** 온보딩 모달이 보이면 시작 버튼으로 완료한다. */
   async dismissOnboarding() {
     const startBtn = this.page.getByRole('button', { name: '시작하기' });
     // 온보딩 모달 표시까지 잠시 대기
     const visible = await startBtn.isVisible().catch(() => false);
     if (visible) {
-      if (await startBtn.isEnabled()) {
-        await startBtn.click();
-      } else {
-        // 모델 로드 실패 시 Start는 의도적으로 disabled다. Esc도 동일한
-        // onOpenChange(false) → dismiss 경로를 타며 완료 상태를 저장한다.
-        await this.page.keyboard.press('Escape');
-      }
+      await expect(startBtn).toBeEnabled();
+      await startBtn.click();
       // 모달 닫힘 대기
       await startBtn.waitFor({ state: 'hidden', timeout: 3000 }).catch(() => {});
     }

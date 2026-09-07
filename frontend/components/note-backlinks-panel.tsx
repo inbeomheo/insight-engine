@@ -6,29 +6,32 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
 import { getNoteBacklinks, type NoteBacklink } from '@/lib/note-graph';
+import { useAuthUserId } from '@/hooks/useAuthUserId';
 
 export function NoteBacklinksPanel() {
+  const authUserId = useAuthUserId();
   const pathname = usePathname();
   const noteId = useMemo(() => {
     if (pathname === '/notes/graph') return null;
     const match = pathname.match(/^\/notes\/([^/]+)$/);
     return match ? decodeURIComponent(match[1]) : null;
   }, [pathname]);
+  if (!noteId) return null;
+  return (
+    <AccountNoteBacklinksPanel
+      key={`${authUserId ? `user:${authUserId}` : 'anonymous'}:${noteId}`}
+      noteId={noteId}
+    />
+  );
+}
+
+function AccountNoteBacklinksPanel({ noteId }: { noteId: string }) {
   const [notes, setNotes] = useState<NoteBacklink[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!noteId) {
-      setNotes([]);
-      setError(null);
-      setLoading(false);
-      return;
-    }
-
     let alive = true;
-    setLoading(true);
-    setError(null);
     getNoteBacklinks(noteId)
       .then((result) => {
         if (alive) setNotes(result.notes);
@@ -44,8 +47,6 @@ export function NoteBacklinksPanel() {
       alive = false;
     };
   }, [noteId]);
-
-  if (!noteId) return null;
 
   return (
     <aside className="mx-auto w-full max-w-4xl px-4 pb-10 sm:px-6" aria-labelledby="note-backlinks-title">

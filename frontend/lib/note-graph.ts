@@ -1,4 +1,4 @@
-import { apiUrl } from '@/lib/api';
+import { isApiError, request } from '@/lib/api';
 
 export interface NoteGraphNode {
   id: string;
@@ -38,15 +38,14 @@ export interface NoteGraphPoint extends NoteGraphNode {
 }
 
 async function readJson<T>(path: string): Promise<T> {
-  const res = await fetch(apiUrl(path));
-  if (res.status === 401 || res.status === 403) {
-    throw new Error('로그인이 필요합니다.');
+  try {
+    return await request<T>(path);
+  } catch (error) {
+    if (isApiError(error) && (error.status === 401 || error.status === 403)) {
+      throw new Error('로그인이 필요합니다.');
+    }
+    throw error;
   }
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body?.error || '노트 관계를 불러오지 못했습니다.');
-  }
-  return res.json();
 }
 
 export async function getNoteGraph(): Promise<NoteGraphResponse> {

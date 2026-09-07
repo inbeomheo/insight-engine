@@ -240,17 +240,17 @@ describe('단일 ChatMock 서비스 UI', () => {
     expect(mocks.ui.setOnboardingOpen).toHaveBeenCalledWith(false);
   });
 
-  it('온보딩에서 서비스가 없으면 안내하고 시작은 비활성화한다', async () => {
+  it('온보딩에서 서비스가 없으면 안내하고 시작으로 닫을 수 있다', async () => {
     const view = await render(<OnboardingModal />);
     expect(view.textContent).toContain('AI 서버에 연결할 수 없습니다');
 
-    // 시작은 모델 의존 게이트로 유지하고 X/Esc/오버레이가 영속적인 탈출구다.
     const startButton = findButton(view, '시작');
-    expect(startButton?.disabled).toBe(true);
-    expect(mocks.setOnboardingDone).not.toHaveBeenCalled();
+    expect(startButton?.disabled).toBe(false);
+    await act(async () => startButton?.click());
+    expect(mocks.setOnboardingDone).toHaveBeenCalledOnce();
   });
 
-  it('온보딩에서 모델이 없으면 안내하고 시작은 비활성화한다', async () => {
+  it('온보딩에서 모델이 없으면 안내하고 시작으로 닫을 수 있다', async () => {
     setChatMockProvider();
     mocks.settings.providers.chatmock.models = [];
     const view = await render(<OnboardingModal />);
@@ -258,8 +258,9 @@ describe('단일 ChatMock 서비스 UI', () => {
     expect(view.textContent).toContain('사용 가능한 ChatMock 모델이 없습니다');
 
     const startButton = findButton(view, '시작');
-    expect(startButton?.disabled).toBe(true);
-    expect(mocks.setOnboardingDone).not.toHaveBeenCalled();
+    expect(startButton?.disabled).toBe(false);
+    await act(async () => startButton?.click());
+    expect(mocks.setOnboardingDone).toHaveBeenCalledOnce();
   });
 
   it('설정에서 서비스 정보와 단일 모델 선택 동작만 제공한다', async () => {

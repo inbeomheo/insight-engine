@@ -102,7 +102,7 @@ class ResearchAgent(BaseAgent):
         web_results = []
         web_context = ''
         search_query = research_data.get('search_query', '')
-        if search_query:
+        if context.get('web_search', False) and search_query:
             try:
                 from services.data import web_search_service
                 web_results = web_search_service.search(

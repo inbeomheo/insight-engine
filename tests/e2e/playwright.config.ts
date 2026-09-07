@@ -1,9 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const backendCommand = 'node scripts/run_python.cjs app.py';
-const frontendCommand = 'node node_modules/next/dist/bin/next dev';
+const frontendPort = process.env.PLAYWRIGHT_FRONTEND_PORT || '3000';
+const frontendCommand = `node node_modules/next/dist/bin/next dev --hostname 127.0.0.1 --port ${frontendPort}`;
 const backendUrl = 'http://127.0.0.1:5001';
-const frontendUrl = 'http://127.0.0.1:3000';
+const frontendUrl = `http://127.0.0.1:${frontendPort}`;
 
 /**
  * Insight Engine E2E 테스트 설정
@@ -117,7 +118,7 @@ export default defineConfig({
       dependencies: ['auth-setup'],
       use: {
         ...devices['Desktop Chrome'],
-        storageState: '.auth/user.json',
+        storageState: '../test-results/auth/user.json',
       },
     },
 

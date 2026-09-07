@@ -1,12 +1,16 @@
 import { act, useEffect } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { generate, generateStream } from '@/lib/api';
-import type { StreamEvent } from '@/lib/types';
+import { generate, generateStream, generateBatch, generateMerged } from '@/lib/api';
+import type { GenerateResponse, StreamEvent } from '@/lib/types';
+import { toast } from 'sonner';
 import { useResultStore } from '@/stores/resultStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useGenerate } from './useGenerate';
 import { setAuthSession, type AuthSession } from '@/lib/auth-session';
+
+(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean })
+  .IS_REACT_ACT_ENVIRONMENT = true;
 
 vi.mock('@/lib/api', () => ({
   generate: vi.fn(),
@@ -23,6 +27,12 @@ vi.mock('sonner', () => ({
 }));
 
 type GenerateHook = ReturnType<typeof useGenerate>;
+type BatchOutcome = Awaited<ReturnType<GenerateHook['generateBatchUrls']>>;
+
+const RESPONSE: GenerateResponse = {
+  title: '생성 결과', content: '생성 본문', html: '<p>생성 본문</p>',
+  usage: { total_tokens: 1 }, elapsed_time: 1, prompt: '',
+};
 
 function authSession(userId: string): AuthSession {
   return { user: { id: userId }, session: { access_token: `${userId}-token` } };
@@ -300,7 +310,7 @@ describe('useGenerate 스트리밍 UX', () => {
     expect(rendered.hook.error).toBeNull();
   });
 
-  it('단일 URL 배치는 A 응답 대기 중 B로 전환되면 false를 반환한다', async () => {
+  it('단일 URL 배치는 A 응답 대기 중 B로 전환되면 성공 URL을 반환하지 않는다', async () => {
     setAuthSession(authSession('account-a'));
     const pending = deferred<{
       title: string;
@@ -312,7 +322,7 @@ describe('useGenerate 스트리밍 UX', () => {
     }>();
     vi.mocked(generate).mockImplementationOnce(() => pending.promise);
     const rendered = await renderHook();
-    let generation!: Promise<boolean>;
+    let generation!: Promise<BatchOutcome>;
 
     await act(async () => {
       generation = rendered.hook.generateBatchUrls(['https://youtu.be/account-a']);
@@ -320,7 +330,7 @@ describe('useGenerate 스트리밍 UX', () => {
     });
 
     await act(async () => setAuthSession(authSession('account-b')));
-    let succeeded = true;
+    let outcome: BatchOutcome = { succeededUrls: ['https://youtu.be/account-a'] };
     await act(async () => {
       pending.resolve({
         title: 'A 늦은 결과',
@@ -330,10 +340,109 @@ describe('useGenerate 스트리밍 UX', () => {
         elapsed_time: 1,
         prompt: 'A prompt',
       });
-      succeeded = await generation;
+      outcome = await generation;
     });
 
-    expect(succeeded).toBe(false);
+    expect(outcome.succeededUrls).toEqual([]);
     expect(useResultStore.getState().reports).toEqual([]);
+  });
+
+  it('부분 성공은 성공 결과만 저장하고 실패 URL과 원인을 안내한다', async () => {
+    const urls = ['https://example.com/success', 'https://example.com/failure'];
+    vi.mocked(generateBatch).mockResolvedValueOnce({ results: [
+      { ...RESPONSE, url: urls[0], success: true },
+      { url: urls[1], success: false, error: '자막을 찾을 수 없습니다.' },
+    ] });
+    useSettingsStore.setState({ detailLevel: 'deep', transcriptLanguage: 'ja', enableWebSearch: true, enableAgentMode: true });
+    const rendered = await renderHook();
+    let outcome!: BatchOutcome;
+    await act(async () => { outcome = await rendered.hook.generateBatchUrls(urls); });
+
+    expect(outcome.succeededUrls).toEqual([urls[0]]);
+    expect(useResultStore.getState().reports.map((report) => report.url)).toEqual([urls[0]]);
+    expect(toast.warning).toHaveBeenCalledWith('1개 URL 처리 실패', {
+      description: `${urls[1]}: 자막을 찾을 수 없습니다.`,
+    });
+    expect(generateBatch).toHaveBeenCalledWith(urls, 'gpt-test', 'blog_seo', expect.any(Object), undefined, {
+      detail_level: 'deep', transcript_language: 'ja', enable_web_search: true, enable_agent_mode: true,
+    });
+    expect(rendered.hook.isLoading).toBe(false);
+    expect(rendered.hook.error).toBeNull();
+  });
+
+  it('모두 실패하면 결과를 저장하지 않고 모든 URL별 오류를 남긴다', async () => {
+    const urls = ['https://example.com/first', 'https://example.com/second'];
+    vi.mocked(generateBatch).mockResolvedValueOnce({ results: urls.map((url, index) => ({ url, success: false, error: `오류 ${index + 1}` })) });
+    const rendered = await renderHook();
+    let outcome!: BatchOutcome;
+    await act(async () => { outcome = await rendered.hook.generateBatchUrls(urls); });
+
+    expect(outcome.succeededUrls).toEqual([]);
+    expect(useResultStore.getState().reports).toEqual([]);
+    expect(rendered.hook.error).toContain(`${urls[0]}: 오류 1`);
+    expect(rendered.hook.error).toContain(`${urls[1]}: 오류 2`);
+    expect(rendered.hook.isLoading).toBe(false);
+  });
+
+  it('모두 성공하면 모든 성공 URL을 반환한다', async () => {
+    const urls = ['https://example.com/first', 'https://example.com/second'];
+    vi.mocked(generateBatch).mockResolvedValueOnce({ results: urls.map((url) => ({ ...RESPONSE, url, success: true })) });
+    const rendered = await renderHook();
+    let outcome!: BatchOutcome;
+    await act(async () => { outcome = await rendered.hook.generateBatchUrls(urls); });
+
+    expect(outcome.succeededUrls).toEqual(urls);
+    expect(useResultStore.getState().reports).toHaveLength(2);
+    expect(toast.warning).not.toHaveBeenCalled();
+    expect(rendered.hook.error).toBeNull();
+  });
+
+  it('응답에서 누락된 URL은 성공으로 취급하지 않는다', async () => {
+    const urls = ['https://example.com/success', 'https://example.com/missing'];
+    vi.mocked(generateBatch).mockResolvedValueOnce({ results: [{ ...RESPONSE, url: urls[0], success: true }] });
+    const rendered = await renderHook();
+    let outcome!: BatchOutcome;
+    await act(async () => { outcome = await rendered.hook.generateBatchUrls(urls); });
+
+    expect(outcome.succeededUrls).toEqual([urls[0]]);
+    expect(toast.warning).toHaveBeenCalledWith('1개 URL 처리 실패', {
+      description: `${urls[1]}: 생성 결과를 받지 못했습니다.`,
+    });
+  });
+
+  it('이전 계정의 늦은 다중 배치 응답은 결과와 알림을 적용하지 않는다', async () => {
+    setAuthSession(authSession('account-a'));
+    const urls = ['https://example.com/first', 'https://example.com/second'];
+    const pending = deferred<Awaited<ReturnType<typeof generateBatch>>>();
+    vi.mocked(generateBatch).mockImplementationOnce(() => pending.promise);
+    const rendered = await renderHook();
+    let generation!: Promise<BatchOutcome>;
+    await act(async () => { generation = rendered.hook.generateBatchUrls(urls); });
+    await act(async () => setAuthSession(authSession('account-b')));
+    let outcome!: BatchOutcome;
+    await act(async () => {
+      pending.resolve({ results: [
+        { ...RESPONSE, url: urls[0], success: true },
+        { url: urls[1], success: false, error: '이전 계정 오류' },
+      ] });
+      outcome = await generation;
+    });
+
+    expect(outcome.succeededUrls).toEqual([]);
+    expect(useResultStore.getState().reports).toEqual([]);
+    expect(toast.warning).not.toHaveBeenCalled();
+    expect(rendered.hook.isLoading).toBe(false);
+    expect(rendered.hook.error).toBeNull();
+  });
+
+  it('합쳐서 생성에도 선택한 자막 언어를 전달한다', async () => {
+    const urls = ['https://example.com/first', 'https://example.com/second'];
+    useSettingsStore.setState({ transcriptLanguage: 'en' });
+    vi.mocked(generateMerged).mockResolvedValueOnce({ ...RESPONSE, id: 'merged', merged: true, source_videos: [] });
+    const rendered = await renderHook();
+    await act(async () => { await rendered.hook.generateMergedUrls(urls); });
+
+    expect(generateMerged).toHaveBeenCalledWith(urls, 'gpt-test', 'blog_seo', expect.any(Object), undefined, 'en');
+    expect(useResultStore.getState().reports[0].merged).toBe(true);
   });
 });

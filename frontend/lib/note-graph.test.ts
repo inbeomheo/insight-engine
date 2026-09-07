@@ -1,8 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { setAuthSession } from './auth-session';
 
 import {
   buildCircularGraphLayout,
   connectedNodeIds,
+  getNoteBacklinks,
+  getNoteGraph,
   type NoteGraphNode,
 } from './note-graph';
 
@@ -11,6 +14,32 @@ const node = (id: string): NoteGraphNode => ({
   title: `note-${id}`,
   key_concepts: [],
   created_at: '',
+});
+
+afterEach(() => {
+  setAuthSession(null);
+  vi.unstubAllGlobals();
+});
+
+describe('노트 관계 인증 요청', () => {
+  it('그래프와 역방향 요청에 현재 사용자 인증 토큰을 전달한다', async () => {
+    const fetchMock = vi.fn().mockImplementation(async () => new Response('{}', { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    setAuthSession({ user: { id: 'user-a' }, session: { access_token: 'token-a' } });
+    await getNoteGraph();
+    setAuthSession({ user: { id: 'user-b' }, session: { access_token: 'token-b' } });
+    await getNoteBacklinks('note/id');
+
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/notes/graph');
+    expect(fetchMock.mock.calls[0][1].headers.get('Authorization')).toBe('Bearer token-a');
+    expect(fetchMock.mock.calls[1][0]).toBe('/api/notes/note%2Fid/backlinks');
+    expect(fetchMock.mock.calls[1][1].headers.get('Authorization')).toBe('Bearer token-b');
+  });
+
+  it.each([401, 403])('인증 거절 %i를 화면용 오류로 전달한다', async (status) => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{}', { status })));
+    await expect(getNoteGraph()).rejects.toThrow('로그인이 필요합니다.');
+  });
 });
 
 describe('note graph helpers', () => {

@@ -295,8 +295,8 @@ export default function Home() {
   const handleGenerate = useCallback(async () => {
     if (urls.length === 0) return;
     const submitted = [...urls];
-    const ok = await generateBatchUrls(submitted);
-    if (ok) startTransition(() => submitted.forEach(removeUrl));
+    const { succeededUrls } = await generateBatchUrls(submitted);
+    startTransition(() => succeededUrls.forEach(removeUrl));
   }, [urls, generateBatchUrls, removeUrl]);
 
   // 직접 텍스트 입력 → 생성
@@ -335,11 +335,14 @@ export default function Home() {
       if (submitted.length < 2) return;
       ok = await generateFusionUrls(submitted);
     } else {
-      ok = await generateBatchUrls(submitted);
+      if (draft && !urls.includes(draft)) addUrl(draft);
+      const { succeededUrls } = await generateBatchUrls(submitted);
+      startTransition(() => succeededUrls.forEach(removeUrl));
+      return;
     }
 
     if (ok) startTransition(() => urls.forEach(removeUrl));
-  }, [urls, generationMode, generateBatchUrls, generateMergedUrls, generateFusionUrls, removeUrl]);
+  }, [urls, generationMode, generateBatchUrls, generateMergedUrls, generateFusionUrls, addUrl, removeUrl]);
 
   const handleClipboardUrl = useCallback((text: string) => {
     const matches = text.match(/https?:\/\/[^\s]+/g);

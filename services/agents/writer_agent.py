@@ -26,7 +26,6 @@ _WRITER_SYSTEM_CONTEXT = """당신은 전문 콘텐츠 작성자입니다. 아�
 
 위 정보를 바탕으로 마크다운 형식의 콘텐츠를 작성하세요.
 첫 줄은 반드시 '# 제목' 형식의 H1 제목으로 시작하세요.
-결과는 반드시 한국어로 작성하세요.
 """
 
 
@@ -68,7 +67,10 @@ class WriterAgent(BaseAgent):
         """
         transcript = context.get('transcript', '')
         style_prompt = context.get('style_prompt', '')
-        modifiers = context.get('modifiers') or {}
+        from config import DETAIL_PRESETS, LENGTH_MAX_TOKENS, STYLE_TEMPERATURE
+        from prompts.modifiers import DEFAULT_MODIFIERS, build_modifier_text
+        modifiers = {**DEFAULT_MODIFIERS, **(context.get('modifiers') or {})}
+        detail = DETAIL_PRESETS.get(context.get('detail_level'), DETAIL_PRESETS['standard'])
 
         # ResearchAgent 결과
         main_topic = context.get('main_topic', '')
@@ -98,14 +100,18 @@ class WriterAgent(BaseAgent):
             web_context_block=web_context_block,
             style_prompt=style_prompt or '블로그 형식으로 자연스럽게 작성하세요.',
         )
+        prompt += '\n[추가 지시사항]\n' + build_modifier_text(modifiers)
+        if detail.get('prompt_suffix'):
+            prompt += '\n\n[상세도 지시]\n' + detail['prompt_suffix']
 
         # 길이 모디파이어에 따른 max_tokens
-        from config import LENGTH_MAX_TOKENS
         length = modifiers.get('length', 'medium')
-        max_tokens = LENGTH_MAX_TOKENS.get(length, 8000)
+        max_tokens = int(LENGTH_MAX_TOKENS.get(length, 8000) * detail['max_tokens_multiplier'])
+        temperature = max(0.0, min(1.0, STYLE_TEMPERATURE.get(context.get('style'), 0.7)
+                                   + detail['temperature_offset']))
 
         try:
-            draft = self._call_ai(prompt, temperature=0.7, max_tokens=max_tokens)
+            draft = self._call_ai(prompt, temperature=temperature, max_tokens=max_tokens)
         except Exception as e:
             self._logger.error(f'[WriterAgent] 콘텐츠 작성 실패: {e}')
             raise

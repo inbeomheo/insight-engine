@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { clearCache, generate, synthesizeTts, uploadKnowledge } from './api';
+import { clearCache, downloadNotebookLmArtifact, fetchProviders, generate, synthesizeTts, uploadKnowledge } from './api';
 
 afterEach(() => {
   vi.useRealTimers();
@@ -15,6 +15,55 @@ function pendingFetchUntilAborted() {
     })
   ));
 }
+
+function pendingBodyUntilAborted(kind: 'json' | 'blob') {
+  return vi.fn().mockImplementation((_url: string, init?: RequestInit) => (
+    Promise.resolve({
+      ok: true,
+      [kind]: () => new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => {
+          reject(new DOMException('aborted', 'AbortError'));
+        }, { once: true });
+      }),
+    })
+  ));
+}
+
+describe('응답 본문 수신 중 시간 제한과 취소', () => {
+  it('헤더가 도착했어도 JSON 본문이 멈추면 시간 초과를 반환한다', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('fetch', pendingBodyUntilAborted('json'));
+    const failure = fetchProviders().catch((error: unknown) => error);
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(await failure).toEqual(expect.objectContaining({
+      message: expect.stringContaining('10초'),
+    }));
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('파일 본문이 멈추면 다운로드 제한 시간이 적용된다', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('fetch', pendingBodyUntilAborted('blob'));
+    const failure = downloadNotebookLmArtifact('test-artifact').catch((error: unknown) => error);
+    await vi.advanceTimersByTimeAsync(600_000);
+    expect(await failure).toEqual(expect.objectContaining({
+      message: expect.stringContaining('600초'),
+    }));
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('파일 본문 수신 중 사용자가 취소하면 즉시 중단한다', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('fetch', pendingBodyUntilAborted('blob'));
+    const controller = new AbortController();
+    const failure = downloadNotebookLmArtifact('test-artifact', controller.signal)
+      .catch((error: unknown) => error);
+    await vi.advanceTimersByTimeAsync(0);
+    controller.abort();
+    expect(await failure).toEqual(expect.objectContaining({ name: 'AbortError' }));
+    expect(vi.getTimerCount()).toBe(0);
+  });
+});
 
 describe('clearCache', () => {
   it('전체 삭제 의도를 명시해 백엔드의 안전한 캐시 계약을 지킨다', async () => {

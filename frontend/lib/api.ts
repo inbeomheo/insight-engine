@@ -93,7 +93,7 @@ export function isApiError<T = unknown>(err: unknown): err is ApiError<T> {
   return err instanceof Error && ('status' in err || 'body' in err);
 }
 
-async function request<T>(url: string, init?: RequestInit): Promise<T> {
+export async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const timeoutMs = timeoutFor(url);
   const controller = new AbortController();
   let timedOut = false;
@@ -136,7 +136,8 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
       error.body = body;
       throw error;
     }
-    return res.json();
+    // 본문 수신까지 기다려야 시간 제한과 외부 취소 연결이 유지된다.
+    return await res.json();
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError') {
       if (!timedOut) throw err;
@@ -172,7 +173,7 @@ async function requestBlob(url: string, init?: RequestInit): Promise<Blob> {
       const body = await res.json().catch(() => ({}));
       throw new Error(body.error || `HTTP ${res.status}`);
     }
-    return res.blob();
+    return await res.blob();
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError') {
       if (!timedOut) throw err;
@@ -351,18 +352,30 @@ export async function generateStream(
 }
 
 // 배치 생성
+export interface BatchGenerateOptions {
+  detail_level?: GenerateRequest['detail_level'];
+  transcript_language?: GenerateRequest['transcript_language'];
+  enable_web_search?: boolean;
+  enable_agent_mode?: boolean;
+}
+
+export type BatchGenerateResult =
+  | (GenerateResponse & { url: string; success: true })
+  | { url: string; success: false; error?: string };
+
 export async function generateBatch(
   urls: string[],
   model: string,
   style: string,
   modifiers: GenerateRequest['modifiers'],
-  customPrompt?: string
+  customPrompt?: string,
+  options: BatchGenerateOptions = {},
 ) {
-  return request<{ results: Array<GenerateResponse & { url: string; success: boolean }> }>(
+  return request<{ results: BatchGenerateResult[] }>(
     '/generate-batch',
     {
       method: 'POST',
-      body: JSON.stringify({ urls, model, style, modifiers, customPrompt }),
+      body: JSON.stringify({ urls, model, style, modifiers, customPrompt, ...options }),
     }
   );
 }
@@ -379,11 +392,12 @@ export async function generateMerged(
   model: string,
   style: string,
   modifiers: Modifiers,
-  customPrompt?: string
+  customPrompt?: string,
+  transcriptLanguage?: GenerateRequest['transcript_language'],
 ): Promise<MergedGenerateResponse> {
   return request('/api/generate-merged', {
     method: 'POST',
-    body: JSON.stringify({ urls, model, style, modifiers, customPrompt }),
+    body: JSON.stringify({ urls, model, style, modifiers, customPrompt, transcript_language: transcriptLanguage }),
   });
 }
 

@@ -95,9 +95,15 @@ class EditorAgent(BaseAgent):
             summary=summary[:500] if summary else '요약 없음',
             draft=draft,
         )
+        from config import DETAIL_PRESETS, LENGTH_MAX_TOKENS
+        detail = DETAIL_PRESETS.get(context.get('detail_level'), DETAIL_PRESETS['standard'])
+        length = (context.get('modifiers') or {}).get('length', 'medium')
+        # 긴 초안을 작성한 뒤 더 작은 교정 상한으로 끝부분을 잃지 않게 한다.
+        max_tokens = max(12000, int(LENGTH_MAX_TOKENS.get(length, 8000)
+                                    * detail['max_tokens_multiplier']))
 
         try:
-            edited = self._call_ai(edit_prompt, temperature=0.3, max_tokens=12000)
+            edited = self._call_ai(edit_prompt, temperature=0.3, max_tokens=max_tokens)
         except UsageLockUnavailable:
             raise
         except Exception as e:

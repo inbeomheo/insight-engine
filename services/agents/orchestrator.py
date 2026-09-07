@@ -49,7 +49,8 @@ class Orchestrator:
         self._seo = SEOAgent(model=model, on_cost_start=on_cost_start)
 
     def run(self, transcript: str, style: str, style_prompt: str,
-            url: str = '', modifiers: dict = None, user_id: str = None) -> dict:
+            url: str = '', modifiers: dict = None, user_id: str = None,
+            detail_level: str = None, web_search: bool = False) -> dict:
         """전체 파이프라인을 실행합니다.
 
         Args:
@@ -59,6 +60,8 @@ class Orchestrator:
             url: YouTube 영상 URL (SEO 스키마 생성용, 옵션)
             modifiers: 모디파이어 dict (length, writing_style 등)
             user_id: 사용자 ID (로깅용, 옵션)
+            detail_level: 생성 상세도 (brief/standard/deep)
+            web_search: 사용자가 웹 검색 보강을 활성화했는지 여부
 
         Returns:
             {
@@ -85,6 +88,8 @@ class Orchestrator:
             'url': url,
             'modifiers': modifiers,
             'user_id': user_id,
+            'detail_level': detail_level,
+            'web_search': web_search,
         }
 
         agent_results = {}

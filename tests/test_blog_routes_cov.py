@@ -407,7 +407,7 @@ class TestGenerateBatchRoute(_Base):
 
         def fail_after_provider(
             _app, url, _model, _style, _modifiers, _custom_prompt,
-            on_cost_start,
+            on_cost_start, **_options,
         ):
             on_cost_start()
             return {

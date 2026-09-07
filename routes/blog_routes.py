@@ -826,6 +826,8 @@ def generate():
                     url=url,
                     modifiers=params['modifiers'] or {},
                     user_id=user_id,
+                    detail_level=params.get('detail_level'),
+                    web_search=bool(request_data_all.get('web_search', False)),
                 )
                 result = {
                     'title': agent_output['title'],
@@ -963,7 +965,7 @@ def generate_batch():
 
         data = request.get_json()
 
-        if not data:
+        if not data or not isinstance(data, dict):
             current_app.logger.error("No JSON data received")
             return api_error('JSON 데이터가 제공되지 않았습니다', 400)
 
@@ -974,9 +976,16 @@ def generate_batch():
             )
         except ValueError as exc:
             return api_error(str(exc), 400, 'UNSUPPORTED_MODEL')
-        style = data.get('style', DEFAULT_STYLE)
-        modifiers = data.get('modifiers')
-        custom_prompt = data.get('customPrompt')
+        modifiers, _ = _validate_modifiers(data.get('modifiers'))
+        custom_prompt, _ = _validate_custom_prompt(data.get('customPrompt'))
+        style = _validate_style(data.get('style', DEFAULT_STYLE), custom_prompt)
+        transcript_language, language_error = _validate_transcript_language(data.get('transcript_language'))
+        if language_error:
+            return api_error(language_error, 400)
+        raw_detail = data.get('detail_level')
+        detail_level = raw_detail if isinstance(raw_detail, str) and raw_detail in {'brief', 'standard', 'deep'} else 'standard'
+        web_search = bool(data.get('web_search', data.get('enable_web_search', False)))
+        agent_mode = bool(data.get('agent_mode', data.get('enable_agent_mode', False)))
 
         current_app.logger.info(
             "Batch request accepted: url_count=%d model=%s",
@@ -988,6 +997,9 @@ def generate_batch():
             return api_error('URL 목록이 제공되지 않았습니다', 400)
         if len(urls) > MAX_BATCH_URLS:
             return api_error(f'최대 {MAX_BATCH_URLS}개의 URL만 처리할 수 있습니다', 400)
+        if any(not isinstance(url, str) or not url.strip() for url in urls):
+            return api_error('URL 목록에는 비어 있지 않은 주소 문자열만 입력해주세요.', 400)
+        urls = [url.strip() for url in urls]
 
         # 입력 검증 뒤, 비용 작업 제출 전 원자적·멱등 예약을 확보한다.
         user_id = getattr(g, 'user_id', None)
@@ -1023,6 +1035,8 @@ def generate_batch():
             return _process_single_url(
                 app, url, model, style, modifiers, custom_prompt,
                 _commit_batch_charge,
+                detail_level=detail_level, transcript_language=transcript_language,
+                web_search=web_search, agent_mode=agent_mode, user_id=user_id,
             )
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_BATCH_WORKERS) as executor:
@@ -1086,7 +1100,6 @@ def generate_batch():
         updated_usage = usage_reservation.usage_after
 
         # P2 버그 #7 수정: 배치 히스토리 저장 (N+1 → 배치 INSERT)
-        # 배치에서는 transcript, usage, elapsed_time이 None (P3 #13 문서화)
         if g.user_id:
             histories_to_save = []
             for result in ordered_results:
@@ -1100,9 +1113,10 @@ def generate_batch():
                         'style': style,
                         'content': result.get('content', ''),
                         'html': result.get('html', ''),
-                        'transcript': None,
-                        'usage': None,
-                        'elapsed_time': None
+                        'transcript': result.get('transcript'),
+                        'transcript_source': result.get('transcript_source'),
+                        'usage': result.get('usage'),
+                        'elapsed_time': result.get('elapsed_time'),
                     })
 
             # 배치 INSERT — Content/Library BC에 위임 (sanitize + batch INSERT 통합 처리)

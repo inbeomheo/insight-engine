@@ -60,17 +60,23 @@ vi.mock('@/components/mobile/MobileAppShell', () => ({
     urls,
     inputTab,
     textValue,
+    onGenerate,
   }: {
     urls: string[];
     inputTab: string;
     textValue: string;
+    onGenerate: (draftUrl?: string) => void;
   }) => (
+    <>
     <output
       data-testid="mobile-source-state"
       data-input-tab={inputTab}
       data-text-value={textValue}
       data-urls={urls.join(',')}
     />
+    <button onClick={() => onGenerate()}>모바일 생성 테스트</button>
+    <button onClick={() => onGenerate('https://example.com/mobile-draft')}>모바일 입력 생성 테스트</button>
+    </>
   ),
 }));
 vi.mock('@/hooks/useProviders', () => ({ useProviders: () => undefined }));
@@ -173,7 +179,7 @@ describe('Home 계정 전환 입력 격리', () => {
       enableAgentMode: false,
     });
     useUIStore.setState({ activeReportId: null, activeModal: null });
-    generateBatchUrlsMock.mockReset().mockResolvedValue(true);
+    generateBatchUrlsMock.mockReset().mockImplementation(async (urls: string[]) => ({ succeededUrls: urls }));
     generateFusionUrlsMock.mockReset().mockResolvedValue(true);
     generateFromTextMock.mockReset().mockResolvedValue(true);
     generateMergedUrlsMock.mockReset().mockResolvedValue(true);
@@ -250,7 +256,7 @@ describe('Home 계정 전환 입력 격리', () => {
   });
 
   it('A의 늦은 생성 후 제거 콜백이 B URL 큐를 삭제하지 않는다', async () => {
-    const pending = deferred<boolean>();
+    const pending = deferred<{ succeededUrls: string[] }>();
     generateBatchUrlsMock.mockImplementationOnce(() => pending.promise);
     setAuthSession(authSession('account-a'));
     await act(async () => root.render(<Home />));
@@ -268,11 +274,63 @@ describe('Home 계정 전환 입력 격리', () => {
       .toBe('https://b.example/video');
 
     await act(async () => {
-      pending.resolve(true);
+      pending.resolve({ succeededUrls: ['https://a.example/video'] });
       await Promise.resolve();
       await Promise.resolve();
     });
     expect(document.querySelector('[data-testid="mobile-source-state"]')?.getAttribute('data-urls'))
       .toBe('https://b.example/video');
+  });
+
+  it.each(['desktop', 'mobile'])('%s 배치의 부분 성공 후 실패 URL과 새 입력을 남긴다', async (surface) => {
+    const succeededUrl = 'https://example.com/success';
+    const failedUrl = 'https://example.com/failure';
+    const newUrl = 'https://example.com/new';
+    const pending = deferred<{ succeededUrls: string[] }>();
+    generateBatchUrlsMock.mockImplementationOnce(() => pending.promise);
+    await act(async () => root.render(<Home />));
+    await addDesktopUrl(succeededUrl);
+    await addDesktopUrl(failedUrl);
+    const button = surface === 'mobile'
+      ? findButton('모바일 생성 테스트')
+      : Array.from(document.querySelectorAll<HTMLButtonElement>('button')).find(
+        (candidate) => candidate.textContent?.includes('콘텐츠 생성'),
+      )!;
+    await act(async () => button.click());
+    expect(generateBatchUrlsMock).toHaveBeenCalledWith([succeededUrl, failedUrl]);
+    await addDesktopUrl(newUrl);
+    await act(async () => { pending.resolve({ succeededUrls: [succeededUrl] }); });
+
+    expect(document.querySelector('[data-testid="mobile-source-state"]')?.getAttribute('data-urls'))
+      .toBe(`${failedUrl},${newUrl}`);
+  });
+
+  it.each(['desktop', 'mobile'])('%s 배치가 모두 실패하면 모든 입력을 보존한다', async (surface) => {
+    const urls = ['https://example.com/first', 'https://example.com/second'];
+    generateBatchUrlsMock.mockResolvedValueOnce({ succeededUrls: [] });
+    await act(async () => root.render(<Home />));
+    for (const url of urls) await addDesktopUrl(url);
+    const button = surface === 'mobile'
+      ? findButton('모바일 생성 테스트')
+      : Array.from(document.querySelectorAll<HTMLButtonElement>('button')).find(
+        (candidate) => candidate.textContent?.includes('콘텐츠 생성'),
+      )!;
+    await act(async () => button.click());
+
+    expect(document.querySelector('[data-testid="mobile-source-state"]')?.getAttribute('data-urls'))
+      .toBe(urls.join(','));
+  });
+
+  it('모바일 입력창에서 바로 생성한 실패 주소도 재시도 목록에 남긴다', async () => {
+    generateBatchUrlsMock.mockResolvedValueOnce({ succeededUrls: [] });
+    await act(async () => root.render(<Home />));
+    await addDesktopUrl('https://example.com/first');
+    await act(async () => findButton('모바일 입력 생성 테스트').click());
+
+    expect(generateBatchUrlsMock).toHaveBeenCalledWith([
+      'https://example.com/first', 'https://example.com/mobile-draft',
+    ]);
+    expect(document.querySelector('[data-testid="mobile-source-state"]')?.getAttribute('data-urls'))
+      .toBe('https://example.com/first,https://example.com/mobile-draft');
   });
 });

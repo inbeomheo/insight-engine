@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable
+from functools import partial
 from typing import Any
 
 from services.content import note_index_service, note_service
@@ -24,6 +25,7 @@ RelatedLookup = Callable[[dict[str, Any], int], list[dict[str, Any]]]
 
 def build_note_graph(
     *,
+    owner_id: str | None,
     notes: Iterable[dict[str, Any]] | None = None,
     node_limit: int = DEFAULT_GRAPH_NODE_LIMIT,
     edge_limit: int = DEFAULT_GRAPH_EDGE_LIMIT,
@@ -41,11 +43,11 @@ def build_note_graph(
         MAX_GRAPH_RELATED_LIMIT,
     )
     min_score = _bounded_score(min_score, DEFAULT_GRAPH_MIN_SCORE)
-    source_notes = list(note_service.list_notes() if notes is None else notes)
+    source_notes = list(note_service.list_notes(owner_id=owner_id) if notes is None else notes)
     selected = _select_notes(source_notes, node_limit)
     nodes = [_graph_node(note) for note in selected]
     allowed_ids = {node["id"] for node in nodes}
-    lookup = related_lookup or _related_lookup
+    lookup = related_lookup or partial(_related_lookup, owner_id=owner_id)
 
     edge_by_key: dict[tuple[str, str], dict[str, Any]] = {}
     for note in selected:
@@ -89,6 +91,7 @@ def build_note_graph(
 def get_note_backlinks(
     note_id: str,
     *,
+    owner_id: str | None,
     notes: Iterable[dict[str, Any]] | None = None,
     scan_limit: int = DEFAULT_GRAPH_NODE_LIMIT,
     related_limit: int = DEFAULT_GRAPH_RELATED_LIMIT,
@@ -110,9 +113,11 @@ def get_note_backlinks(
     )
     result_limit = _bounded_int(result_limit, DEFAULT_BACKLINK_LIMIT, 1, MAX_BACKLINK_LIMIT)
     min_score = _bounded_score(min_score, DEFAULT_GRAPH_MIN_SCORE)
-    source_notes = list(note_service.list_notes() if notes is None else notes)
+    source_notes = list(note_service.list_notes(owner_id=owner_id) if notes is None else notes)
+    if not any(_note_id(note) == target_id for note in source_notes):
+        return []
     selected = _select_notes(source_notes, scan_limit, include_id=target_id)
-    lookup = related_lookup or _related_lookup
+    lookup = related_lookup or partial(_related_lookup, owner_id=owner_id)
 
     backlinks: dict[str, dict[str, Any]] = {}
     for note in selected:
@@ -180,8 +185,10 @@ def _graph_node(note: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _related_lookup(note: dict[str, Any], limit: int) -> list[dict[str, Any]]:
-    return note_index_service.get_related_notes(note, limit=limit)
+def _related_lookup(
+    note: dict[str, Any], limit: int, *, owner_id: str | None,
+) -> list[dict[str, Any]]:
+    return note_index_service.get_related_notes(note, owner_id=owner_id, limit=limit)
 
 
 def _safe_related(

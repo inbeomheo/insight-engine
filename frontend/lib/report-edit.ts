@@ -45,7 +45,7 @@ export function escapeHtmlText(value: string): string {
 }
 
 /** 사용자 제목에서 제어문자와 경로/파일시스템 예약문자를 제거한 다운로드 파일명 생성. */
-export function createDownloadFilename(title: string, extension: 'html' | 'md'): string {
+export function createDownloadFilename(title: string, extension: 'html' | 'md' | 'apkg'): string {
   const base = title
     .replace(/[\u0000-\u001f\u007f-\u009f/\\:*?"<>|]/g, '_')
     .replace(/\s+/g, ' ')
