@@ -146,8 +146,8 @@ def _get_model() -> str:
     from config import PROVIDER_API_KEYS
 
     candidates = [
-        'cliproxyapi/gpt-5.5',
-        'cliproxyapi/gpt-5.3-codex-spark',
+        'cliproxyapi/gpt-5.6-luna',
+        'cliproxyapi/gpt-5.6-luna',
     ]
     for model_id in candidates:
         provider = model_id.split('/')[0]

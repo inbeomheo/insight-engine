@@ -60,7 +60,7 @@ function cliProxyProviders() {
       name: 'CLIProxyAPI',
       models: [
         { id: 'cliproxyapi/gpt-5.5', name: 'GPT-5.5', max_input_tokens: 128000, price_input: 0, price_output: 0 },
-        { id: 'cliproxyapi/gpt-5.3-codex-spark', name: 'GPT-5.3 Codex Spark', max_input_tokens: 128000, price_input: 0, price_output: 0 },
+        { id: 'cliproxyapi/gpt-5.6-luna', name: 'GPT-5.6 Luna', max_input_tokens: 128000, price_input: 0, price_output: 0 },
       ],
     },
   };
@@ -80,7 +80,7 @@ describe('useProviders 단일 CLIProxyAPI 모델 동기화', () => {
     document.body.innerHTML = '';
   });
 
-  it('모델 순서와 관계없이 유효하지 않은 선택을 GPT-5.5로 메모리에서 복구한다', async () => {
+  it('모델 순서와 관계없이 유효하지 않은 선택을 Luna로 메모리에서 복구한다', async () => {
     const providers = cliProxyProviders();
     providers.cliproxyapi.models.reverse();
     mocks.query.data = { providers };
@@ -89,11 +89,11 @@ describe('useProviders 단일 CLIProxyAPI 모델 동기화', () => {
     await renderHook();
 
     expect(mocks.store.setProviders).toHaveBeenCalledWith(providers);
-    expect(mocks.setState).toHaveBeenCalledWith({ selectedModel: 'cliproxyapi/gpt-5.5' });
+    expect(mocks.setState).toHaveBeenCalledWith({ selectedModel: 'cliproxyapi/gpt-5.6-luna' });
     expect(mocks.store.setSelectedModel).not.toHaveBeenCalled();
   });
 
-  it.each(['gpt-5.5', 'gpt-5.3-codex-spark'])('ChatMock의 지원 모델 %s 선택은 메모리에서만 같은 모델로 연결한다', async (model) => {
+  it.each(['gpt-5.5', 'gpt-5.6-luna'])('ChatMock의 지원 모델 %s 선택은 메모리에서만 같은 모델로 연결한다', async (model) => {
     mocks.query.data = { providers: cliProxyProviders() };
     mocks.store.selectedModel = `chatmock/${model}`;
 
@@ -103,24 +103,34 @@ describe('useProviders 단일 CLIProxyAPI 모델 동기화', () => {
     expect(mocks.store.setSelectedModel).not.toHaveBeenCalled();
   });
 
-  it.each(['gpt-5.4-mini', 'gpt-5.4'])('지원이 종료된 ChatMock 모델 %s는 GPT-5.5로 복구한다', async (model) => {
+  it.each(['gpt-5.4-mini', 'gpt-5.4'])('지원이 종료된 ChatMock 모델 %s는 Luna로 복구한다', async (model) => {
     mocks.query.data = { providers: cliProxyProviders() };
     mocks.store.selectedModel = `chatmock/${model}`;
 
     await renderHook();
 
-    expect(mocks.setState).toHaveBeenCalledWith({ selectedModel: 'cliproxyapi/gpt-5.5' });
+    expect(mocks.setState).toHaveBeenCalledWith({ selectedModel: 'cliproxyapi/gpt-5.6-luna' });
     expect(mocks.store.setSelectedModel).not.toHaveBeenCalled();
   });
 
   it('현재 모델이 유효하면 선택을 다시 저장하지 않는다', async () => {
     mocks.query.data = { providers: cliProxyProviders() };
-    mocks.store.selectedModel = 'cliproxyapi/gpt-5.3-codex-spark';
+    mocks.store.selectedModel = 'cliproxyapi/gpt-5.6-luna';
 
     await renderHook();
 
     expect(mocks.store.setSelectedModel).not.toHaveBeenCalled();
     expect(mocks.setState).not.toHaveBeenCalled();
+  });
+
+  it('Luna 단일 목록에서는 과거 GPT-5.5 선택을 저장소 수정 없이 복구한다', async () => {
+    const providers = cliProxyProviders();
+    providers.cliproxyapi.models = providers.cliproxyapi.models.filter((m) => m.id.endsWith('gpt-5.6-luna'));
+    mocks.query.data = { providers };
+    mocks.store.selectedModel = 'cliproxyapi/gpt-5.5';
+    await renderHook();
+    expect(mocks.setState).toHaveBeenCalledWith({ selectedModel: 'cliproxyapi/gpt-5.6-luna' });
+    expect(mocks.store.setSelectedModel).not.toHaveBeenCalled();
   });
 
   it('기본 모델이 목록에 없으면 실제 제공되는 첫 모델을 선택한다', async () => {
@@ -130,7 +140,7 @@ describe('useProviders 단일 CLIProxyAPI 모델 동기화', () => {
 
     await renderHook();
 
-    expect(mocks.setState).toHaveBeenCalledWith({ selectedModel: 'cliproxyapi/gpt-5.3-codex-spark' });
+    expect(mocks.setState).toHaveBeenCalledWith({ selectedModel: 'cliproxyapi/gpt-5.6-luna' });
     expect(mocks.store.setSelectedModel).not.toHaveBeenCalled();
   });
 
@@ -140,7 +150,7 @@ describe('useProviders 단일 CLIProxyAPI 모델 동기화', () => {
 
     await renderHook();
 
-    expect(mocks.setState).toHaveBeenCalledWith({ selectedModel: 'cliproxyapi/gpt-5.5' });
+    expect(mocks.setState).toHaveBeenCalledWith({ selectedModel: 'cliproxyapi/gpt-5.6-luna' });
     expect(mocks.store.setSelectedModel).not.toHaveBeenCalled();
   });
 

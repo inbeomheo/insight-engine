@@ -72,7 +72,9 @@ def create_content_stream(content: str, model: str, style_prompt: Optional[str] 
                           user_id: Optional[str] = None,
                           segments: Optional[List[Dict[str, Any]]] = None,
                           web_search: bool = False,
-                          on_cost_start: Optional[Callable[[], None]] = None) -> Generator[str, None, Dict[str, Any]]:
+                          on_cost_start: Optional[Callable[[], None]] = None,
+                          report_progress: bool = False,
+                          worker_context=None) -> Generator[Any, None, Dict[str, Any]]:
     """
     LiteLLM 스트리밍으로 AI 콘텐츠를 생성합니다.
     각 조각은 텍스트 delta만 yield하고, generator return 값으로 prompt/usage를 돌려줍니다.
@@ -108,6 +110,25 @@ def create_content_stream(content: str, model: str, style_prompt: Optional[str] 
         completion_kwargs = ai_service._build_completion_kwargs(
             model, prompt, style_id, modifiers, stream=True, detail_level=detail_level
         )
+        from services.core.content_quality_service import enabled, generate_verified
+        if enabled(model, style_id):
+            evidence_source = '\n\n'.join(part for part in (content, rag_context, web_context) if part)
+            if report_progress:
+                from services.core.quality_stream_service import stream_verified
+                verified, usage = yield from stream_verified(
+                    evidence_source, prompt, model, completion_kwargs, modifiers, style_id,
+                    on_cost_start=on_cost_start,
+                    worker_context=worker_context,
+                )
+            else:
+                verified, usage = generate_verified(
+                    evidence_source, prompt, model, completion_kwargs, modifiers, style_id,
+                    on_cost_start=on_cost_start,
+                )
+            # 검토 전 초안은 전송하지 않는다. UI의 기존 meta/로딩 상태는 유지한다.
+            yield verified
+            return {**default_meta, 'prompt': prompt, 'usage': usage,
+                    'web_sources': web_sources or None, 'fallback_non_streaming': True}
         completion = ai_service._get_completion()
         if callable(on_cost_start):
             on_cost_start()
@@ -132,8 +153,11 @@ def create_content_stream(content: str, model: str, style_prompt: Optional[str] 
             'web_sources': web_sources or None,
         }
 
-    except UsageLockUnavailable:
+    except (UsageLockUnavailable, ai_service.GatewayConfigurationError):
         raise
     except Exception as e:
         logger.error(f"Streaming failed: model={model}, error={e}")
+        from services.core.content_quality_service import ContentQualityError
+        if isinstance(e, ContentQualityError):
+            raise ContentQualityError(f'[생성 실패] {e}') from e
         raise Exception(ai_service._convert_error_message(str(e), model)) from e

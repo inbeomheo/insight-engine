@@ -137,7 +137,6 @@ AI_CACHE_MAX_SIZE_MB = 512
 
 FALLBACK_CHAIN = [
     DEFAULT_GATEWAY_MODEL,
-    'cliproxyapi/gpt-5.3-codex-spark',
 ]
 MAX_FALLBACK_ATTEMPTS = 3
 
@@ -179,13 +178,11 @@ DETAIL_PRESETS: Dict[str, Dict[str, Any]] = {
 # === Providers ===
 
 _GATEWAY_MODEL_NAMES = dict.fromkeys([
-    'gpt-5.5',
-    'gpt-5.3-codex-spark',
-    *(model.strip() for model in os.getenv('CLIPROXYAPI_MODELS', '').split(',') if model.strip()),
+    'gpt-5.6-luna',
 ])
 _GATEWAY_DISPLAY_NAMES = {
     'gpt-5.5': 'GPT-5.5',
-    'gpt-5.3-codex-spark': 'GPT-5.3 Codex Spark',
+    'gpt-5.6-luna': 'GPT-5.6 Luna',
 }
 
 SUPPORTED_PROVIDERS: Dict[str, Dict[str, Any]] = {

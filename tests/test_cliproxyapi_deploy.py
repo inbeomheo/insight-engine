@@ -17,6 +17,18 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def test_gateway_image_applies_pinned_quota_pool_fix_and_runs_regressions():
+    dockerfile = (ROOT / "Dockerfile").read_text()
+    assert 'test "$(git rev-parse HEAD)" = "$CLIPROXYAPI_COMMIT"' in dockerfile
+    assert "COPY patches/cliproxyapi-quota-pools.patch" in dockerfile
+    assert "git apply --check /tmp/cliproxyapi-quota-pools.patch" in dockerfile
+    assert "git apply /tmp/cliproxyapi-quota-pools.patch" in dockerfile
+    assert "go test ./sdk/cliproxy/auth -run TestCodexQuotaPool -count=1" in dockerfile
+    patch = (ROOT / "patches/cliproxyapi-quota-pools.patch").read_text()
+    assert "TestCodexQuotaPoolIsolation" in patch
+    assert "TestCodexQuotaPoolPreservesExistingRestrictions" in patch
+
+
 def _load(filename):
     spec = importlib.util.spec_from_file_location(filename.removesuffix(".py"), ROOT / "scripts" / filename)
     module = importlib.util.module_from_spec(spec)

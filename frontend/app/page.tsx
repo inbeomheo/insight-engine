@@ -81,7 +81,8 @@ export default function Home() {
   const enableAgentMode = useSettingsStore((s) => s.enableAgentMode);
   const setEnableAgentMode = useSettingsStore((s) => s.setEnableAgentMode);
   const { urls, addUrl, addUrls, removeUrl } = useUrls();
-  const { isLoading, error, generateBatchUrls, generateMergedUrls, generateFusionUrls, generateFromText } = useGenerate();
+  const { isLoading, error, generateBatchUrls, generateMergedUrls, generateFusionUrls, generateFromText, abort } = useGenerate();
+  const streamingReport = reports.find((report) => report.is_streaming);
   const [sourceInputState, setSourceInputState] = useState<AccountSourceInputState>(
     () => emptySourceInputState(authUserId),
   );
@@ -301,7 +302,7 @@ export default function Home() {
 
   // 직접 텍스트 입력 → 생성
   const handleGenerateFromText = useCallback(async (text: string) => {
-    const ok = await generateFromText(text);
+    const ok = await generateFromText(text, true);
     if (ok) setPastedText('');
   }, [generateFromText, setPastedText]);
 
@@ -384,6 +385,12 @@ export default function Home() {
         onTextChange={setPastedText}
         onGenerateText={handleGenerateFromText}
       />
+      {isLoading && streamingReport && (
+        <div className="fixed bottom-24 right-4 z-40 flex max-w-[calc(100vw-2rem)] items-center gap-3 rounded-lg border bg-background p-3 shadow-lg">
+          <span role="status" aria-live="polite" className="text-sm">{streamingReport.title}</span>
+          <Button type="button" variant="outline" onClick={abort}>생성 취소</Button>
+        </div>
+      )}
       <div
         className="relative hidden h-screen overflow-hidden xl:flex"
       onDragEnter={handleDragEnter}

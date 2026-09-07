@@ -1,5 +1,9 @@
 # Insight Engine
 
+**한국어** · [English](README.en.md)
+
+설치·설정·운영 안내는 두 언어로 함께 관리합니다. 명령어, 환경변수, 보안 경고를 변경할 때는 두 문서를 같이 갱신합니다.
+
 YouTube/문서/텍스트를 학습하고 LLMWiki형 지식 위키로 쌓는 AI 학습 엔진.
 CLIProxyAPI(OpenAI 호환) 기반 생성, 다국어(한/영/일) 지원, RAG 지식 참조, 팀 워크스페이스까지.
 
@@ -79,6 +83,8 @@ cp .env.example .env
 
 공식 [CLIProxyAPI v7.2.152 릴리스](https://github.com/router-for-me/CLIProxyAPI/releases/tag/v7.2.152)에서
 운영체제에 맞는 바이너리와 체크섬(파일 변조 확인값)을 내려받아 검증하세요.
+현재 앱은 해당 버전에 프로젝트의 [사용량 풀 분리 패치](patches/README.md)를 적용한 실행 파일을 사용합니다.
+Docker 빌드는 패치를 자동 적용합니다. 로컬 소스 빌드는 패치 안내에 따라 진행하세요.
 백엔드와 게이트웨이에 동일한 **새 난수 키**를 설정합니다. 실제 키는 커밋하거나 채팅에 공유하지 마세요.
 기존 `.env`가 있다면 복사해서 덮어쓰지 말고 아래 새 항목만 로컬에서 추가하세요.
 
@@ -201,13 +207,30 @@ insight-engine/
 
 | Provider | Models | Notes |
 |----------|--------|-------|
-| **CLIProxyAPI** | gpt-5.5 (기본), gpt-5.3-codex-spark | OpenAI 호환 로컬 게이트웨이 |
+| **CLIProxyAPI** | gpt-5.6-luna (단일 모델) | OpenAI 호환 로컬 게이트웨이 |
 
-앱 모델 ID는 `cliproxyapi/gpt-5.5` 형식입니다. v7.2.152에서 제거된 `gpt-5.4`와
-`gpt-5.4-mini`는 기본 목록에 넣지 않습니다. 추가 모델은 서버에 실제로 등록한 후
-`CLIPROXYAPI_MODELS`에 쉼표로 구분해 지정하세요. 추가 모델도 같은 게이트웨이를 통해 호출됩니다.
+앱 모델 ID는 `cliproxyapi/gpt-5.6-luna`입니다. 공개 생성 요청과 기본 보조 호출은 Luna만 사용합니다.
+`CLIPROXYAPI_MODELS`로 다른 모델을 추가하지 않습니다.
 브라우저의 과거 모델 선택은 지원되는 같은 모델이면 유지하고, 미지원 선택은 기본 모델로
 표시합니다. 기존 노트·결과·사용량 기록은 일괄 변환하거나 삭제하지 않습니다.
+
+### Luna 품질 우선 생성
+
+근거 추출·작성·보정은 `reasoning_effort=medium`, 독립 근거 검토는 `high`를 사용합니다.
+
+글쓰기 스타일은 원문에서 정확한 인용문을 추출한 뒤 작성하고, 별도 Luna 호출로 근거를 검토합니다.
+언어 혼합·길이 상한·SEO/GEO 형식도 코드로 검사하며 최대 2회 보정 후에도 실패하면 오류를 반환합니다.
+짧게/보통/길게의 본문 상한은 마크다운 포함 800/1,500/3,000자입니다. 모든 보조 호출의 토큰을 합산합니다.
+선택된 근거가 충분하면 본문 최소 500/1,000/2,000자도 검사합니다. 짧은 원문을 억지로 늘리지는 않습니다.
+2만 자 이하 원문은 일반적으로 3~7회 호출하고, 긴 원문은 2만 자 조각마다 근거 추출 호출이 추가됩니다.
+전체 품질 단계는 240초로 제한합니다. 원문에 없는 사실을 완전히 차단한다는 보장은 아닙니다.
+실시간 응답도 검토가 끝난 본문만 전송하므로 첫 본문 표시가 늦어질 수 있습니다.
+텍스트 및 일반 단일 YouTube 생성은 근거 확인·작성·검토·보정 상태와 취소 버튼을 표시합니다.
+연결 종료를 감지하면 다음 AI 호출을 막지만, 이미 전송한 요청의 사용량까지 되돌리지는 않습니다.
+일반 웹 URL·다중 생성·에이전트 모드는 기존 요청 경로를 유지합니다.
+기존 SEO/GEO 파서용 고정 한국어 라벨은 다른 언어에서도 유지하되 값과 일반 제목은 번역합니다.
+마인드맵·챕터·댓글·지식 노트 등 구조화 변환과 스타일 없는 저수준 호출은 기존 형식 계약을 유지합니다.
+이전 생성 캐시는 삭제하지 않고 새 버전 키로 분리합니다.
 
 실제 바이너리의 통신 형식은 외부 계정 없이 로컬 가짜 공급자로 검증할 수 있습니다.
 아래 검사는 일반 응답·도구 호출·스트리밍(응답 조각 연속 전송)·최종 사용량을 확인하며,
@@ -229,7 +252,7 @@ CLIPROXYAPI_TEST_BINARY=/absolute/path/to/cli-proxy-api \
 | Quiz | 객관식 학습 퀴즈 |
 | Retention Cards | 반복 학습 카드 |
 
-각 스타일은 독립 프롬프트 + 최적화된 temperature/max_tokens 설정.
+각 스타일은 독립 프롬프트와 생성 설정을 사용합니다. temperature(출력 변동성) 등의 실제 전달 여부는 모델별 지원 범위에 따릅니다.
 
 ---
 
@@ -239,7 +262,8 @@ CLIPROXYAPI_TEST_BINARY=/absolute/path/to/cli-proxy-api \
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/generate` | POST | 단일 URL 콘텐츠 생성 |
+| `/generate` | POST | 단일 URL 또는 직접 텍스트 콘텐츠 생성 |
+| `/generate-stream` | POST | 텍스트 또는 단일 YouTube 생성, 진행 상태와 검토 완료 결과 전송 |
 | `/generate-batch` | POST | 다중 URL 배치 (최대 10개) |
 
 ### Content Management
@@ -276,7 +300,7 @@ CLIPROXYAPI_TEST_BINARY=/absolute/path/to/cli-proxy-api \
 |----------|----------|---------|
 | `CLIPROXYAPI_BASE_URL` | CLIProxyAPI | 기본 `http://127.0.0.1:8317/v1` |
 | `CLIPROXYAPI_API_KEY` | CLIProxyAPI | 서버와 동일한 새 난수 키, 필수 |
-| `CLIPROXYAPI_MODELS` | CLIProxyAPI | 선택: 서버에 등록한 추가 모델명, 쉼표 구분 |
+| `CLIPROXYAPI_MODELS` | CLIProxyAPI | 사용하지 않음: Luna 단일 모델 정책 |
 
 ### 주요 설정
 
@@ -312,6 +336,8 @@ npm ci
 npx --no-install playwright install chromium
 npm run test:ci
 
+# 아래 명령은 저장소 루트에서 실행합니다.
+cd ../..
 # 커버리지
 node scripts/run_python.cjs -m pytest tests/ --cov=. --cov-report=html
 
@@ -380,12 +406,14 @@ docker compose ps
 실행할 때는 반드시 쓰기 서비스를 먼저 멈춘 상태에서 수행하세요.
 
 복원도 백엔드·백업 데몬 등 대상 디렉터리에 쓰는 프로세스를 모두 멈춘 뒤 실행해야
-합니다. `python scripts/backup_app_data.py restore <archive.zip> --target <data-dir> --overwrite`
+합니다. **경고: `--overwrite`는 대상 데이터를 교체합니다. 백업과 사용자 확인을 먼저 완료하세요.**
+`python scripts/backup_app_data.py restore <archive.zip> --target <data-dir> --overwrite`
 명령은 아카이브 경로·CRC·파일 형식·내장 SHA-256 manifest와 SQLite 무결성을 별도
 staging 디렉터리에서 검증한 다음 대상 디렉터리를 원자적으로 교체합니다. 검증이나
 교체가 실패하면 기존 대상을 유지하거나 되돌리며, archive는 복원 대상 밖에 두세요.
 
 운영 Compose의 CLIProxyAPI는 공식 `v7.2.152` 커밋으로 고정 빌드되며 비루트 사용자로 실행됩니다.
+프로젝트의 사용량 풀 분리 패치와 해당 자동 테스트를 빌드 중 적용합니다. 공식 릴리스 자체에 포함된 수정은 아닙니다.
 `CLIPROXYAPI_API_KEY`를 설정한 뒤 최초 로그인과 토큰 갱신은 다음 명령으로 수행하세요.
 
 ```bash
@@ -484,6 +512,8 @@ export FLASK_ENV=production
 export FLASK_DEBUG=0
 gunicorn app:app -b 0.0.0.0:5001
 ```
+
+위 명령은 백엔드만 실행합니다. 프론트엔드·게이트웨이·필수 서비스와 운영 접근 제어도 별도로 설정해야 합니다.
 
 ---
 

@@ -114,7 +114,7 @@ vi.mock('@/components/ui/select', () => ({
     onValueChange: (value: string) => void;
   }) => (
     <div data-testid="select-control" data-value={value}>
-      <button type="button" aria-label="테스트 모델 변경" onClick={() => onValueChange('cliproxyapi/gpt-5.3-codex-spark')}>
+      <button type="button" aria-label="테스트 모델 변경" onClick={() => onValueChange('cliproxyapi/gpt-5.6-luna')}>
         모델 변경
       </button>
       {children}
@@ -150,7 +150,7 @@ function setCLIProxyAPIProvider() {
       name: 'CLIProxyAPI (OpenAI 호환)',
       models: [
         { id: 'cliproxyapi/gpt-5.5', name: 'GPT-5.5', max_input_tokens: 128000, price_input: 0, price_output: 0 },
-        { id: 'cliproxyapi/gpt-5.3-codex-spark', name: 'GPT-5.3 Codex Spark', max_input_tokens: 128000, price_input: 0, price_output: 0 },
+        { id: 'cliproxyapi/gpt-5.6-luna', name: 'GPT-5.6 Luna', max_input_tokens: 128000, price_input: 0, price_output: 0 },
       ],
     },
   };
@@ -273,7 +273,7 @@ describe('단일 CLIProxyAPI 서비스 UI', () => {
     expect(view.textContent).toContain('GPT-5.5');
 
     await act(async () => view.querySelector<HTMLButtonElement>('[aria-label="테스트 모델 변경"]')?.click());
-    expect(mocks.settings.setSelectedModel).toHaveBeenCalledWith('cliproxyapi/gpt-5.3-codex-spark');
+    expect(mocks.settings.setSelectedModel).toHaveBeenCalledWith('cliproxyapi/gpt-5.6-luna');
   });
 
   it('\uc800\uc7a5\ub41c \ubaa8\ub378\uc774 \uc720\ud6a8\ud558\uc9c0 \uc54a\uc544\ub3c4 \uccab CLIProxyAPI \ubaa8\ub378\ub85c \ubcf5\uad6c\ud55c\ub2e4', async () => {
@@ -285,7 +285,7 @@ describe('단일 CLIProxyAPI 서비스 UI', () => {
     expect(view.querySelector('[aria-label="CLIProxyAPI 서비스 정보"]')?.textContent)
       .toContain('CLIProxyAPI (OpenAI 호환)');
     expect(view.querySelector('[data-testid="select-control"]')?.getAttribute('data-value'))
-      .toBe('cliproxyapi/gpt-5.5');
+      .toBe('cliproxyapi/gpt-5.6-luna');
   });
 
   it('설정에서 모델이 없으면 빈 선택기 대신 안내를 보여준다', async () => {
@@ -301,11 +301,11 @@ describe('단일 CLIProxyAPI 서비스 UI', () => {
   it('설정에서 이전 ChatMock 선택과 동일한 지원 모델을 표시한다', async () => {
     mocks.ui.activeModal = 'settings';
     setCLIProxyAPIProvider();
-    mocks.settings.selectedModel = 'chatmock/gpt-5.3-codex-spark';
+    mocks.settings.selectedModel = 'chatmock/gpt-5.6-luna';
     const view = await render(<SettingsModal />);
 
     expect(view.querySelector('[data-testid="select-control"]')?.getAttribute('data-value'))
-      .toBe('cliproxyapi/gpt-5.3-codex-spark');
+      .toBe('cliproxyapi/gpt-5.6-luna');
     expect(mocks.settings.setSelectedModel).not.toHaveBeenCalled();
   });
 

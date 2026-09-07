@@ -65,7 +65,7 @@ class TestGenerateStreamDelta(unittest.TestCase):
         self.app.ai_cache = _FakeCache()
         self.client = self.app.test_client()
 
-    def _post(self, model='cliproxyapi/gpt-5.5', payload=None, headers=None):
+    def _post(self, model='cliproxyapi/gpt-5.6-luna', payload=None, headers=None):
         body = {
             'url': 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
             'model': model,
@@ -152,6 +152,7 @@ class TestGenerateStreamDelta(unittest.TestCase):
             body = resp.get_data(as_text=True)
 
         self.assertEqual(resp.status_code, 200)
+        self.assertIn('no-transform', resp.headers['Cache-Control'])
         events = _parse_sse(body)
         self.assertEqual([e['type'] for e in events], ['meta', 'delta', 'delta', 'result'])
 
@@ -169,6 +170,19 @@ class TestGenerateStreamDelta(unittest.TestCase):
         self.assertEqual(result['youtube_title'], 'YT')
         self.assertEqual(result['transcript_source'], 'api')
         self.assertEqual(result['quota'], {'remaining': 4, 'is_admin': False})
+
+    def test_quality_status_is_forwarded_without_becoming_body(self):
+        def fake_stream(*args, **kwargs):
+            self.assertTrue(kwargs['report_progress'])
+            yield {'type': 'status', 'stage': 'reviewing'}
+            yield '# 검토 완료\n본문'
+            return {'usage': {'total_tokens': 15}}
+
+        with self._patched(create_stream=patch(
+                'routes.blog_routes.ai_service.create_content_stream', side_effect=fake_stream)):
+            events = _parse_sse(self._post().get_data(as_text=True))
+        self.assertEqual([event['type'] for event in events], ['meta', 'status', 'delta', 'result'])
+        self.assertEqual(events[-1]['content'], '본문')
 
     def test_comments_path_emits_status_before_result(self):
         def fake_stream(*args, **kwargs):
@@ -409,7 +423,7 @@ class TestGenerateStreamDelta(unittest.TestCase):
                 '/generate-stream',
                 json={
                     'url': 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-                    'model': 'cliproxyapi/gpt-5.5',
+                    'model': 'cliproxyapi/gpt-5.6-luna',
                     'style': 'summary',
                 },
                 headers=_H,
@@ -439,7 +453,7 @@ class TestGenerateStreamDelta(unittest.TestCase):
                 '/generate-stream',
                 json={
                     'url': 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-                    'model': 'cliproxyapi/gpt-5.5',
+                    'model': 'cliproxyapi/gpt-5.6-luna',
                     'style': 'summary',
                 },
                 headers=_H,
@@ -531,7 +545,7 @@ class TestGenerateStreamDelta(unittest.TestCase):
                 '/generate-stream',
                 json={
                     'url': 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-                    'model': 'cliproxyapi/gpt-5.5',
+                    'model': 'cliproxyapi/gpt-5.6-luna',
                     'style': 'summary',
                 },
                 headers=headers,
@@ -570,7 +584,7 @@ class TestGenerateStreamDelta(unittest.TestCase):
                     '/generate-stream',
                     json={
                         'url': 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-                        'model': 'cliproxyapi/gpt-5.5',
+                        'model': 'cliproxyapi/gpt-5.6-luna',
                         'style': 'summary',
                     },
                     headers=headers,
@@ -719,7 +733,7 @@ class TestGenerateStreamDelta(unittest.TestCase):
         with self._patched(
             create_stream=patch('routes.blog_routes.ai_service.create_content_stream', side_effect=fake_stream),
         ) as mocks:
-            resp = self._post(model='cliproxyapi/gpt-5.5')
+            resp = self._post(model='cliproxyapi/gpt-5.6-luna')
             body = resp.get_data(as_text=True)
 
         self.assertEqual(resp.status_code, 200)

@@ -387,7 +387,7 @@ def test_paid_transcript_then_short_summary_keeps_reservation():
             json={
                 "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
                 "style": "summary",
-                "model": "cliproxyapi/gpt-5.5",
+                "model": "cliproxyapi/gpt-5.6-luna",
             },
             headers=_HEADERS,
         )
@@ -428,7 +428,7 @@ def test_all_transcript_failures_before_cost_refund_reservation():
             json={
                 "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
                 "style": "summary",
-                "model": "cliproxyapi/gpt-5.5",
+                "model": "cliproxyapi/gpt-5.6-luna",
             },
             headers=_HEADERS,
         )

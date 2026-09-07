@@ -111,14 +111,14 @@ class TestConvertErrorMessage(unittest.TestCase):
 
         self.assertIn("모델", result)
 
-    def test_unknown_error_preserves_message(self):
-        """알 수 없는 오류는 원본 메시지 포함"""
+    def test_unknown_error_hides_message(self):
+        """알 수 없는 오류의 내부 메시지를 노출하지 않는다."""
         from services.core.ai_service import _convert_error_message
 
         original = "Some unknown error occurred"
         result = _convert_error_message(original)
 
-        self.assertIn(original, result)
+        self.assertNotIn(original, result)
 
 
 class TestCreateContent(unittest.TestCase):

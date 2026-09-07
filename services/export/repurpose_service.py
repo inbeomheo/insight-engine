@@ -75,7 +75,7 @@ class RepurposeService:
 
     DEFAULT_MODEL = os.getenv(
         'REPURPOSE_MODEL',
-        'cliproxyapi/gpt-5.5'
+        'cliproxyapi/gpt-5.6-luna'
     )
 
     def repurpose(

@@ -15,7 +15,7 @@ from services.core.gateway_service import apply_gateway_kwargs
 logger = logging.getLogger(__name__)
 
 # 기본 추출 모델 (CLIProxyAPI/OpenAI 호환)
-_DEFAULT_MODEL = "cliproxyapi/gpt-5.5"
+_DEFAULT_MODEL = "cliproxyapi/gpt-5.6-luna"
 
 _ENTITY_RELATION_PROMPT = """다음 텍스트에서 주요 엔티티와 관계를 추출하세요.
 

@@ -175,6 +175,15 @@ async function runGenerateStream({
 
         if (event.type === 'meta') {
           updateReport(tempId, buildMetaPatch(event));
+        } else if (event.type === 'status' && !content) {
+          const stages: Record<string, string> = {
+            evidence: '원문 근거 확인 중…',
+            writing: '본문 작성 중…',
+            reviewing: '사실·형식 검토 중…',
+            repairing: '검토 결과 반영 중…',
+          };
+          const title = stages[event.stage || ''];
+          if (title) updateReport(tempId, { title });
         } else if (event.type === 'delta' || event.type === 'token') {
           content += event.delta || event.data || '';
           scheduleContentUpdate();
@@ -329,7 +338,13 @@ export function useGenerate() {
 
       // 단일 URL이면 일반 생성
       if (urls.length === 1) {
-        const succeeded = await generateSingle(urls[0], false);
+        let supportsStreaming = false;
+        try {
+          const parsed = new URL(urls[0]);
+          supportsStreaming = ['http:', 'https:'].includes(parsed.protocol)
+            && ['youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtu.be'].includes(parsed.hostname);
+        } catch { /* 잘못된 URL은 기존 서버 검증에서 안내한다. */ }
+        const succeeded = await generateSingle(urls[0], supportsStreaming && !enableAgentMode);
         return { succeededUrls: succeeded ? [urls[0]] : [] };
       }
 

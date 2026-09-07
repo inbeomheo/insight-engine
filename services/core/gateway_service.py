@@ -3,7 +3,7 @@ import os
 from urllib.parse import urlsplit
 
 
-DEFAULT_GATEWAY_MODEL = 'cliproxyapi/gpt-5.5'
+DEFAULT_GATEWAY_MODEL = 'cliproxyapi/gpt-5.6-luna'
 DEFAULT_GATEWAY_BASE_URL = 'http://127.0.0.1:8317/v1'
 
 

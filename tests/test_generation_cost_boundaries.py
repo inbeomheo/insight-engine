@@ -24,7 +24,7 @@ def test_worker_free_context_failure_does_not_commit_usage():
     ), patch(
         "services.core.ai_service._get_completion",
         return_value=provider,
-    ), pytest.raises(Exception, match="free context failed"):
+    ), pytest.raises(Exception, match="콘텐츠 생성에 실패"):
         _generate_main_content_with_web_search(
             app,
             "content",

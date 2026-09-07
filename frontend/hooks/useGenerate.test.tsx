@@ -138,6 +138,24 @@ describe('useGenerate 스트리밍 UX', () => {
     expect(rendered.hook.error).toBe('테스트 실패');
   });
 
+  it('검토 단계는 제목에 표시하고 검토 전 본문은 비워 둔다', async () => {
+    const titles: string[] = [];
+    vi.mocked(generateStream).mockImplementation(async (_req, onEvent) => {
+      for (const stage of ['evidence', 'writing', 'reviewing', 'repairing']) {
+        onEvent({ type: 'status', stage });
+        const report = useResultStore.getState().reports[0];
+        titles.push(report.title);
+        expect(report.content).toBe('');
+        expect(report.is_streaming).toBe(true);
+      }
+      onEvent({ type: 'result', ...RESPONSE });
+    });
+    const rendered = await renderHook();
+    await act(async () => { await rendered.hook.generateFromText('직접 입력', true); });
+    expect(titles).toEqual(['원문 근거 확인 중…', '본문 작성 중…', '사실·형식 검토 중…', '검토 결과 반영 중…']);
+    expect(useResultStore.getState().reports[0].title).toBe(RESPONSE.title);
+  });
+
   it('일부 본문 수신 후 오류가 나면 본문을 유지하고 스트리밍 상태를 종료한다', async () => {
     mockStream([
       { type: 'delta', delta: '일부까지 생성된 본문' },
@@ -310,7 +328,18 @@ describe('useGenerate 스트리밍 UX', () => {
     expect(rendered.hook.error).toBeNull();
   });
 
-  it('단일 URL 배치는 A 응답 대기 중 B로 전환되면 성공 URL을 반환하지 않는다', async () => {
+  it('단일 YouTube URL은 진행 표시가 가능한 스트림으로 생성한다', async () => {
+    mockStream([{ type: 'result', ...RESPONSE }]);
+    const rendered = await renderHook();
+    await act(async () => {
+      const outcome = await rendered.hook.generateBatchUrls(['https://youtu.be/example']);
+      expect(outcome.succeededUrls).toEqual(['https://youtu.be/example']);
+    });
+    expect(generateStream).toHaveBeenCalledOnce();
+    expect(generate).not.toHaveBeenCalled();
+  });
+
+  it('단일 일반 URL 배치는 A 응답 대기 중 B로 전환되면 성공 URL을 반환하지 않는다', async () => {
     setAuthSession(authSession('account-a'));
     const pending = deferred<{
       title: string;
@@ -325,12 +354,12 @@ describe('useGenerate 스트리밍 UX', () => {
     let generation!: Promise<BatchOutcome>;
 
     await act(async () => {
-      generation = rendered.hook.generateBatchUrls(['https://youtu.be/account-a']);
+      generation = rendered.hook.generateBatchUrls(['https://example.com/account-a']);
       await Promise.resolve();
     });
 
     await act(async () => setAuthSession(authSession('account-b')));
-    let outcome: BatchOutcome = { succeededUrls: ['https://youtu.be/account-a'] };
+    let outcome: BatchOutcome = { succeededUrls: ['https://example.com/account-a'] };
     await act(async () => {
       pending.resolve({
         title: 'A 늦은 결과',
