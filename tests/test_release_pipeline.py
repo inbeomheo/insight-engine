@@ -79,7 +79,10 @@ def test_master_is_the_only_production_publish_and_deploy_branch():
     assert docker_build.index('python scripts/ci_docker_smoke.py') < docker_build.index(
         'docker push "$DOCKER_REPOSITORY:$IMAGE_SHA"'
     )
-    assert 'target: chatmock' in docker_build
+    assert 'target: cliproxyapi' in docker_build
+    assert docker_build.index('python scripts/cliproxyapi_docker_smoke.py') < docker_build.index(
+        'docker push "$DOCKER_REPOSITORY:$IMAGE_SHA"'
+    )
 
     e2e = workflow.split('  e2e-no-auth:', 1)[1].split('  docker-build:', 1)[0]
     assert '--project=no-auth-chromium' not in e2e
@@ -439,21 +442,26 @@ def test_railway_uses_the_full_stack_docker_artifact():
     )
 
 
-def test_chatmock_is_pinned_non_root_and_uses_a_named_credential_volume():
+def test_cliproxyapi_is_pinned_non_root_and_uses_a_new_named_credential_volume():
     dockerfile = _read('Dockerfile')
     compose_text = _read('docker-compose.deploy.yml')
     compose = yaml.safe_load(compose_text)
-    chatmock = compose['services']['chatmock']
-    login = compose['services']['chatmock-login']
+    gateway = compose['services']['cliproxyapi']
+    login = compose['services']['cliproxyapi-login']
 
-    assert dockerfile.count('chatmock==1.40') == 1
-    assert chatmock['read_only'] is True
-    assert chatmock['cap_drop'] == ['ALL']
-    assert chatmock['volumes'] == ['insight_chatmock_credentials:/data']
-    assert chatmock['environment']['CHATGPT_LOCAL_HOME'] == '/data/codex'
-    assert login['profiles'] == ['chatmock-login']
-    assert login['volumes'] == ['insight_chatmock_credentials:/data']
-    assert 'CHATMOCK_CODEX_HOME' not in compose_text
+    assert 'CLIPROXYAPI_VERSION=7.2.152' in dockerfile
+    assert 'CLIPROXYAPI_COMMIT=c76dfd4e0edabab9000628b1560ab8ab379eadb8' in dockerfile
+    assert 'USER cliproxyapi' in dockerfile
+    assert gateway['read_only'] is True
+    assert gateway['cap_drop'] == ['ALL']
+    assert gateway['volumes'] == ['insight_cliproxyapi_auth:/data/cliproxyapi/auth']
+    assert gateway['ports'] == ['127.0.0.1:8317:8317']
+    assert 'CLIPROXYAPI_API_KEY:?' in gateway['environment']['CLIPROXYAPI_API_KEY']
+    assert login['profiles'] == ['cliproxyapi-login']
+    assert login['command'] == ['login']
+    assert login['volumes'] == gateway['volumes']
+    assert 'chatmock' not in compose_text.lower()
+    assert compose['services']['backend']['environment']['CLIPROXYAPI_BASE_URL'] == 'http://cliproxyapi:8317/v1'
 
 
 def test_compose_health_and_single_volume_backup_contracts():
@@ -463,7 +471,7 @@ def test_compose_health_and_single_volume_backup_contracts():
     assert '3000/' in ' '.join(standard['services']['frontend']['healthcheck']['test'])
     assert standard['services']['nginx']['depends_on']['frontend']['condition'] == 'service_healthy'
     assert 'ready' in ' '.join(deploy['services']['backend']['healthcheck']['test'])
-    assert deploy['services']['backend']['depends_on']['chatmock']['condition'] == 'service_healthy'
+    assert deploy['services']['backend']['depends_on']['cliproxyapi']['condition'] == 'service_healthy'
     assert deploy['services']['edge']['depends_on']['frontend']['condition'] == 'service_healthy'
 
     assert 'app-data-backup' not in deploy['services']

@@ -47,10 +47,9 @@ test.describe('온보딩 모달 @parallel @no-auth', () => {
         contentType: 'application/json',
         body: JSON.stringify({
           providers: {
-            chatmock: {
-              name: 'ChatMock',
-              api_base: '/v1',
-              models: [{ id: 'chatmock/test-model', name: 'Test model' }],
+            cliproxyapi: {
+              name: 'CLIProxyAPI',
+              models: [{ id: 'cliproxyapi/test-model', name: 'Test model' }],
             },
           },
           style_options: [],
@@ -160,9 +159,9 @@ test.describe('설정 모달 @parallel @no-auth', () => {
     const modal = page.getByRole('dialog', { name: '설정', exact: true });
     await expect(modal).toBeVisible({ timeout: 3000 });
 
-    // Expected: 단일 AI 서비스(ChatMock) 안내 표시
+    // Expected: 단일 AI 서비스(CLIProxyAPI) 안내 표시
     // (API 키는 서버 환경변수로 관리 → 모달에는 서비스 정보만 노출)
-    await expect(modal.getByRole('group', { name: 'ChatMock 서비스 정보' })).toBeVisible();
+    await expect(modal.getByRole('group', { name: 'CLIProxyAPI 서비스 정보' })).toBeVisible();
     await expect(modal.getByText('단일 AI 서비스 사용 중')).toBeVisible();
 
     // Expected: 캐시 관리 섹션 표시

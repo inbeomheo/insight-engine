@@ -22,7 +22,7 @@ test.describe('기본 콘텐츠 생성', () => {
   }) => {
     test.skip(
       process.env.E2E_LIVE_GENERATION !== '1',
-      '실제 ChatMock/YouTube 연동은 E2E_LIVE_GENERATION=1에서만 실행',
+      '실제 CLIProxyAPI/YouTube 연동은 E2E_LIVE_GENERATION=1에서만 실행',
     );
     await contentGenerator.applyCheapPreset();
     // 1. URL 추가
@@ -60,7 +60,7 @@ test.describe('기본 콘텐츠 생성', () => {
   }) => {
     test.skip(
       process.env.E2E_LIVE_GENERATION !== '1',
-      '실제 ChatMock/YouTube 연동은 E2E_LIVE_GENERATION=1에서만 실행',
+      '실제 CLIProxyAPI/YouTube 연동은 E2E_LIVE_GENERATION=1에서만 실행',
     );
     await contentGenerator.applyCheapPreset();
     await urlInput.addUrl(TEST_DATA.SHORT_VIDEO);

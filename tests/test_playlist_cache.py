@@ -11,6 +11,13 @@ class TestPlaylistCache(unittest.TestCase):
     """재생목록 조회 캐시 동작 검증"""
 
     def setUp(self):
+        # 각 테스트는 외부 Redis의 이전 실행 결과와 격리한다.
+        # Redis 경로 전용 테스트는 아래의 중첩 mock으로 계약을 검증한다.
+        redis_patch = patch(
+            'routes.utility._state._redis_playlist_client', return_value=None,
+        )
+        redis_patch.start()
+        self.addCleanup(redis_patch.stop)
         self.app = create_app()
         self.app.config['TESTING'] = True
         self.client = self.app.test_client()

@@ -28,7 +28,7 @@ def test_worker_free_context_failure_does_not_commit_usage():
         _generate_main_content_with_web_search(
             app,
             "content",
-            "chatmock/gpt-5.4-mini",
+            "cliproxyapi/gpt-5.5",
             "style",
             {},
             style_id="summary",
@@ -58,7 +58,7 @@ def test_worker_lost_lease_stops_actual_provider_call():
         _generate_main_content(
             app,
             "content",
-            "chatmock/gpt-5.4-mini",
+            "cliproxyapi/gpt-5.5",
             "style",
             {},
             style_id="summary",
@@ -79,7 +79,7 @@ def test_comment_summary_does_not_swallow_usage_lock_failure():
         _generate_comment_summary(
             app,
             ["댓글"],
-            "chatmock/gpt-5.4-mini",
+            "cliproxyapi/gpt-5.5",
             on_cost_start=MagicMock(),
         )
 

@@ -25,6 +25,9 @@ from agent.registry import TOOL_EXECUTION_ERROR_MESSAGE, registry
 from agent.toolsets import resolve_toolsets
 from agent.memory import AgentMemoryStore, SessionAccessDenied, memory_store
 from services.usage.usage_lock import UsageLockUnavailable
+from services.core.gateway_service import (
+    DEFAULT_GATEWAY_MODEL, GatewayConfigurationError, apply_gateway_kwargs,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -134,7 +137,7 @@ class AIAgent:
 
     사용법:
         agent = AIAgent(
-            model="gemini/gemini-3-flash-preview",
+            model="cliproxyapi/gpt-5.5",
             toolsets=["role_writer"],
             system_prompt="당신은 콘텐츠 작성 전문가입니다.",
         )
@@ -311,7 +314,7 @@ class AIAgent:
             # LLM API 호출
             try:
                 response = self._call_llm(messages, tool_schemas)
-            except UsageLockUnavailable:
+            except (UsageLockUnavailable, GatewayConfigurationError):
                 raise
             except Exception as exc:
                 # 공급자 예외 메시지에는 API key/요청 헤더가 포함될 수 있다.
@@ -403,7 +406,6 @@ class AIAgent:
 
     def _call_llm(self, messages: List[Dict], tools: List[Dict]) -> Any:
         """LiteLLM을 통해 LLM API를 호출합니다."""
-        import os
         from litellm import completion
 
         kwargs: Dict[str, Any] = {
@@ -419,23 +421,7 @@ class AIAgent:
             kwargs["tools"] = tools
             kwargs["tool_choice"] = "auto"
 
-        # 모델별 특수 설정
-        if self.model.startswith("gemini/") and "lite" not in self.model.lower():
-            kwargs["reasoning_effort"] = "minimal"
-
-        elif self.model.startswith("zhipuai/"):
-            zhipuai_key = os.getenv("ZHIPUAI_API_KEY")
-            if zhipuai_key:
-                kwargs["model"] = f"openai/{self.model.replace('zhipuai/', '')}"
-                kwargs["api_base"] = "https://open.bigmodel.cn/api/paas/v4/"
-                kwargs["api_key"] = zhipuai_key
-
-        elif self.model.startswith("chatmock/"):
-            kwargs["model"] = self.model.replace("chatmock/", "")
-            kwargs["api_base"] = os.getenv("CHATMOCK_BASE_URL", "http://127.0.0.1:8000/v1")
-            kwargs["api_key"] = os.getenv("CHATMOCK_API_KEY", "dummy")
-            kwargs["drop_params"] = True
-            kwargs.pop("temperature", None)
+        apply_gateway_kwargs(kwargs, self.model)
 
         # 공급자 호출 직전 비용 시작을 확정한다. 세션 소유권 검증과 메시지
         # 구성은 이미 끝난 시점이므로 그 이전 실패는 예약을 환불할 수 있다.
@@ -445,6 +431,7 @@ class AIAgent:
         # 스트리밍 콜백이 있으면 스트리밍 모드
         if self._on_stream_delta:
             kwargs["stream"] = True
+            kwargs["stream_options"] = {"include_usage": True}
             response = completion(**kwargs)
             return self._collect_stream(response)
 
@@ -457,8 +444,13 @@ class AIAgent:
         collected_content = ""
         collected_tool_calls = []
         usage = None
+        finish_reason = None
 
         for chunk in stream:
+            if getattr(chunk, 'usage', None):
+                usage = chunk.usage
+            if chunk.choices and getattr(chunk.choices[0], 'finish_reason', None):
+                finish_reason = chunk.choices[0].finish_reason
             delta = chunk.choices[0].delta if chunk.choices else None
             if not delta:
                 continue
@@ -487,13 +479,11 @@ class AIAgent:
                         if tc_delta.function.arguments:
                             tc["function"]["arguments"] += tc_delta.function.arguments
 
-            # 사용량
-            if hasattr(chunk, "usage") and chunk.usage:
-                usage = chunk.usage
-
         # ModelResponse 형태로 재조립
         response = ModelResponse()
         response.choices[0].message.content = collected_content or None
+        if finish_reason:
+            response.choices[0].finish_reason = finish_reason
 
         if collected_tool_calls:
             tool_calls_objs = []
@@ -765,9 +755,8 @@ class AIAgent:
     def _get_default_model() -> str:
         """사용 가능한 기본 모델을 반환합니다.
 
-        우선순위: config.AGENT_DEFAULT_MODEL → 환경변수 기반 자동 선택
+        우선순위: config.AGENT_DEFAULT_MODEL → CLIProxyAPI 기본 모델
         """
-        import os
         # config.py의 AGENT_DEFAULT_MODEL 우선
         try:
             from config import AGENT_DEFAULT_MODEL
@@ -775,15 +764,7 @@ class AIAgent:
                 return AGENT_DEFAULT_MODEL
         except (ImportError, AttributeError):
             pass
-        if os.getenv("GEMINI_API_KEY"):
-            return "gemini/gemini-3-flash-preview"
-        if os.getenv("DEEPSEEK_API_KEY"):
-            return "deepseek/deepseek-chat"
-        if os.getenv("ANTHROPIC_API_KEY"):
-            return "anthropic/claude-sonnet-4-6"
-        if os.getenv("OPENAI_API_KEY"):
-            return "gpt-4o"
-        return "gemini/gemini-3-flash-preview"
+        return DEFAULT_GATEWAY_MODEL
 
     @staticmethod
     def _default_system_prompt() -> str:

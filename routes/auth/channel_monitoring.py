@@ -94,11 +94,11 @@ def admin_dashboard():
         from config import PROVIDER_API_KEYS, SUPPORTED_PROVIDERS
         provider_distribution = {}
         _provider_labels = {
-            'chatmock': 'ChatMock',
+            'cliproxyapi': 'CLIProxyAPI',
         }
         for prov in SUPPORTED_PROVIDERS:
             key = PROVIDER_API_KEYS.get(prov, '')
-            if prov == 'chatmock' and key:
+            if prov == 'cliproxyapi' and key:
                 provider_distribution[_provider_labels.get(prov, prov)] = 'active'
             elif key and key not in ('', 'dummy'):
                 provider_distribution[_provider_labels.get(prov, prov)] = 'active'

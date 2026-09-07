@@ -1,10 +1,23 @@
-import { test, expect } from '../fixtures/test-fixtures';
+import { test, expect, makeMockReport } from '../fixtures/test-fixtures';
 
-// API 키 관리 제거 후의 계약: ChatMock 단일 서비스와 모델 선택만 제공한다.
-test.describe('ChatMock 모델 설정 @parallel @no-auth', () => {
+// API 키 관리 제거 후의 계약: CLIProxyAPI 단일 서비스와 모델 선택만 제공한다.
+test.describe('CLIProxyAPI 모델 설정 @parallel @no-auth', () => {
   test.use({ storageState: { cookies: [], origins: [] } });
 
   test.beforeEach(async ({ page, mainPage }) => {
+    await page.route('**/api/providers', async (route) => {
+      await route.fulfill({ json: {
+        providers: {
+          cliproxyapi: {
+            name: 'CLIProxyAPI (OpenAI 호환)',
+            models: [
+              { id: 'cliproxyapi/gpt-5.5', name: 'GPT-5.5' },
+              { id: 'cliproxyapi/gpt-5.3-codex-spark', name: 'GPT-5.3 Codex Spark' },
+            ],
+          },
+        },
+      } });
+    });
     await page.addInitScript(() => {
       localStorage.setItem('insight-engine-onboarding-done', 'true');
     });
@@ -14,8 +27,8 @@ test.describe('ChatMock 모델 설정 @parallel @no-auth', () => {
 
   test('고정 서비스를 안내하고 API 키 입력이나 서비스 선택을 노출하지 않는다', async ({ page }) => {
     const settings = page.getByRole('dialog', { name: '설정', exact: true });
-    const service = settings.getByRole('group', { name: 'ChatMock 서비스 정보' });
-    await expect(service).toContainText('ChatMock');
+    const service = settings.getByRole('group', { name: 'CLIProxyAPI 서비스 정보' });
+    await expect(service).toContainText('CLIProxyAPI');
     await expect(service).toContainText('단일 AI 서비스 사용 중');
     await expect(settings.getByRole('combobox', { name: 'AI 모델 선택' })).toBeVisible();
     // 언어 선택은 별도로 존재한다. 서비스 선택 UI만 없어야 한다.
@@ -27,15 +40,39 @@ test.describe('ChatMock 모델 설정 @parallel @no-auth', () => {
     await expect(settings.getByLabel('비밀번호', { exact: true })).toHaveAttribute('autocomplete', 'current-password');
   });
 
-  test('선택한 ChatMock 모델을 새로고침 후에도 유지한다', async ({ page }) => {
+  test('선택한 CLIProxyAPI 모델을 새로고침 후에도 유지한다', async ({ page }) => {
     const settings = page.getByRole('dialog', { name: '설정', exact: true });
     await settings.getByRole('combobox', { name: 'AI 모델 선택' }).click();
-    await page.getByRole('option', { name: 'GPT-5.5', exact: true }).click();
-    await expect(settings.getByRole('combobox', { name: 'AI 모델 선택' })).toContainText('GPT-5.5');
+    await page.getByRole('option', { name: 'GPT-5.3 Codex Spark', exact: true }).click();
+    await expect(settings.getByRole('combobox', { name: 'AI 모델 선택' })).toContainText('GPT-5.3 Codex Spark');
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem('insight-engine-selected-model') ?? 'null')))
-      .toBe('chatmock/gpt-5.5');
+      .toBe('cliproxyapi/gpt-5.3-codex-spark');
     await page.reload();
     await page.getByRole('button', { name: '설정 열기', exact: true }).click();
-    await expect(settings.getByRole('combobox', { name: 'AI 모델 선택' })).toContainText('GPT-5.5');
+    await expect(settings.getByRole('combobox', { name: 'AI 모델 선택' })).toContainText('GPT-5.3 Codex Spark');
   });
+
+  for (const legacySelection of [
+    { id: 'chatmock/gpt-5.5', label: 'GPT-5.5' },
+    { id: 'chatmock/gpt-5.3-codex-spark', label: 'GPT-5.3 Codex Spark' },
+    { id: 'chatmock/gpt-5.4-mini', label: 'GPT-5.5' },
+    { id: 'chatmock/gpt-5.4', label: 'GPT-5.5' },
+  ]) {
+    test(`이전 ${legacySelection.id} 선택을 복구하면서 저장 결과를 보존한다`, async ({ page }) => {
+      const reports = [makeMockReport({ model: legacySelection.id, title: '이전 모델로 생성한 노트' })];
+      await page.evaluate(({ model, savedReports }) => {
+        localStorage.setItem('insight-engine-selected-model', JSON.stringify(model));
+        localStorage.setItem('insight-engine-reports', JSON.stringify(savedReports));
+      }, { model: legacySelection.id, savedReports: reports });
+
+      await page.reload();
+      await page.getByRole('button', { name: '설정 열기', exact: true }).click();
+      const settings = page.getByRole('dialog', { name: '설정', exact: true });
+      await expect(settings.getByRole('combobox', { name: 'AI 모델 선택' })).toContainText(legacySelection.label);
+      expect(await page.evaluate(() => JSON.parse(localStorage.getItem('insight-engine-selected-model') ?? 'null')))
+        .toBe(legacySelection.id);
+      expect(await page.evaluate(() => JSON.parse(localStorage.getItem('insight-engine-reports') ?? '[]')))
+        .toEqual(reports);
+    });
+  }
 });

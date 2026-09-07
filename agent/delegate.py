@@ -66,7 +66,7 @@ class DelegateManager:
 
     사용법:
         manager = DelegateManager(
-            parent_model="gemini/gemini-3-flash-preview",
+            parent_model="cliproxyapi/gpt-5.5",
             parent_toolsets=["full"],
             depth=0,
         )

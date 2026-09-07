@@ -29,18 +29,36 @@ COPY requirements.txt ./
 RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt
 
-# ── ChatMock 런타임 (운영 Compose 전용) ──────────────────────────────────────
-FROM python:3.11-slim AS chatmock
+# ── CLIProxyAPI: 공식 릴리스와 소스 커밋을 함께 고정 ────────────────────────
+FROM golang:1.26-bookworm AS cliproxyapi-builder
+ARG CLIPROXYAPI_VERSION=7.2.152
+ARG CLIPROXYAPI_COMMIT=c76dfd4e0edabab9000628b1560ab8ab379eadb8
+WORKDIR /src
+RUN git clone --depth 1 --branch "v${CLIPROXYAPI_VERSION}" \
+        https://github.com/router-for-me/CLIProxyAPI.git . \
+    && test "$(git rev-parse HEAD)" = "$CLIPROXYAPI_COMMIT" \
+    && CGO_ENABLED=1 GOOS=linux go build -buildvcs=false \
+        -ldflags="-s -w -X main.Version=${CLIPROXYAPI_VERSION} -X main.Commit=${CLIPROXYAPI_COMMIT}" \
+        -o /out/CLIProxyAPI ./cmd/server/
 
-RUN pip install --no-cache-dir "chatmock==1.40" \
-    && useradd --create-home --uid 10001 --shell /usr/sbin/nologin chatmock \
-    && mkdir -p /data/codex \
-    && chown -R chatmock:chatmock /data
-ENV CODEX_HOME=/data/codex CHATGPT_LOCAL_HOME=/data/codex HOME=/data
-USER chatmock
-WORKDIR /data
-EXPOSE 8000
-CMD ["chatmock", "serve", "--host", "0.0.0.0", "--port", "8000", "--reasoning-effort", "minimal", "--fast-mode"]
+FROM python:3.11-slim-bookworm AS cliproxyapi
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates tzdata \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd --create-home --uid 10001 --shell /usr/sbin/nologin cliproxyapi \
+    && mkdir -p /data/cliproxyapi/auth /opt/cliproxyapi \
+    && chown -R cliproxyapi:cliproxyapi /data/cliproxyapi
+COPY --from=cliproxyapi-builder /out/CLIProxyAPI /usr/local/bin/CLIProxyAPI
+COPY scripts/cliproxyapi_runtime.py /opt/cliproxyapi/runtime.py
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    CLIPROXYAPI_BIND_HOST=0.0.0.0 \
+    CLIPROXYAPI_AUTH_DIR=/data/cliproxyapi/auth
+USER cliproxyapi
+WORKDIR /tmp
+EXPOSE 8317
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=5 \
+    CMD ["python", "/opt/cliproxyapi/runtime.py", "healthcheck"]
+ENTRYPOINT ["python", "/opt/cliproxyapi/runtime.py"]
+CMD ["serve"]
 
 # ── 스테이지 3: 최종 이미지 ───────────────────────────────────────────────────
 FROM python:3.11-slim AS final

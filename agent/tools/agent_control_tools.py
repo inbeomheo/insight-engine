@@ -52,7 +52,7 @@ def _handle_delegate_task(args: dict, **kwargs) -> str:
         }, ensure_ascii=False)
 
     # 부모 에이전트 정보 (kwargs에서 전달)
-    parent_model = kwargs.get("parent_model", "gemini/gemini-3-flash-preview")
+    parent_model = kwargs.get("parent_model", "cliproxyapi/gpt-5.5")
     parent_toolsets = kwargs.get("parent_toolsets", ["full"])
 
     manager = DelegateManager(

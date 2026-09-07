@@ -34,7 +34,7 @@ def test_core_create_content_checks_trusted_callback_before_provider():
 
     with patch(
         "services.core.ai_service.resolve_public_model",
-        return_value="chatmock/gpt-5.4-mini",
+        return_value="cliproxyapi/gpt-5.5",
     ), patch(
         "services.core.ai_service.create_content",
         side_effect=provider,
@@ -64,7 +64,7 @@ def test_core_create_content_lock_loss_prevents_provider():
 
     with patch(
         "services.core.ai_service.resolve_public_model",
-        return_value="chatmock/gpt-5.4-mini",
+        return_value="cliproxyapi/gpt-5.5",
     ), patch(
         "services.core.ai_service.create_content",
         side_effect=call_ai,
@@ -81,7 +81,7 @@ def test_core_create_content_generic_failure_hides_provider_secret():
     secret = "Bearer sk-tool-secret https://internal.example"
     with patch(
         "services.core.ai_service.resolve_public_model",
-        return_value="chatmock/gpt-5.4-mini",
+        return_value="cliproxyapi/gpt-5.5",
     ), patch(
         "services.core.ai_service.create_content",
         side_effect=RuntimeError(secret),
@@ -291,7 +291,7 @@ def test_commentary_auto_wrapper_ignores_model_supplied_model():
 
     with patch(
         "services.content.commentary_service._get_model",
-        return_value="chatmock/gpt-5.4-mini",
+        return_value="cliproxyapi/gpt-5.5",
     ), patch(
         "services.core.ai_service.create_content",
         return_value={"content": "원문"},
@@ -302,7 +302,7 @@ def test_commentary_auto_wrapper_ignores_model_supplied_model():
             on_cost_start=lambda: None,
         )
 
-    assert provider.call_args.args[1] == "chatmock/gpt-5.4-mini"
+    assert provider.call_args.args[1] == "cliproxyapi/gpt-5.5"
 
 
 def test_podcast_auto_wrapper_ignores_model_supplied_model():
@@ -325,7 +325,7 @@ def test_podcast_auto_wrapper_ignores_model_supplied_model():
             on_cost_start=lambda: None,
         )
 
-    assert generate_script.call_args.args[2] == "chatmock/gpt-5.4-mini"
+    assert generate_script.call_args.args[2] == "cliproxyapi/gpt-5.5"
 
 
 def test_content_auto_wrapper_uses_trusted_callback_and_ignores_model_value():
@@ -340,7 +340,7 @@ def test_content_auto_wrapper_uses_trusted_callback_and_ignores_model_value():
 
     with patch(
         "services.content.brief_service._get_model",
-        return_value="chatmock/gpt-5.4-mini",
+        return_value="cliproxyapi/gpt-5.5",
     ), patch(
         "services.core.ai_service.create_content",
         side_effect=provider,
@@ -372,7 +372,7 @@ def test_content_auto_wrapper_rethrows_lock_loss_before_provider():
 
     with patch(
         "services.content.brief_service._get_model",
-        return_value="chatmock/gpt-5.4-mini",
+        return_value="cliproxyapi/gpt-5.5",
     ), patch(
         "services.core.ai_service.create_content",
         side_effect=call_ai,
@@ -464,7 +464,7 @@ def test_podcast_threads_callback_to_ai_and_every_tts_call():
         assert _generate_script(
             "콘텐츠",
             "제목",
-            "chatmock/gpt-5.4-mini",
+            "cliproxyapi/gpt-5.5",
             on_cost_start=callback,
         ) == "Host: 안녕"
 
@@ -586,7 +586,7 @@ def test_analysis_auto_wrapper_uses_only_trusted_cost_callback():
 
     with patch(
         "services.core.ai_service.resolve_public_model",
-        return_value="chatmock/gpt-5.4-mini",
+        return_value="cliproxyapi/gpt-5.5",
     ), patch("litellm.completion", side_effect=provider):
         payload = json.loads(registry.dispatch(
             "analyze_content",
@@ -612,7 +612,7 @@ def test_quality_auto_wrapper_rethrows_trusted_lock_loss_before_provider():
 
     with patch(
         "services.quality.quality_service._get_eval_model",
-        return_value="chatmock/gpt-5.4-mini",
+        return_value="cliproxyapi/gpt-5.5",
     ), patch("litellm.completion", provider), pytest.raises(
         UsageLockUnavailable
     ):
@@ -637,7 +637,9 @@ def test_rag_auto_wrapper_forwards_trusted_callback_to_graph_provider():
 
     def provider(**kwargs):
         events.append("provider")
-        assert kwargs["model"] == "chatmock/gpt-5.4-mini"
+        assert kwargs["model"] == "gpt-5.5"
+        assert kwargs["custom_llm_provider"] == "openai"
+        assert kwargs["api_base"] == "http://127.0.0.1:8317/v1"
         return _completion_response(
             '{"entities": [{"name": "Python", "type": "technology"}], '
             '"relations": []}'

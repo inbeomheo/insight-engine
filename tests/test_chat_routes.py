@@ -19,7 +19,7 @@ def _payload(**overrides):
         "question": "핵심 결론은 뭐야?",
         "context": "[00:01] AI는 반복 학습을 돕습니다.\n[00:05] 복습 질문이 중요합니다.",
         "history": [{"role": "user", "content": "요약해줘"}],
-        "model": "chatmock/gpt-5.4-mini",
+        "model": "cliproxyapi/gpt-5.5",
         "language": "ko",
     }
     data.update(overrides)
@@ -65,7 +65,7 @@ def test_chat_happy_path_uses_ai_and_note_search():
     assert "자막/본문과 관련 지식 노트만" in messages[0]["content"]
     assert messages[1]["role"] == "user"
     assert "복습 질문 메모" in messages[-1]["content"]
-    assert create_chat.call_args.kwargs["model"] == "chatmock/gpt-5.4-mini"
+    assert create_chat.call_args.kwargs["model"] == "cliproxyapi/gpt-5.5"
 
 
 def test_chat_rejects_unlisted_model_before_search_or_ai():

@@ -47,7 +47,7 @@ def _live_ready_request(
     client_error: Exception | None = None,
 ):
     with patch.dict('os.environ', {'FLASK_ENV': 'production'}, clear=False), \
-            patch('routes.utility.operations._check_chatmock_ready', return_value=True), \
+            patch('routes.utility.operations._check_cliproxyapi_ready', return_value=True), \
             patch('routes.utility.operations._check_redis_ready', return_value=True), \
             patch(
                 'routes.utility.operations.is_supabase_enabled',

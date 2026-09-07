@@ -54,7 +54,7 @@ from services.usage.usage_lock import (
 
 blog_bp = Blueprint('blog', __name__)
 
-DEFAULT_MODEL = 'chatmock/gpt-5.4-mini'
+DEFAULT_MODEL = 'cliproxyapi/gpt-5.5'
 DEFAULT_STYLE = 'summary'
 MAX_BATCH_URLS = 10
 MAX_BATCH_WORKERS = 5
@@ -2071,7 +2071,7 @@ def extract_events_endpoint():
     요청 형식:
         {"url": "https://youtube.com/..."} — URL 제공 시 자막 자동 추출
         {"transcript": "자막 텍스트"} — 자막 직접 제공
-        {"model": "chatmock/gpt-5.4-mini"} — 서버 허용 목록 내 선택
+        {"model": "cliproxyapi/gpt-5.5"} — 서버 허용 목록 내 선택
 
     응답 형식:
         {"events": [...], "summary": {...}, "categorized": {...}}

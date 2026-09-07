@@ -103,13 +103,13 @@
   "settings": {
     "title": "設定",
     "aiService": "AIサービス",
-    "aiServiceDescription": "ChatMockモデルとキャッシュを管理します",
+    "aiServiceDescription": "CLIProxyAPIモデルとキャッシュを管理します",
     "selectModel": "モデルを選択",
-    "serviceInfoLabel": "ChatMockサービス情報",
+    "serviceInfoLabel": "CLIProxyAPIサービス情報",
     "singleServiceActive": "単一のAIサービスを使用中",
     "modelSelectLabel": "AIモデルを選択",
-    "noModels": "利用可能なChatMockモデルがありません。",
-    "noProviders": "ChatMockモデル一覧を読み込めません。Flaskサーバーとchatmock serveを確認してください。",
+    "noModels": "利用可能なCLIProxyAPIモデルがありません。",
+    "noProviders": "CLIProxyAPIモデル一覧を読み込めません。FlaskサーバーとCLIProxyAPI (http://127.0.0.1:8317/v1)を確認してください。",
     "cacheManagement": "キャッシュ管理",
     "cacheDescription": "保存された字幕/コメントキャッシュを削除します。",
     "clearCache": "全キャッシュを削除",
@@ -122,11 +122,11 @@
   "onboarding": {
     "title": "ようこそ！",
     "description": "YouTubeの動画をAIで分析して\nさまざまな形式のコンテンツを生成します",
-    "noServer": "Flaskサーバーが実行中か確認してください。",
+    "noServer": "FlaskサーバーとCLIProxyAPI（http://127.0.0.1:8317/v1）が起動しているか確認してください。",
     "modelCount": "{count}モデル",
-    "serviceInfoLabel": "ChatMockサービス情報",
+    "serviceInfoLabel": "CLIProxyAPIサービス情報",
     "singleService": "単一のAIサービス",
-    "noModels": "利用可能なChatMockモデルがありません。",
+    "noModels": "利用可能なCLIProxyAPIモデルがありません。",
     "start": "始める",
     "step2Desc": "要約、Q&A、クイズ、復習カードから学習スタイルを選択してください。"
   },
@@ -150,9 +150,9 @@
     "shortcutsDesc": "Enterキーを押してURLを追加または生成を開始できます。",
     "faq": "よくある質問",
     "faqApiKey": "APIキーはどこで設定しますか？",
-    "faqApiKeyAnswer": "ChatMockを起動してから、設定 > AIサービスでモデルを選択してください。",
+    "faqApiKeyAnswer": "CLIProxyAPIをhttp://127.0.0.1:8317/v1で起動してから、設定 > AIサービスでモデルを選択してください。APIキーはサーバーの環境変数で管理します。",
     "faqOffline": "オフラインでも使えますか？",
-    "faqOfflineAnswer": "以前に生成したコンテンツはオフラインでも閲覧できますが、新しいコンテンツの生成にはインターネット接続が必要です。"
+    "faqOfflineAnswer": "以前に生成したコンテンツはオフラインでも閲覧できます。新しいコンテンツの生成にはFlaskサーバーとCLIProxyAPIの起動、およびインターネット接続が必要です。"
   },
   "profile": {
     "title": "プロフィール",

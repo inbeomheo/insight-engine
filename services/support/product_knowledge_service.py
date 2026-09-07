@@ -20,9 +20,9 @@ FAQ_ITEMS = [
         "answer": "예약 발행과 캘린더 기능은 학습 엔진으로의 방향 전환 과정에서 제거됐어. 지금은 URL/텍스트를 넣어 바로 콘텐츠를 생성하고 학습하는 흐름에 집중하고 있어.",
     },
     {
-        "keywords": ["모델", "chatmock", "gpt", "프로바이더", "provider"],
+        "keywords": ["모델", "cliproxyapi", "chatmock", "gpt", "프로바이더", "provider"],
         "title": "모델/프로바이더",
-        "answer": "현재 생성 모델은 ChatMock(OpenAI 호환 로컬 프록시) 기준으로 단순화했어. 터미널에서 `chatmock login` 후 `chatmock serve`를 실행하고, `.env`의 `CHATMOCK_BASE_URL`이 `http://127.0.0.1:8000/v1`인지 확인하면 돼.",
+        "answer": "현재 생성 모델은 CLIProxyAPI(OpenAI 호환 요청을 연결하는 서버)를 통해 사용해. CLIProxyAPI에서 계정 로그인과 서버 실행을 완료한 뒤, `.env`의 `CLIPROXYAPI_BASE_URL`을 `http://127.0.0.1:8317/v1`로 설정하고 `CLIPROXYAPI_API_KEY`를 서버에 등록한 키와 맞추면 돼. 추가 모델은 `CLIPROXYAPI_MODELS`에 쉼표로 구분해서 등록할 수 있어.",
     },
     {
         "keywords": ["스타일", "출력", "요약", "qna", "q&a", "퀴즈", "quiz", "리텐션"],

@@ -77,7 +77,7 @@ def create_content_stream(content: str, model: str, style_prompt: Optional[str] 
     LiteLLM 스트리밍으로 AI 콘텐츠를 생성합니다.
     각 조각은 텍스트 delta만 yield하고, generator return 값으로 prompt/usage를 돌려줍니다.
 
-    ChatMock(OpenAI 호환) 단일 경로를 사용하므로 프로바이더별 스트리밍 폴백은 두지 않습니다.
+    CLIProxyAPI(OpenAI 호환) 단일 경로를 사용하므로 프로바이더별 스트리밍 폴백은 두지 않습니다.
     """
     default_meta = {
         'prompt': '',
@@ -87,6 +87,7 @@ def create_content_stream(content: str, model: str, style_prompt: Optional[str] 
     }
 
     try:
+        ai_service.require_gateway_connection()
         rag_context, web_context, web_sources, style_memory_context, memory_context = (
             build_optional_prompt_contexts(
                 content,

@@ -74,7 +74,7 @@ def test_post_notes_generates_saves_and_returns_note(tmp_path, monkeypatch):
     ):
         resp = client.post(
             "/api/notes",
-            json={"content": "원문 콘텐츠", "source": _source(), "language": "ko", "model": "chatmock/gpt-5.4-mini"},
+            json={"content": "원문 콘텐츠", "source": _source(), "language": "ko", "model": "cliproxyapi/gpt-5.5"},
             headers=_H,
         )
 
@@ -166,7 +166,7 @@ def test_authenticated_note_routes_enforce_owner_for_create_list_search_and_deta
             json={
                 "content": "사용자 B의 새 원문",
                 "source": {"type": "text", "url": "", "title": "새 노트"},
-                "model": "chatmock/gpt-5.4-mini",
+                "model": "cliproxyapi/gpt-5.5",
             },
             headers=headers_b,
         )
@@ -231,7 +231,7 @@ def test_post_notes_generates_from_text_source_without_url(tmp_path, monkeypatch
     ):
         resp = client.post(
             "/api/notes",
-            json={"content": "붙여넣은 원문 콘텐츠", "source": source, "language": "ko", "model": "chatmock/gpt-5.4-mini"},
+            json={"content": "붙여넣은 원문 콘텐츠", "source": source, "language": "ko", "model": "cliproxyapi/gpt-5.5"},
             headers=_H,
         )
 
@@ -267,7 +267,7 @@ def test_post_notes_duplicate_url_returns_warning_without_ai(tmp_path, monkeypat
                     "title": "영상 제목",
                 },
                 "language": "ko",
-                "model": "chatmock/gpt-5.4-mini",
+                "model": "cliproxyapi/gpt-5.5",
             },
             headers=_H,
         )
@@ -303,7 +303,7 @@ def test_post_notes_similar_content_returns_warning_without_ai(tmp_path, monkeyp
                 "content": "유사한 원문 콘텐츠",
                 "source": {"type": "article", "url": "https://example.com/new", "title": "새 글"},
                 "language": "ko",
-                "model": "chatmock/gpt-5.4-mini",
+                "model": "cliproxyapi/gpt-5.5",
             },
             headers=_H,
         )
@@ -346,7 +346,7 @@ def test_post_notes_similarity_threshold_boundaries(tmp_path, monkeypatch, score
                 "content": "유사한 원문 콘텐츠",
                 "source": {"type": "article", "url": f"https://example.com/new-{score}", "title": "새 글"},
                 "language": "ko",
-                "model": "chatmock/gpt-5.4-mini",
+                "model": "cliproxyapi/gpt-5.5",
             },
             headers=_H,
         )
@@ -379,7 +379,7 @@ def test_post_notes_similarity_lookup_failure_still_generates(tmp_path, monkeypa
                 "content": "새 원문 콘텐츠",
                 "source": {"type": "article", "url": "https://example.com/new", "title": "새 글"},
                 "language": "ko",
-                "model": "chatmock/gpt-5.4-mini",
+                "model": "cliproxyapi/gpt-5.5",
             },
             headers=_H,
         )

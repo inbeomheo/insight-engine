@@ -267,6 +267,8 @@ def _smoke_split_production_roles(
             "--env",
             f"ENCRYPTION_SECRET={ephemeral_secret}",
             "--env",
+            f"CLIPROXYAPI_API_KEY={ephemeral_secret}",
+            "--env",
             "SUPABASE_URL=https://ci-runtime-smoke.supabase.co",
             "--env",
             f"SUPABASE_PUBLISHABLE_KEY={ephemeral_secret}",
@@ -417,7 +419,7 @@ def main() -> int:
         if (
             ready.get("status") != "ready"
             or not isinstance(dependencies, dict)
-            or dependencies.get("chatmock") != "skipped"
+            or dependencies.get("cliproxyapi") != "skipped"
             or dependencies.get("redis") != "skipped"
             or not isinstance(supabase_schema, dict)
             or supabase_schema.get("ready") is not True

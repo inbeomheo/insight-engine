@@ -1,7 +1,7 @@
 /**
  * 배치 (개별 생성) 테스트
  *
- * - 2개 URL 개별 생성 → 결과 카드 2개 (API — ChatMock 필요)
+ * - 2개 URL 개별 생성 → 결과 카드 2개 (API — CLIProxyAPI 필요)
  * - 생성 모드 선택기(개별/통합/퓨전) 상시 표시 + 모드 전환 시 CTA 교체 (UI)
  * - 최대 10개 URL 제한 (UI)
  * - URL 칩 삭제 동작 (UI)
@@ -22,9 +22,9 @@ test.describe('배치 처리 (개별 생성)', () => {
   }) => {
     test.skip(
       process.env.E2E_LIVE_GENERATION !== '1',
-      '실제 ChatMock/YouTube 연동은 E2E_LIVE_GENERATION=1에서만 실행',
+      '실제 CLIProxyAPI/YouTube 연동은 E2E_LIVE_GENERATION=1에서만 실행',
     );
-    // 설정: 저비용 프리셋 (ChatMock Mini · 요약 · 짧게)
+    // 설정: 저비용 프리셋 (CLIProxyAPI GPT-5.5 · 요약 · 짧게)
     await contentGenerator.applyCheapPreset();
 
     // URL 2개 추가

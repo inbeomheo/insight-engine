@@ -206,7 +206,7 @@ class TestCompletionChargeBoundary(unittest.TestCase):
                 side_effect=completion_factory,
             ):
                 result = _call_completion_with_model_retry(
-                    'chatmock/gpt-5.4-mini',
+                    'cliproxyapi/gpt-5.5',
                     {'model': 'gpt-5.4-mini'},
                 )
 
@@ -236,7 +236,7 @@ class TestCompletionChargeBoundary(unittest.TestCase):
             side_effect=completion_factory,
         ):
             result = _call_completion_with_model_retry(
-                'chatmock/gpt-5.4-mini',
+                'cliproxyapi/gpt-5.5',
                 {'model': 'gpt-5.4-mini'},
                 on_cost_start=lambda: events.append('cost'),
             )
@@ -261,7 +261,7 @@ class TestCompletionChargeBoundary(unittest.TestCase):
         ):
             result = call_litellm(
                 [{'role': 'user', 'content': 'translate'}],
-                model='chatmock/gpt-5.4-mini',
+                model='cliproxyapi/gpt-5.5',
                 on_cost_start=lambda: events.append('cost'),
             )
 
@@ -287,7 +287,7 @@ class TestCompletionChargeBoundary(unittest.TestCase):
             with self.assertRaises(UsageLockUnavailable):
                 create_content(
                     'content',
-                    'chatmock/gpt-5.4-mini',
+                    'cliproxyapi/gpt-5.5',
                     on_cost_start=reject_cost,
                 )
 
@@ -304,7 +304,7 @@ class TestCompletionChargeBoundary(unittest.TestCase):
             with self.assertRaises(Exception):
                 create_content(
                     'content',
-                    'chatmock/gpt-5.4-mini',
+                    'cliproxyapi/gpt-5.5',
                     on_cost_start=on_cost_start,
                 )
 
@@ -351,7 +351,7 @@ class TestStreamingUsage(unittest.TestCase):
         ):
             self.assertEqual(list(create_content_stream(
                 'content',
-                'chatmock/gpt-5.4-mini',
+                'cliproxyapi/gpt-5.5',
                 on_cost_start=lambda: events.append('cost'),
             )), [])
 
@@ -378,7 +378,7 @@ class TestStreamingUsage(unittest.TestCase):
             with self.assertRaises(UsageLockUnavailable):
                 list(create_content_stream(
                     'content',
-                    'chatmock/gpt-5.4-mini',
+                    'cliproxyapi/gpt-5.5',
                     on_cost_start=reject_cost,
                 ))
 
@@ -397,7 +397,7 @@ class TestStreamingUsage(unittest.TestCase):
             with self.assertRaises(Exception):
                 list(create_content_stream(
                     'content',
-                    'chatmock/gpt-5.4-mini',
+                    'cliproxyapi/gpt-5.5',
                     on_cost_start=on_cost_start,
                 ))
 

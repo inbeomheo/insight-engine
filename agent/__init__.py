@@ -20,7 +20,7 @@ Hermes Agent 패턴 기반 에이전트 오케스트레이션 시스템.
 
     # 에이전트 실행
     agent = AIAgent(
-        model="gemini/gemini-3-flash-preview",
+        model="cliproxyapi/gpt-5.5",
         toolsets=["role_writer"],
         system_prompt="콘텐츠 작성 전문가",
     )

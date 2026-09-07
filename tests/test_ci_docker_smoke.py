@@ -24,7 +24,7 @@ def _ready_payload() -> dict[str, object]:
     return {
         "status": "ready",
         "dependencies": {
-            "chatmock": "skipped",
+            "cliproxyapi": "skipped",
             "redis": "skipped",
             "supabase_schema": {
                 "ready": True,
@@ -141,7 +141,7 @@ def test_main_logs_and_removes_container_when_testing_ready_contract_fails(
         {
             "status": "ready",
             "dependencies": {
-                "chatmock": "skipped",
+                "cliproxyapi": "skipped",
                 "redis": "skipped",
                 "supabase_schema": {"ready": False},
             },

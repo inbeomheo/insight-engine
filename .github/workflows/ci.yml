@@ -251,14 +251,18 @@ jobs:
           DOCKER_SMOKE_TIMEOUT_SECONDS: "180"
         run: python scripts/ci_docker_smoke.py
 
-      - name: ChatMock 1.40 이미지 빌드 검증
+      - name: CLIProxyAPI 7.2.152 이미지 빌드 검증
         uses: docker/build-push-action@v5
         with:
           context: .
-          target: chatmock
+          target: cliproxyapi
           push: false
-          tags: insight-engine-chatmock:ci
+          load: true
+          tags: insight-engine-cliproxyapi:ci
           cache-from: type=gha
+
+      - name: CLIProxyAPI 인증 런타임 스모크
+        run: python scripts/cliproxyapi_docker_smoke.py
 
       - name: Docker 게시 설정 확인
         if: github.ref == 'refs/heads/master' && github.event_name == 'push' && vars.ENABLE_DOCKER_PUBLISH == 'true'

@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/select';
 import { useUIStore } from '@/stores/uiStore';
 import { useSettingsStore } from '@/stores/settingsStore';
+import { resolveModelSelection } from '@/lib/ai-model-selection';
 import { formatModelSize } from '@/lib/utils';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useAuthUserId } from '@/hooks/useAuthUserId';
@@ -60,9 +61,7 @@ function AccountSettingsModal({ authUserId }: { authUserId: string | null }) {
 
   const activeProvider = Object.values(providers)[0] ?? null;
   const currentModels = activeProvider?.models ?? [];
-  const activeModelId = currentModels.some((model) => model.id === selectedModel)
-    ? selectedModel
-    : currentModels[0]?.id ?? '';
+  const activeModelId = resolveModelSelection(currentModels, selectedModel);
   const { t } = useTranslation();
 
   // 스타일 메모리 상태

@@ -15,7 +15,7 @@ class TestAddCommentary(unittest.TestCase):
         with self.assertRaises(ValueError):
             add_commentary("   ")
 
-    @patch('services.content.commentary_service._get_model', return_value='chatmock/gpt-5.4-mini')
+    @patch('services.content.commentary_service._get_model', return_value='cliproxyapi/gpt-5.5')
     @patch('services.core.ai_service.create_content')
     def test_successful_commentary(self, mock_create, mock_model):
         commented_text = (
@@ -32,7 +32,7 @@ class TestAddCommentary(unittest.TestCase):
         self.assertIn("commented_content", result)
         self.assertEqual(result["comment_count"], 2)
 
-    @patch('services.content.commentary_service._get_model', return_value='chatmock/gpt-5.4-mini')
+    @patch('services.content.commentary_service._get_model', return_value='cliproxyapi/gpt-5.5')
     @patch('services.core.ai_service.create_content')
     def test_no_comments_added(self, mock_create, mock_model):
         mock_create.return_value = {'content': '원본 그대로 반환'}
@@ -40,7 +40,7 @@ class TestAddCommentary(unittest.TestCase):
         result = add_commentary("원본 텍스트")
         self.assertEqual(result["comment_count"], 0)
 
-    @patch('services.content.commentary_service._get_model', return_value='chatmock/gpt-5.4-mini')
+    @patch('services.content.commentary_service._get_model', return_value='cliproxyapi/gpt-5.5')
     @patch('services.core.ai_service.create_content')
     def test_empty_response_fallback(self, mock_create, mock_model):
         mock_create.return_value = {'content': ''}

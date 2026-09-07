@@ -170,7 +170,7 @@ def test_generate_youtube_citations_add_source_receipts():
     ):
         resp = client.post(
             "/generate",
-            json={"url": url, "style": "qna", "model": "chatmock/gpt-5.4-mini", "enable_citations": True},
+            json={"url": url, "style": "qna", "model": "cliproxyapi/gpt-5.5", "enable_citations": True},
             headers=_H,
         )
 

@@ -10,11 +10,12 @@ from typing import Any, Callable, Optional
 import litellm
 
 from services.usage.usage_lock import UsageLockUnavailable
+from services.core.gateway_service import apply_gateway_kwargs
 
 logger = logging.getLogger(__name__)
 
-# 기본 추출 모델 (ChatMock/OpenAI 호환)
-_DEFAULT_MODEL = "chatmock/gpt-5.4-mini"
+# 기본 추출 모델 (CLIProxyAPI/OpenAI 호환)
+_DEFAULT_MODEL = "cliproxyapi/gpt-5.5"
 
 _ENTITY_RELATION_PROMPT = """다음 텍스트에서 주요 엔티티와 관계를 추출하세요.
 
@@ -56,6 +57,7 @@ def _call_llm(
         "temperature": 0.1,  # 정밀 추출이므로 낮은 temperature
         "max_tokens": 2000,
     }
+    apply_gateway_kwargs(completion_kwargs, model)
 
     try:
         if callable(on_cost_start):

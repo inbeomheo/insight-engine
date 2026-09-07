@@ -103,13 +103,13 @@
   "settings": {
     "title": "Settings",
     "aiService": "AI Service",
-    "aiServiceDescription": "Manage ChatMock models and cache",
+    "aiServiceDescription": "Manage CLIProxyAPI models and cache",
     "selectModel": "Select model",
-    "serviceInfoLabel": "ChatMock service information",
+    "serviceInfoLabel": "CLIProxyAPI service information",
     "singleServiceActive": "Using a single AI service",
     "modelSelectLabel": "Select AI model",
-    "noModels": "No ChatMock models are available.",
-    "noProviders": "Could not load ChatMock models. Check Flask server and chatmock serve.",
+    "noModels": "No CLIProxyAPI models are available.",
+    "noProviders": "Could not load CLIProxyAPI models. Check Flask server and CLIProxyAPI (http://127.0.0.1:8317/v1).",
     "cacheManagement": "Cache Management",
     "cacheDescription": "Delete saved transcript/comment cache.",
     "clearCache": "Clear all cache",
@@ -122,11 +122,11 @@
   "onboarding": {
     "title": "Welcome!",
     "description": "Analyze YouTube videos with AI\nand generate content in various formats",
-    "noServer": "Please check if the Flask server is running.",
+    "noServer": "Check that Flask and CLIProxyAPI (http://127.0.0.1:8317/v1) are running.",
     "modelCount": "{count} models",
-    "serviceInfoLabel": "ChatMock service information",
+    "serviceInfoLabel": "CLIProxyAPI service information",
     "singleService": "Single AI service",
-    "noModels": "No ChatMock models are available.",
+    "noModels": "No CLIProxyAPI models are available.",
     "start": "Get Started",
     "step2Desc": "Select a learning style: summary, Q&A, quiz, or retention cards."
   },
@@ -150,9 +150,9 @@
     "shortcutsDesc": "Press Enter to add a URL or start generation.",
     "faq": "FAQ",
     "faqApiKey": "Where do I set my API key?",
-    "faqApiKeyAnswer": "Run ChatMock, then choose a model in Settings > AI Service.",
+    "faqApiKeyAnswer": "Run CLIProxyAPI at http://127.0.0.1:8317/v1, then choose a model in Settings > AI Service. API keys are configured through server environment variables.",
     "faqOffline": "Can I use it offline?",
-    "faqOfflineAnswer": "Previously generated content is available offline, but new generation requires an internet connection."
+    "faqOfflineAnswer": "Previously generated content is available offline. New generation requires Flask and CLIProxyAPI to be running and an internet connection."
   },
   "profile": {
     "title": "Profile",

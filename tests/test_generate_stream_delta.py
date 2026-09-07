@@ -65,7 +65,7 @@ class TestGenerateStreamDelta(unittest.TestCase):
         self.app.ai_cache = _FakeCache()
         self.client = self.app.test_client()
 
-    def _post(self, model='chatmock/gpt-5.4-mini', payload=None, headers=None):
+    def _post(self, model='cliproxyapi/gpt-5.5', payload=None, headers=None):
         body = {
             'url': 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
             'model': model,
@@ -409,7 +409,7 @@ class TestGenerateStreamDelta(unittest.TestCase):
                 '/generate-stream',
                 json={
                     'url': 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-                    'model': 'chatmock/gpt-5.4-mini',
+                    'model': 'cliproxyapi/gpt-5.5',
                     'style': 'summary',
                 },
                 headers=_H,
@@ -439,7 +439,7 @@ class TestGenerateStreamDelta(unittest.TestCase):
                 '/generate-stream',
                 json={
                     'url': 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-                    'model': 'chatmock/gpt-5.4-mini',
+                    'model': 'cliproxyapi/gpt-5.5',
                     'style': 'summary',
                 },
                 headers=_H,
@@ -531,7 +531,7 @@ class TestGenerateStreamDelta(unittest.TestCase):
                 '/generate-stream',
                 json={
                     'url': 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-                    'model': 'chatmock/gpt-5.4-mini',
+                    'model': 'cliproxyapi/gpt-5.5',
                     'style': 'summary',
                 },
                 headers=headers,
@@ -570,7 +570,7 @@ class TestGenerateStreamDelta(unittest.TestCase):
                     '/generate-stream',
                     json={
                         'url': 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-                        'model': 'chatmock/gpt-5.4-mini',
+                        'model': 'cliproxyapi/gpt-5.5',
                         'style': 'summary',
                     },
                     headers=headers,
@@ -719,7 +719,7 @@ class TestGenerateStreamDelta(unittest.TestCase):
         with self._patched(
             create_stream=patch('routes.blog_routes.ai_service.create_content_stream', side_effect=fake_stream),
         ) as mocks:
-            resp = self._post(model='chatmock/gpt-5.4-mini')
+            resp = self._post(model='cliproxyapi/gpt-5.5')
             body = resp.get_data(as_text=True)
 
         self.assertEqual(resp.status_code, 200)

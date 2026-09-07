@@ -46,7 +46,7 @@ for (const viewport of [
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     await injectReports(page, []);
     await page.addInitScript(() => {
-      localStorage.setItem('insight-engine-selected-model', JSON.stringify('chatmock/gpt-5.4-mini'));
+      localStorage.setItem('insight-engine-selected-model', JSON.stringify('cliproxyapi/gpt-5.5'));
     });
 
     const submittedBatches: string[][] = [];

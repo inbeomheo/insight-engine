@@ -2,6 +2,7 @@
 
 import { useRef, useEffect, useState } from 'react';
 import { useSettingsStore } from '@/stores/settingsStore';
+import { resolveModelSelection } from '@/lib/ai-model-selection';
 import { useUIStore } from '@/stores/uiStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import { STYLE_OPTIONS, LENGTH_OPTIONS, WRITING_STYLE_OPTIONS, LANGUAGE_OPTIONS, TRANSCRIPT_LANGUAGE_OPTIONS } from '@/lib/constants';
@@ -75,10 +76,8 @@ export default function SettingsPopover() {
 
   const activeProvider = Object.values(providers)[0];
   const currentModels = activeProvider?.models ?? [];
-  const activeModelId = currentModels.some((model) => model.id === selectedModel)
-    ? selectedModel
-    : currentModels[0]?.id ?? '';
-  const providerName = activeProvider?.name ?? 'ChatMock';
+  const activeModelId = resolveModelSelection(currentModels, selectedModel);
+  const providerName = activeProvider?.name ?? 'CLIProxyAPI (OpenAI 호환)';
 
   // 내장 + 커스텀 스타일
   const allStyles: StyleOption[] = [

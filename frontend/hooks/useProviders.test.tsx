@@ -10,7 +10,6 @@ const mocks = vi.hoisted(() => ({
     data: undefined as undefined | {
       providers: Record<string, {
         name: string;
-        api_base: string;
         models: Array<{
           id: string;
           name: string;
@@ -28,10 +27,16 @@ const mocks = vi.hoisted(() => ({
     setSelectedModel: vi.fn(),
   },
   toastError: vi.fn(),
+  setState: vi.fn(),
 }));
 
 vi.mock('@tanstack/react-query', () => ({ useQuery: () => mocks.query }));
-vi.mock('@/stores/settingsStore', () => ({ useSettingsStore: () => mocks.store }));
+vi.mock('@/stores/settingsStore', () => ({
+  useSettingsStore: Object.assign(
+    (selector: (state: typeof mocks.store) => unknown) => selector(mocks.store),
+    { setState: mocks.setState },
+  ),
+}));
 vi.mock('@/lib/api', () => ({ fetchProviders: vi.fn() }));
 vi.mock('sonner', () => ({ toast: { error: mocks.toastError } }));
 
@@ -49,20 +54,19 @@ async function renderHook() {
   await act(async () => root!.render(<Harness />));
 }
 
-function chatMockProviders() {
+function cliProxyProviders() {
   return {
-    chatmock: {
-      name: 'ChatMock',
-      api_base: 'http://127.0.0.1:8000/v1',
+    cliproxyapi: {
+      name: 'CLIProxyAPI',
       models: [
-        { id: 'chatmock/gpt-5.4-mini', name: 'GPT-5.4 Mini', max_input_tokens: 128000, price_input: 0, price_output: 0 },
-        { id: 'chatmock/gpt-5.4', name: 'GPT-5.4', max_input_tokens: 128000, price_input: 0, price_output: 0 },
+        { id: 'cliproxyapi/gpt-5.5', name: 'GPT-5.5', max_input_tokens: 128000, price_input: 0, price_output: 0 },
+        { id: 'cliproxyapi/gpt-5.3-codex-spark', name: 'GPT-5.3 Codex Spark', max_input_tokens: 128000, price_input: 0, price_output: 0 },
       ],
     },
   };
 }
 
-describe('useProviders 단일 ChatMock 모델 동기화', () => {
+describe('useProviders 단일 CLIProxyAPI 모델 동기화', () => {
   beforeEach(() => {
     mocks.query.data = undefined;
     mocks.query.error = null;
@@ -76,23 +80,67 @@ describe('useProviders 단일 ChatMock 모델 동기화', () => {
     document.body.innerHTML = '';
   });
 
-  it('모델 목록을 저장하고 유효하지 않은 선택을 첫 모델로 복구한다', async () => {
-    const providers = chatMockProviders();
+  it('모델 순서와 관계없이 유효하지 않은 선택을 GPT-5.5로 메모리에서 복구한다', async () => {
+    const providers = cliProxyProviders();
+    providers.cliproxyapi.models.reverse();
     mocks.query.data = { providers };
     mocks.store.selectedModel = 'removed-model';
 
     await renderHook();
 
     expect(mocks.store.setProviders).toHaveBeenCalledWith(providers);
-    expect(mocks.store.setSelectedModel).toHaveBeenCalledWith('chatmock/gpt-5.4-mini');
+    expect(mocks.setState).toHaveBeenCalledWith({ selectedModel: 'cliproxyapi/gpt-5.5' });
+    expect(mocks.store.setSelectedModel).not.toHaveBeenCalled();
   });
 
-  it('현재 모델이 유효하면 선택을 다시 저장하지 않는다', async () => {
-    mocks.query.data = { providers: chatMockProviders() };
-    mocks.store.selectedModel = 'chatmock/gpt-5.4';
+  it.each(['gpt-5.5', 'gpt-5.3-codex-spark'])('ChatMock의 지원 모델 %s 선택은 메모리에서만 같은 모델로 연결한다', async (model) => {
+    mocks.query.data = { providers: cliProxyProviders() };
+    mocks.store.selectedModel = `chatmock/${model}`;
 
     await renderHook();
 
+    expect(mocks.setState).toHaveBeenCalledWith({ selectedModel: `cliproxyapi/${model}` });
+    expect(mocks.store.setSelectedModel).not.toHaveBeenCalled();
+  });
+
+  it.each(['gpt-5.4-mini', 'gpt-5.4'])('지원이 종료된 ChatMock 모델 %s는 GPT-5.5로 복구한다', async (model) => {
+    mocks.query.data = { providers: cliProxyProviders() };
+    mocks.store.selectedModel = `chatmock/${model}`;
+
+    await renderHook();
+
+    expect(mocks.setState).toHaveBeenCalledWith({ selectedModel: 'cliproxyapi/gpt-5.5' });
+    expect(mocks.store.setSelectedModel).not.toHaveBeenCalled();
+  });
+
+  it('현재 모델이 유효하면 선택을 다시 저장하지 않는다', async () => {
+    mocks.query.data = { providers: cliProxyProviders() };
+    mocks.store.selectedModel = 'cliproxyapi/gpt-5.3-codex-spark';
+
+    await renderHook();
+
+    expect(mocks.store.setSelectedModel).not.toHaveBeenCalled();
+    expect(mocks.setState).not.toHaveBeenCalled();
+  });
+
+  it('기본 모델이 목록에 없으면 실제 제공되는 첫 모델을 선택한다', async () => {
+    const providers = cliProxyProviders();
+    providers.cliproxyapi.models = providers.cliproxyapi.models.slice(1);
+    mocks.query.data = { providers };
+
+    await renderHook();
+
+    expect(mocks.setState).toHaveBeenCalledWith({ selectedModel: 'cliproxyapi/gpt-5.3-codex-spark' });
+    expect(mocks.store.setSelectedModel).not.toHaveBeenCalled();
+  });
+
+  it('저장된 선택값이 문자열이 아니어도 기본 모델을 사용한다', async () => {
+    mocks.query.data = { providers: cliProxyProviders() };
+    mocks.store.selectedModel = null as unknown as string;
+
+    await renderHook();
+
+    expect(mocks.setState).toHaveBeenCalledWith({ selectedModel: 'cliproxyapi/gpt-5.5' });
     expect(mocks.store.setSelectedModel).not.toHaveBeenCalled();
   });
 
@@ -103,6 +151,7 @@ describe('useProviders 단일 ChatMock 모델 동기화', () => {
 
     expect(mocks.store.setProviders).toHaveBeenCalledWith({});
     expect(mocks.store.setSelectedModel).not.toHaveBeenCalled();
+    expect(mocks.setState).not.toHaveBeenCalled();
   });
 
   it('목록 조회 오류를 사용자에게 알린다', async () => {

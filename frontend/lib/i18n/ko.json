@@ -103,13 +103,13 @@
   "settings": {
     "title": "설정",
     "aiService": "AI 서비스",
-    "aiServiceDescription": "ChatMock 모델과 캐시를 관리합니다",
+    "aiServiceDescription": "CLIProxyAPI 모델과 캐시를 관리합니다",
     "selectModel": "모델 선택",
-    "serviceInfoLabel": "ChatMock 서비스 정보",
+    "serviceInfoLabel": "CLIProxyAPI 서비스 정보",
     "singleServiceActive": "단일 AI 서비스 사용 중",
     "modelSelectLabel": "AI 모델 선택",
-    "noModels": "사용 가능한 ChatMock 모델이 없습니다.",
-    "noProviders": "ChatMock 모델 목록을 불러올 수 없습니다. Flask 서버와 chatmock serve 실행 상태를 확인하세요.",
+    "noModels": "사용 가능한 CLIProxyAPI 모델이 없습니다.",
+    "noProviders": "CLIProxyAPI 모델 목록을 불러올 수 없습니다. Flask 서버와 CLIProxyAPI(http://127.0.0.1:8317/v1) 실행 상태를 확인하세요.",
     "cacheManagement": "캐시 관리",
     "cacheDescription": "저장된 자막/댓글 캐시를 삭제합니다.",
     "clearCache": "전체 캐시 삭제",
@@ -122,11 +122,11 @@
   "onboarding": {
     "title": "환영합니다!",
     "description": "YouTube 영상을 AI로 분석하여\n다양한 형식의 콘텐츠를 생성합니다",
-    "noServer": "Flask 서버가 실행 중인지 확인하세요.",
+    "noServer": "Flask 서버와 CLIProxyAPI(http://127.0.0.1:8317/v1)가 실행 중인지 확인하세요.",
     "modelCount": "{count}개 모델",
-    "serviceInfoLabel": "ChatMock 서비스 정보",
+    "serviceInfoLabel": "CLIProxyAPI 서비스 정보",
     "singleService": "단일 AI 서비스",
-    "noModels": "사용 가능한 ChatMock 모델이 없습니다.",
+    "noModels": "사용 가능한 CLIProxyAPI 모델이 없습니다.",
     "start": "시작하기",
     "step2Desc": "요약, Q&A, 퀴즈, 리텐션 카드 중 원하는 학습 스타일을 선택하세요."
   },
@@ -150,9 +150,9 @@
     "shortcutsDesc": "Enter키로 URL 추가 및 생성을 시작할 수 있습니다.",
     "faq": "자주 묻는 질문",
     "faqApiKey": "API 키는 어디서 설정하나요?",
-    "faqApiKeyAnswer": "ChatMock을 실행한 뒤 설정 > AI 서비스에서 모델만 선택하세요.",
+    "faqApiKeyAnswer": "CLIProxyAPI를 http://127.0.0.1:8317/v1에서 실행한 뒤 설정 > AI 서비스에서 모델을 선택하세요. API 키는 서버 환경변수로 관리합니다.",
     "faqOffline": "오프라인에서도 사용할 수 있나요?",
-    "faqOfflineAnswer": "이전에 생성한 콘텐츠는 오프라인에서도 볼 수 있지만, 새 콘텐츠 생성에는 인터넷 연결이 필요합니다."
+    "faqOfflineAnswer": "이전에 생성한 콘텐츠는 오프라인에서도 볼 수 있습니다. 새 콘텐츠를 생성하려면 Flask 서버와 CLIProxyAPI가 실행 중이어야 하고 인터넷 연결도 필요합니다."
   },
   "profile": {
     "title": "프로필",

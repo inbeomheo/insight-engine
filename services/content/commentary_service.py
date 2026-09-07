@@ -95,8 +95,8 @@ def _get_model() -> str:
     from config import PROVIDER_API_KEYS
 
     candidates = [
-        'chatmock/gpt-5.4-mini',
-        'chatmock/gpt-5.4',
+        'cliproxyapi/gpt-5.5',
+        'cliproxyapi/gpt-5.3-codex-spark',
     ]
     for model_id in candidates:
         provider = model_id.split('/')[0]

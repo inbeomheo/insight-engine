@@ -10,11 +10,12 @@ from typing import Callable, Optional
 import litellm
 
 from services.usage.usage_lock import UsageLockUnavailable
+from services.core.gateway_service import apply_gateway_kwargs
 
 logger = logging.getLogger(__name__)
 
 # 리랭킹용 모델 (빠른 응답 우선)
-_DEFAULT_MODEL = "chatmock/gpt-5.4-mini"
+_DEFAULT_MODEL = "cliproxyapi/gpt-5.5"
 
 _RERANK_PROMPT = """다음 쿼리에 대해 각 문서 청크의 관련도 점수(0~10)를 평가하세요.
 
@@ -72,16 +73,18 @@ def rerank(
     chunks_text = "\n\n".join(chunks_text_parts)
 
     prompt = _RERANK_PROMPT.format(query=query, chunks_text=chunks_text)
+    completion_kwargs = {
+        'model': model,
+        'messages': [{'role': 'user', 'content': prompt}],
+        'temperature': 0.0,
+        'max_tokens': 200,
+    }
+    apply_gateway_kwargs(completion_kwargs, model)
 
     try:
         if callable(on_cost_start):
             on_cost_start()
-        response = litellm.completion(
-            model=model,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.0,   # 결정론적 평가
-            max_tokens=200,
-        )
+        response = litellm.completion(**completion_kwargs)
         raw = response.choices[0].message.content.strip()
 
         # JSON 추출

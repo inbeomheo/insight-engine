@@ -17,8 +17,9 @@ services:
       PORT: "5001"
       BACKEND_BIND_HOST: 0.0.0.0
       REDIS_URL: redis://redis:6379/0
-      CHATMOCK_BASE_URL: http://chatmock:8000/v1
-      CHATMOCK_API_KEY: ${CHATMOCK_API_KEY:-dummy}
+      CLIPROXYAPI_BASE_URL: http://cliproxyapi:8317/v1
+      CLIPROXYAPI_API_KEY: ${CLIPROXYAPI_API_KEY:?Set CLIPROXYAPI_API_KEY to the gateway server key}
+      CLIPROXYAPI_MODELS: ${CLIPROXYAPI_MODELS:-}
       CHROMA_DB_PATH: /app/persist/data/chroma_db
       GRAPH_STORE_PATH: /app/persist/data/graph_store
       KNOWLEDGE_NOTES_DIR: /app/persist/data/notes
@@ -55,7 +56,7 @@ services:
     depends_on:
       redis:
         condition: service_healthy
-      chatmock:
+      cliproxyapi:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5001/ready"]
@@ -114,21 +115,19 @@ services:
       retries: 3
       start_period: 20s
 
-  chatmock:
+  cliproxyapi:
     build:
       context: .
-      target: chatmock
-    image: insight-engine-chatmock:1.40
-    container_name: insight-chatmock
+      target: cliproxyapi
+    image: insight-engine-cliproxyapi:7.2.152
+    container_name: insight-cliproxyapi
     restart: unless-stopped
     environment:
-      CODEX_HOME: /data/codex
-      CHATGPT_LOCAL_HOME: /data/codex
-      HOME: /data
-      CHATGPT_LOCAL_REASONING_EFFORT: minimal
-      CHATGPT_LOCAL_FAST_MODE: "true"
+      CLIPROXYAPI_API_KEY: ${CLIPROXYAPI_API_KEY:?Set CLIPROXYAPI_API_KEY to the gateway server key}
+    ports:
+      - "127.0.0.1:8317:8317"
     volumes:
-      - insight_chatmock_credentials:/data
+      - insight_cliproxyapi_auth:/data/cliproxyapi/auth
     read_only: true
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=64m
@@ -137,25 +136,26 @@ services:
     security_opt:
       - no-new-privileges:true
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/v1/models', timeout=5).read()"]
+      test: ["CMD", "python", "/opt/cliproxyapi/runtime.py", "healthcheck"]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 90s
 
-  chatmock-login:
+  cliproxyapi-login:
     build:
       context: .
-      target: chatmock
-    image: insight-engine-chatmock:1.40
-    profiles: ["chatmock-login"]
-    command: ["chatmock", "login"]
+      target: cliproxyapi
+    image: insight-engine-cliproxyapi:7.2.152
+    profiles: ["cliproxyapi-login"]
+    command: ["login"]
+    # docker compose run --service-ports로 로그인 콜백만 임시 공개한다.
+    ports:
+      - "127.0.0.1:1455:1455"
     environment:
-      CODEX_HOME: /data/codex
-      CHATGPT_LOCAL_HOME: /data/codex
-      HOME: /data
+      CLIPROXYAPI_API_KEY: ${CLIPROXYAPI_API_KEY:?Set CLIPROXYAPI_API_KEY to the gateway server key}
     volumes:
-      - insight_chatmock_credentials:/data
+      - insight_cliproxyapi_auth:/data/cliproxyapi/auth
     read_only: true
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=64m
@@ -165,6 +165,8 @@ services:
       - no-new-privileges:true
     stdin_open: true
     tty: true
+    healthcheck:
+      disable: true
 
   redis:
     image: redis:7-alpine
@@ -183,5 +185,5 @@ services:
 
 volumes:
   insight_app_persist:
-  insight_chatmock_credentials:
+  insight_cliproxyapi_auth:
   insight_redis_data:
