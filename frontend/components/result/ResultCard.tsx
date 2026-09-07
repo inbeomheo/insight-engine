@@ -86,6 +86,7 @@ const NOTEBOOKLM_ENABLED = process.env.NEXT_PUBLIC_NOTEBOOKLM_ENABLED === 'true'
 const NOTEBOOKLM_POLL_INTERVAL_MS = 5000;
 const NOTEBOOKLM_MAX_POLL_ATTEMPTS = 60;
 const NOTEBOOKLM_MAX_CONSECUTIVE_ERRORS = 3;
+const ANKI_EXPORT_STYLES = new Set(['quiz', 'retention_cards']);
 // 수식 감지 패턴: $$...$$ 또는 \(...\) 또는 \[...\]
 const MATH_PATTERN = /\$\$[\s\S]+?\$\$|\\\([\s\S]+?\\\)|\\\[[\s\S]+?\\\]/;
 
@@ -393,6 +394,7 @@ const ResultCard = memo(function ResultCard({ report, viewMode = 'full', onExpan
   // 완료된 마크다운/평문 결과는 html이 비어 있어도 편집할 수 있어야 한다.
   const isStreaming = report.is_streaming === true;
   const editingBaseRef = useRef<string | null>(null);
+  const canExportAnki = ANKI_EXPORT_STYLES.has(report.style);
 
   // NotebookLM 폴링 작업 추적 — 언마운트 시 타이머와 진행 중 응답을 모두 무효화한다.
   const pollJobsRef = useRef<Map<string, NotebookLmPollJob>>(new Map());
@@ -636,19 +638,23 @@ const ResultCard = memo(function ResultCard({ report, viewMode = 'full', onExpan
     void handleSaveKnowledgeNote();
   }
 
-  async function handleExportFormat(format: 'markdown') {
+  async function handleExportFormat(format: 'markdown' | 'anki') {
     try {
-      const blob = await exportFormat(format, report.title, report.content);
-      const ext = format === 'markdown' ? 'md' : format;
+      const blob = await exportFormat(format, report.title, report.content, {
+        style: report.style,
+        source_url: report.url,
+        tags: [report.style, 'generated-content'],
+      });
+      const ext = format === 'markdown' ? 'md' : 'apkg';
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = createDownloadFilename(report.title, ext);
       a.click();
       URL.revokeObjectURL(url);
-      toast.success(`${ext.toUpperCase()} 내보내기 완료`);
-    } catch {
-      toast.error('내보내기에 실패했습니다.');
+      toast.success(format === 'anki' ? 'Anki 덱 내보내기 완료' : 'MD 내보내기 완료');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '내보내기에 실패했습니다.');
     }
   }
 
@@ -1386,6 +1392,12 @@ const ResultCard = memo(function ResultCard({ report, viewMode = 'full', onExpan
                 <FileText className="h-3.5 w-3.5 mr-2" />
                 마크다운 (.md)
               </DropdownMenuItem>
+              {canExportAnki && (
+                <DropdownMenuItem onClick={() => handleExportFormat('anki')}>
+                  <Layers className="h-3.5 w-3.5 mr-2" />
+                  Anki 덱 (.apkg)
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive"

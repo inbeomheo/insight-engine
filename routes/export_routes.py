@@ -1,4 +1,4 @@
-﻿"""내보내기 라우트 — HTML/Markdown 전용."""
+"""내보내기 라우트 — HTML/Markdown 전용."""
 import io
 import re as re_module
 
@@ -186,3 +186,43 @@ a {{ color: #2563eb; }}
 
     except Exception as e:
         return handle_error(e, 'HTML 내보내기')
+
+
+@blog_bp.route('/api/export/anki', methods=['POST'])
+@require_auth
+def export_anki():
+    """퀴즈·리텐션 카드를 Anki .apkg 덱으로 내보냅니다."""
+    from services.export.anki_export_service import AnkiExportError, build_anki_package
+
+    try:
+        data = request.get_json(silent=True) or {}
+        title = data.get('title', 'Insight Engine 학습 덱')
+        content = data.get('content', '')
+        cards = data.get('cards')
+        if not content and not cards:
+            return api_error('Anki로 변환할 콘텐츠나 카드가 없습니다.', 400)
+
+        buffer, card_count = build_anki_package(
+            title=title,
+            content=content,
+            style=data.get('style', ''),
+            source_url=data.get('source_url') or data.get('url', ''),
+            tags=data.get('tags') or [],
+            cards=cards,
+        )
+        safe_title = re_module.sub(r'[^\w\s가-힣-]', '', title)[:50].strip() or 'insight-engine-deck'
+        response = send_file(
+            buffer,
+            mimetype='application/octet-stream',
+            as_attachment=True,
+            download_name=f'{safe_title}.apkg',
+        )
+        response.headers['X-Anki-Card-Count'] = str(card_count)
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        return response
+    except AnkiExportError as exc:
+        return api_error(str(exc), 400)
+    except Exception as exc:
+        current_app.logger.exception('Anki export failed')
+        return api_error('Anki 내보내기 실패', 500)
+

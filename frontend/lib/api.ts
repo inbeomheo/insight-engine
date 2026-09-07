@@ -410,9 +410,24 @@ export async function fetchPlaylistVideos(
   });
 }
 
-// 포맷별 내보내기 (MD)
-export async function exportFormat(format: 'markdown', title: string, content: string): Promise<Blob> {
-  return requestBlob(`/api/export/${format}`, { method: 'POST', body: JSON.stringify({ title, content }) });
+// 포맷별 내보내기 (Markdown / Anki)
+export interface ExportMetadata {
+  style?: string;
+  source_url?: string;
+  tags?: string[];
+  cards?: Array<{ front: string; back: string; chapter?: string; tags?: string[] }>;
+}
+
+export async function exportFormat(
+  format: 'markdown' | 'anki',
+  title: string,
+  content: string,
+  metadata: ExportMetadata = {},
+): Promise<Blob> {
+  return requestBlob(`/api/export/${format}`, {
+    method: 'POST',
+    body: JSON.stringify({ title, content, ...metadata }),
+  });
 }
 
 // 퓨전 분석
