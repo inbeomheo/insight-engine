@@ -97,3 +97,6 @@ autoresearch-lighthouse/.lh_run_*.json
 autoresearch-lighthouse/.build_log.txt
 
 cov_report.json
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+/graft/
